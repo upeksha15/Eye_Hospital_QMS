@@ -4,6 +4,7 @@ export { setAuthToken };
 
 const TOKEN_KEY = 'qms_token';
 const PATIENT_KEY = 'qms_patient';
+const ROLE_KEY = 'qms_role';
 
 export function getStoredToken() {
   return localStorage.getItem(TOKEN_KEY);
@@ -18,15 +19,21 @@ export function getStoredPatient() {
   }
 }
 
+export function getStoredRole() {
+  return localStorage.getItem(ROLE_KEY);
+}
+
 export function persistAuth(token, patient) {
   localStorage.setItem(TOKEN_KEY, token);
   localStorage.setItem(PATIENT_KEY, JSON.stringify(patient));
+  localStorage.setItem(ROLE_KEY, patient.role || 'patient');
   setAuthToken(token);
 }
 
 export function clearAuth() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(PATIENT_KEY);
+  localStorage.removeItem(ROLE_KEY);
   setAuthToken(null);
 }
 

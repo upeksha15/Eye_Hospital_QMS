@@ -22,6 +22,7 @@ import {
   Users,
   Timer
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 
     
@@ -29,12 +30,20 @@ import axios from 'axios';
 const UserDashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [user, setUser] = useState({
-    fullName: 'John Doe',
-    email: 'john.doe@example.com',
-    phoneNumber: '0712345678',
-    nicNumber: '123456789V'
+  const { patient, logout, role } = useAuth();
+  
+  const [user, setUser] = useState(patient || {
+    fullName: 'Loading...',
+    email: '',
+    contactNumber: '',
+    nic: ''
   });
+  
+  useEffect(() => {
+    if (patient) {
+      setUser(patient);
+    }
+  }, [patient]);
   
   const [queueStatus, setQueueStatus] = useState({
     isInQueue: true,
@@ -95,7 +104,7 @@ const UserDashboard = () => {
 
   const handleLogout = () => {
     if (window.confirm('Are you sure you want to logout?')) {
-      // Handle logout logic here
+      logout();
       window.location.href = '/';
     }
   };

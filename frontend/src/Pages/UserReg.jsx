@@ -3,7 +3,6 @@ import axios from 'axios';
 import { User, Mail, Phone, CreditCard, Calendar, MapPin, Lock, Eye, EyeOff, CheckCircle, ArrowRight } from 'lucide-react';
 import eyeRegistrationImg from "../assets/eye-registration.png";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../hooks/useAuth";
 
 // Move InputField component outside to prevent recreation on each render
 const InputField = ({ icon: Icon, placeholder, name, type = "text", showToggle = false, label, value, onChange, errors, showPassword, setShowPassword, showConfirmPassword, setShowConfirmPassword }) => (
@@ -74,7 +73,6 @@ const SelectField = ({ name, label, options, value, onChange, errors }) => (
 
 const EyeCareRegistration = () => {
   const navigate = useNavigate();
-  const { login: patientLogin } = useAuth();
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -153,13 +151,7 @@ const EyeCareRegistration = () => {
           localStorage.setItem('userId', newUser._id);
         }
 
-        try {
-          await patientLogin({ nic, password: plainPassword });
-        } catch (loginErr) {
-          console.warn('Could not start patient session:', loginErr?.response?.data || loginErr?.message);
-        }
-
-        alert("Account Created Successfully!");
+        alert("Account Created Successfully! Please login with your credentials.");
 
         setFormData({
           fullName: '',
@@ -175,7 +167,7 @@ const EyeCareRegistration = () => {
           confirmPassword: ''
         });
         setAgreedToTerms(false);
-        navigate('/dashboard');
+        navigate('/login');
       }
     } catch (error) {
       console.error('Registration error:', error);

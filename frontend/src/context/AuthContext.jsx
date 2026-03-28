@@ -13,6 +13,7 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [patient, setPatient] = useState(() => authApi.getStoredPatient());
   const [token, setToken] = useState(() => authApi.getStoredToken());
+  const [role, setRole] = useState(() => authApi.getStoredRole());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -22,12 +23,16 @@ export function AuthProvider({ children }) {
       authApi
         .fetchMe()
         .then((d) => {
-          if (d.patient) setPatient(d.patient);
+          if (d.patient) {
+            setPatient(d.patient);
+            setRole(d.patient.role || 'patient');
+          }
         })
         .catch(() => {
           authApi.clearAuth();
           setPatient(null);
           setToken(null);
+          setRole(null);
         })
         .finally(() => setLoading(false));
     } else {
@@ -39,6 +44,7 @@ export function AuthProvider({ children }) {
     const data = await authApi.login(body);
     setPatient(data.patient);
     setToken(data.token);
+    setRole(data.patient.role || 'patient');
     return data;
   }, []);
 
@@ -46,6 +52,7 @@ export function AuthProvider({ children }) {
     const data = await authApi.register(body);
     setPatient(data.patient);
     setToken(data.token);
+    setRole(data.patient.role || 'patient');
     return data;
   }, []);
 
@@ -53,19 +60,21 @@ export function AuthProvider({ children }) {
     authApi.clearAuth();
     setPatient(null);
     setToken(null);
+    setRole(null);
   }, []);
 
   const value = useMemo(
     () => ({
       patient,
       token,
+      role,
       isAuthenticated: Boolean(token && patient),
       loading,
       login,
       register,
       logout,
     }),
-    [patient, token, loading, login, register, logout]
+    [patient, token, role, loading, login, register, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

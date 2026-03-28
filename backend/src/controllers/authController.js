@@ -63,41 +63,33 @@ export async function register(req, res) {
 
 export async function login(req, res) {
   try {
-    const { nic, password } = req.body;
-    if (!nic || !password) {
-      return res.status(400).json({ success: false, message: 'nic and password are required' });
+    const { email, password, role = 'patient' } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'email and password are required' });
     }
 
-    const nicTrim = nic.trim();
-    let patient = await Patient.findOne({ nic: nicTrim });
+    // Validate role
+    const validRoles = ['patient', 'admin', 'medical_staff'];
+    if (!validRoles.includes(role)) {
+      return res.status(400).json({ success: false, message: 'Invalid role selected' });
+    }
+
+    const emailTrim = email.trim().toLowerCase();
+    let patient = await Patient.findOne({ email: emailTrim });
 
     if (!patient) {
-      const user = await User.findOne({ nicNumber: nicTrim });
-      if (!user) {
-        return res.status(401).json({ success: false, message: 'Invalid credentials' });
-      }
-      const okUser = await bcrypt.compare(password, user.password);
-      if (!okUser) {
-        return res.status(401).json({ success: false, message: 'Invalid credentials' });
-      }
-      patient = await Patient.findOneAndUpdate(
-        { nic: nicTrim },
-        {
-          fullName: user.fullName,
-          nic: nicTrim,
-          dateOfBirth: user.dob,
-          contactNumber: user.phoneNumber || '',
-          email: user.email?.toLowerCase(),
-          passwordHash: user.password,
-        },
-        { upsert: true, new: true, setDefaultsOnInsert: true }
-      );
-    } else {
-      const ok = await bcrypt.compare(password, patient.passwordHash);
-      if (!ok) {
-        return res.status(401).json({ success: false, message: 'Invalid credentials' });
-      }
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
+
+    const ok = await bcrypt.compare(password, patient.passwordHash);
+    if (!ok) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    // Set or update the role
+    patient.role = role;
+    await patient.save();
 
     const token = signToken(patient._id);
     res.json({

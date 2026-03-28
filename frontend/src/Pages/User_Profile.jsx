@@ -25,6 +25,7 @@ import {
 import axios from 'axios';
 
 const UserProfile = () => {
+  const location = useLocation();
   const [isEditMode, setIsEditMode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [profileImage, setProfileImage] = useState(null);
