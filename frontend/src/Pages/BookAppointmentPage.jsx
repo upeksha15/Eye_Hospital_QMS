@@ -18,6 +18,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useSlotAvailability } from '../hooks/useSlotAvailability';
 import { useSocket } from '../hooks/useSocket';
 import { fetchDoctors } from '../api/doctorsApi';
+import api from '../api/client';
 import { createAppointment } from '../api/appointmentsApi';
 import { fetchQueueToday } from '../api/queueApi';
 import { monthKeyFromDate, formatYMD, nowColombo } from '../utils/dateHelpers';
@@ -62,10 +63,31 @@ export default function BookAppointmentPage() {
   useEffect(() => {
     (async () => {
       try {
-        const data = await fetchDoctors();
-        setDoctors(data.doctors || []);
-      } catch {
-        setDoctors([]);
+        // prefer doctor rooms data (doctorName, specialization, room)
+        const { data } = await api.get('/api/doctor-rooms');
+        const mapped = (data || []).map((d) => ({
+          _id: d._id,
+          fullName: d.doctorName || d.fullname || 'Doctor',
+          speciality: d.specialization || d.speciality || '',
+          room: d.room || '',
+          availability: Array.isArray(d.availability) ? d.availability : [],
+          // derive a simple status based on slot/queue limits
+          status: (d.slotLimit && d.slotLimit > 0) ? 'available' : 'full',
+        }));
+        setDoctors(mapped);
+      } catch (err) {
+        try {
+          const data = await fetchDoctors();
+          setDoctors((data.doctors || []).map(d=>({
+            _id: d._id,
+            fullName: d.fullName || d.name || '',
+            speciality: d.speciality || d.specialization || '',
+            room: d.room || '',
+            availability: Array.isArray(d.availability) ? d.availability : [],
+          })));
+        } catch {
+          setDoctors([]);
+        }
       }
     })();
   }, []);
@@ -87,7 +109,7 @@ export default function BookAppointmentPage() {
     [doctors, doctorId]
   );
 
-  const { slots, loading: slotsLoading } = useSlotAvailability(doctorId, monthKey);
+  const { slots, loading: slotsLoading, refetch: refetchSlots } = useSlotAvailability(doctorId, monthKey);
 
   useEffect(() => {
     setSelectedDate(null);
@@ -114,7 +136,12 @@ export default function BookAppointmentPage() {
     loadQueue();
   }, [loadQueue]);
 
-  useSocket(doctorId, onQueueSocket);
+  const onSlotsSocket = useCallback(() => {
+    // refresh slots for selected doctor/month
+    refetchSlots?.();
+  }, [refetchSlots]);
+
+  useSocket(doctorId, onQueueSocket, onSlotsSocket);
 
   const slotForDay = useMemo(() => {
     if (!selectedDate) return null;
@@ -166,7 +193,17 @@ export default function BookAppointmentPage() {
         appointmentDate,
         visitReason: form.visitReason,
         notes: form.notes,
+        fullName: form.fullName,
+        dateOfBirth: form.dateOfBirth,
+        contactNumber: form.contactNumber,
       });
+      // refresh monthly slots so calendar shows updated availability immediately
+      try {
+        await refetchSlots?.();
+      } catch (e) {
+        // ignore refetch errors; booking already succeeded
+        console.warn('Failed to refetch slots after booking', e);
+      }
       navigate('/appointments/mine', { replace: true });
     } catch (e) {
       setFormError(e.response?.data?.message || e.message || 'Booking failed');
@@ -214,6 +251,7 @@ export default function BookAppointmentPage() {
                   onSelectDate={setSelectedDate}
                   loading={slotsLoading}
                   strings={strings}
+                  allowedWeekdays={selectedDoctor?.availability || []}
                 />
                 <SlotDetailPanel
                   dateStr={selectedDate}

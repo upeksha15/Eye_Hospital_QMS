@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import Appointment from '../models/Appointment.js';
 import DailySlot from '../models/DailySlot.js';
+import Patient from '../models/Patient.js';
 import { formatYMD, nowColombo } from '../utils/dateUtils.js';
 
 async function generateBookingRef() {
@@ -16,9 +17,22 @@ async function generateBookingRef() {
 
 export async function createAppointment(req, res) {
   try {
-    const { doctorId, appointmentDate, visitReason, notes } = req.body;
+    const { doctorId, appointmentDate, visitReason, notes, fullName, dateOfBirth, contactNumber } = req.body;
     const patientId = req.user._id;
     const dayStart = req.appointmentDayStart;
+
+    // If frontend supplied updated patient info, persist it (do not update NIC here)
+    try {
+      const updates = {};
+      if (fullName) updates.fullName = fullName;
+      if (dateOfBirth) updates.dateOfBirth = new Date(dateOfBirth);
+      if (contactNumber) updates.contactNumber = contactNumber;
+      if (Object.keys(updates).length > 0) {
+        await Patient.findByIdAndUpdate(patientId, updates, { runValidators: true });
+      }
+    } catch (uErr) {
+      console.warn('Failed to update patient data during booking:', uErr.message || uErr);
+    }
 
     let bookingRef;
     try {
@@ -59,6 +73,22 @@ export async function createAppointment(req, res) {
     const populated = await Appointment.findById(appointment._id)
       .populate('doctorId', 'fullName speciality room initials status')
       .lean();
+
+    // Emit socket event to notify clients about slot change for this doctor/date
+    try {
+      const io = req.app.get('io');
+      if (io && req.dailySlotDoc) {
+        const payload = {
+          doctorId: String(appointment.doctorId),
+          slotDate: formatYMD(req.dailySlotDoc.slotDate),
+          bookedCount: req.dailySlotDoc.bookedCount,
+          totalSlots: req.dailySlotDoc.totalSlots,
+        };
+        io.emit('slots:update', payload);
+      }
+    } catch (emitErr) {
+      console.warn('Failed to emit slots:update', emitErr);
+    }
 
     res.status(201).json({
       success: true,

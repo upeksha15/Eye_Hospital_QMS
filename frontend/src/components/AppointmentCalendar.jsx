@@ -19,6 +19,7 @@ export default function AppointmentCalendar({
   onSelectDate,
   loading,
   strings,
+  allowedWeekdays, // array of weekday names e.g. ['Monday','Wednesday']
 }) {
   const [y, m] = monthKey.split('-').map(Number);
   const firstOfMonth = new Date(y, m - 1, 1);
@@ -32,6 +33,9 @@ export default function AppointmentCalendar({
   }, [slots]);
 
   const todayStr = formatYMD(nowColombo());
+
+  const weekdayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const allowedSet = new Set((allowedWeekdays || []).map((s) => String(s || '').toLowerCase()));
 
   const cells = [];
   for (let i = 0; i < startWeekday; i += 1) {
@@ -60,7 +64,9 @@ export default function AppointmentCalendar({
     if (c.type !== 'day') return;
     const { key, dow, slot } = c;
     if (!slot) return;
-    if (dow === 0) return;
+    const weekdayName = weekdayNames[dow];
+    const allowed = allowedSet.size === 0 ? true : allowedSet.has(String(weekdayName).toLowerCase());
+    if (!allowed) return;
     if (key < todayStr) return;
     if (slot.isFull) return;
     if (slot.available <= 0) return;
@@ -119,14 +125,18 @@ export default function AppointmentCalendar({
 
             const { d, key, dow, slot } = c;
             const isPast = key < todayStr;
-            const isSunday = dow === 0;
             const isToday = key === todayStr;
             const isSelected = selectedDate === key;
             const full = slot?.isFull || slot?.available === 0;
             const sat = slot?.isSaturday;
 
+            const weekdayName = weekdayNames[dow];
+            const allowed = allowedSet.size === 0 ? true : allowedSet.has(String(weekdayName).toLowerCase());
+
             let badge = null;
-            if (isSunday) {
+            if (!allowed) {
+              badge = { text: 'Unavailable', className: 'bg-slate-200 text-slate-600' };
+            } else if (dow === 0) {
               badge = { text: 'Closed', className: 'bg-slate-200 text-slate-600' };
             } else if (full) {
               badge = { text: 'Full', className: 'bg-red-100 text-red-700' };
@@ -147,8 +157,7 @@ export default function AppointmentCalendar({
               };
             }
 
-            const disabled =
-              isPast || isSunday || full || !slot || loading;
+            const disabled = isPast || !allowed || full || !slot || loading;
 
             return (
               <button
@@ -159,8 +168,8 @@ export default function AppointmentCalendar({
                 className={`min-h-[88px] text-left p-2 flex flex-col gap-1 transition rounded-none ${
                   isSelected
                     ? 'bg-gradient-to-br from-blue-500 to-blue-700 text-white ring-2 ring-blue-300 z-10'
-                    : isSunday
-                      ? 'bg-red-50/80 cursor-not-allowed'
+                    : !allowed
+                      ? 'bg-slate-50/80 cursor-not-allowed opacity-70'
                       : full || isPast
                         ? 'bg-red-50/50 cursor-not-allowed opacity-70'
                         : 'bg-white hover:bg-blue-50/80 cursor-pointer'

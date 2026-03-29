@@ -10,9 +10,11 @@ import MyAppointmentsPage from "./Pages/MyAppointmentsPage";
 import QueueStatusPage from "./Pages/QueueStatusPage";
 import QueueManagementPage from "./Pages/DoctorRoomManagement";
 import StaffManagement from "./Pages/StaffManagement";
+import StaffDashboard from "./Pages/StaffDashboard";
 
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { QueueProvider } from "./context/QueueContext";
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -84,6 +86,16 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+            <Route
+              path="/staffdashboard"
+              element={
+                <ProtectedRoute>
+                  <StaffDashboard />
+                </ProtectedRoute>
+              }
+            />
+            {/* support legacy/hyphenated path */}
+            <Route path="/staff-dashboard" element={<Navigate to="/staffdashboard" replace />} />
                   <Route
         path="/staffmanagement"
         element={
@@ -99,9 +111,11 @@ function AppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
+      <QueueProvider>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </QueueProvider>
     </AuthProvider>
   );
 }

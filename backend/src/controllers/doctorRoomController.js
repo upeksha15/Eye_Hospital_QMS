@@ -2,7 +2,7 @@ import DoctorRoom from "../models/DoctorRoom.js";
 
 export const createDoctorRoom = async (req, res) => {
   try {
-    const { doctorName, room, slotLimit, queueLimit } = req.body;
+    const { doctorName, room, slotLimit, queueLimit, specialization, availability } = req.body;
 
     if (!doctorName || !room || !slotLimit || !queueLimit) {
       return res.status(400).json({ message: "All fields are required" });
@@ -11,6 +11,8 @@ export const createDoctorRoom = async (req, res) => {
     const newDoctorRoom = new DoctorRoom({
       doctorName,
       room,
+      specialization,
+      availability: Array.isArray(availability) ? availability : [],
       slotLimit,
       queueLimit,
     });
@@ -50,13 +52,15 @@ export const getDoctorRoomById = async (req, res) => {
 
 export const updateDoctorRoom = async (req, res) => {
   try {
-    const { doctorName, room, slotLimit, queueLimit } = req.body;
+    const { doctorName, room, slotLimit, queueLimit, specialization, availability } = req.body;
 
     const updatedDoctorRoom = await DoctorRoom.findByIdAndUpdate(
       req.params.id,
       {
         doctorName,
         room,
+        specialization,
+        availability: Array.isArray(availability) ? availability : [],
         slotLimit,
         queueLimit,
       },
@@ -86,5 +90,18 @@ export const deleteDoctorRoom = async (req, res) => {
   } catch (error) {
     console.error("Delete Doctor Room Error:", error);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const getSpecializations = async (req, res) => {
+  try {
+    // Get distinct specialization values and sort them
+    const specs = await DoctorRoom.distinct('specialization');
+    const cleaned = (specs || []).map(s => (s || '').trim()).filter(Boolean);
+    const unique = Array.from(new Set(cleaned)).sort();
+    res.status(200).json(unique);
+  } catch (error) {
+    console.error('Get Specializations Error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };

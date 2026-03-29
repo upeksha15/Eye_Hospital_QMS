@@ -5,6 +5,7 @@ import {
   totalSlotsForDate,
   formatYMD,
 } from '../utils/dateUtils.js';
+import DoctorRoom from '../models/DoctorRoom.js';
 
 export async function getSlotsForDoctorMonth(req, res) {
   try {
@@ -30,6 +31,9 @@ export async function getSlotsForDoctorMonth(req, res) {
 
     const byDate = new Map(slots.map((s) => [formatYMD(s.slotDate), s]));
 
+    // load doctor room settings (availability, slotLimit)
+    const doctorRoom = await DoctorRoom.findById(doctorId).lean();
+
     const result = [];
     for (let d = 1; d <= daysInMonth; d++) {
       const dayStart = startOfDayColombo(new Date(Date.UTC(y, mo - 1, d, 12, 0, 0)));
@@ -37,19 +41,34 @@ export async function getSlotsForDoctorMonth(req, res) {
       const key = formatYMD(dayStart);
       const doc = byDate.get(key);
 
-      if (dow === 0) {
+      // determine weekday name (Sunday..Saturday) to match DoctorRoom.availability values
+      const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const weekdayName = WEEKDAY_NAMES[dow] || '';
+
+      // If doctorRoom exists, only allow days present in its availability array.
+      let allowedByDoctor = true;
+      if (doctorRoom) {
+        const avail = Array.isArray(doctorRoom.availability) ? doctorRoom.availability : [];
+        allowedByDoctor = avail.includes(weekdayName);
+      } else {
+        // fallback: keep original behavior that blocks Sundays
+        allowedByDoctor = dow !== 0;
+      }
+
+      if (!allowedByDoctor) {
         result.push({
           date: key,
           totalSlots: 0,
           bookedCount: 0,
           available: 0,
-          isSaturday: false,
+          isSaturday: dow === 6,
           isFull: true,
         });
         continue;
       }
 
-      const total = doc?.totalSlots ?? totalSlotsForDate(dayStart);
+      // allowed day: compute total from DailySlot override or doctor's slotLimit or default
+      const total = doc?.totalSlots ?? (doctorRoom?.slotLimit ?? totalSlotsForDate(dayStart));
       const booked = doc?.bookedCount ?? 0;
       const available = Math.max(0, total - booked);
       const isSaturday = dow === 6;

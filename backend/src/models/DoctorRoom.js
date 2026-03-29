@@ -12,6 +12,16 @@ const doctorRoomSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    specialization: {
+      type: String,
+      trim: true,
+      default: 'General Ophthalmology',
+    },
+    availability: {
+      type: [String],
+      default: [],
+      // expected values: ['Monday','Tuesday',...]
+    },
     slotLimit: {
       type: Number,
       required: true,
