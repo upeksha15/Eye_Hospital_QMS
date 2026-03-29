@@ -10,23 +10,33 @@ export function getStoredToken() {
   return localStorage.getItem(TOKEN_KEY);
 }
 
-export function getStoredPatient() {
+/** Stored session user (patient or staff). Legacy entries without userType are treated as patients. */
+export function getStoredUser() {
   try {
     const raw = localStorage.getItem(PATIENT_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    const u = JSON.parse(raw);
+    if (!u.userType) u.userType = 'patient';
+    return u;
   } catch {
     return null;
   }
+}
+
+/** @deprecated use getStoredUser */
+export function getStoredPatient() {
+  return getStoredUser();
 }
 
 export function getStoredRole() {
   return localStorage.getItem(ROLE_KEY);
 }
 
-export function persistAuth(token, patient) {
+export function persistAuth(token, user) {
   localStorage.setItem(TOKEN_KEY, token);
-  localStorage.setItem(PATIENT_KEY, JSON.stringify(patient));
-  localStorage.setItem(ROLE_KEY, patient.role || 'patient');
+  localStorage.setItem(PATIENT_KEY, JSON.stringify(user));
+  const role = user.userType === 'staff' ? user.role : 'patient';
+  localStorage.setItem(ROLE_KEY, role);
   setAuthToken(token);
 }
 
@@ -39,13 +49,15 @@ export function clearAuth() {
 
 export async function register(body) {
   const { data } = await api.post('/api/auth/register', body);
-  if (data.token && data.patient) persistAuth(data.token, data.patient);
+  const u = data.user || data.patient;
+  if (data.token && u) persistAuth(data.token, u);
   return data;
 }
 
 export async function login(body) {
   const { data } = await api.post('/api/auth/login', body);
-  if (data.token && data.patient) persistAuth(data.token, data.patient);
+  const u = data.user || data.patient;
+  if (data.token && u) persistAuth(data.token, u);
   return data;
 }
 
@@ -56,10 +68,11 @@ export async function fetchMe() {
 
 export async function updatePatientData(patientData) {
   const { data } = await api.put('/api/auth/sync-patient', patientData);
-  if (data.token && data.patient) {
-    persistAuth(data.token, data.patient);
-  } else if (data.patient) {
-    persistAuth(getStoredToken(), data.patient);
+  const u = data.user || data.patient;
+  if (data.token && u) {
+    persistAuth(data.token, u);
+  } else if (u) {
+    persistAuth(getStoredToken(), u);
   }
   return data;
 }

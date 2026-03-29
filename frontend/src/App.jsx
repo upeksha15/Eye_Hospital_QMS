@@ -11,15 +11,27 @@ import QueueStatusPage from "./Pages/QueueStatusPage";
 import QueueManagementPage from "./Pages/DoctorRoomManagement";
 import StaffManagement from "./Pages/StaffManagement";
 import StaffDashboard from "./Pages/StaffDashboard";
+import { AdminRoute } from "./components/AdminRoute";
+import { PatientRoute } from "./components/PatientRoute";
+import { StaffRoute } from "./components/StaffRoute";
+import AdminLayout from "./admin/AdminLayout";
+import AdminDashboard from "./admin/pages/AdminDashboard";
+import UserManagementPage from "./admin/pages/UserManagementPage";
+import StaffAccountsPage from "./admin/pages/StaffAccountsPage";
+import SystemPerformancePage from "./admin/pages/SystemPerformancePage";
+import NoticesPage from "./admin/pages/NoticesPage";
+import AuditLogsPage from "./admin/pages/AuditLogsPage";
+import AdminSettingsPage from "./admin/pages/AdminSettingsPage";
+import ReportsPage from "./admin/pages/ReportsPage";
 
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { QueueProvider } from "./context/QueueContext";
 
-// Protected Route Component
-const ProtectedRoute = ({ children }) => {
+/** Any authenticated user (patient or staff). */
+const AuthenticatedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
-  
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50">
@@ -27,7 +39,7 @@ const ProtectedRoute = ({ children }) => {
       </div>
     );
   }
-  
+
   return isAuthenticated ? children : <Navigate to="/login" replace />;
 };
 
@@ -40,70 +52,88 @@ function AppRoutes() {
       <Route
         path="/dashboard"
         element={
-          <ProtectedRoute>
+          <PatientRoute>
             <UserDashboard />
-          </ProtectedRoute>
+          </PatientRoute>
         }
       />
       <Route
         path="/profile"
         element={
-          <ProtectedRoute>
+          <PatientRoute>
             <UserProfile />
-          </ProtectedRoute>
+          </PatientRoute>
         }
       />
       <Route
         path="/appointments/book"
         element={
-          <ProtectedRoute>
+          <PatientRoute>
             <BookAppointmentPage />
-          </ProtectedRoute>
+          </PatientRoute>
         }
       />
       <Route
         path="/appointments/mine"
         element={
-          <ProtectedRoute>
+          <PatientRoute>
             <MyAppointmentsPage />
-          </ProtectedRoute>
+          </PatientRoute>
         }
       />
       <Route
         path="/queue"
         element={
-          <ProtectedRoute>
+          <PatientRoute>
             <QueueStatusPage />
-          </ProtectedRoute>
+          </PatientRoute>
         }
       />
 
-            <Route
+      <Route
         path="/queuemanagement"
         element={
-          <ProtectedRoute>
+          <AuthenticatedRoute>
             <QueueManagementPage />
-          </ProtectedRoute>
+          </AuthenticatedRoute>
         }
       />
-            <Route
-              path="/staffdashboard"
-              element={
-                <ProtectedRoute>
-                  <StaffDashboard />
-                </ProtectedRoute>
-              }
-            />
-            {/* support legacy/hyphenated path */}
-            <Route path="/staff-dashboard" element={<Navigate to="/staffdashboard" replace />} />
-                  <Route
+      <Route
+        path="/staffdashboard"
+        element={
+          <StaffRoute>
+            <StaffDashboard />
+          </StaffRoute>
+        }
+      />
+      {/* support legacy/hyphenated path */}
+      <Route path="/staff-dashboard" element={<Navigate to="/staffdashboard" replace />} />
+      <Route
         path="/staffmanagement"
         element={
-          <ProtectedRoute>
+          <StaffRoute>
             <StaffManagement />
-          </ProtectedRoute>
+          </StaffRoute>
         }
       />
+
+      <Route
+        path="/admin"
+        element={
+          <AdminRoute>
+            <AdminLayout />
+          </AdminRoute>
+        }
+      >
+        <Route index element={<AdminDashboard />} />
+        <Route path="staff-accounts" element={<StaffAccountsPage />} />
+        <Route path="users" element={<UserManagementPage />} />
+        <Route path="performance" element={<SystemPerformancePage />} />
+        <Route path="notices" element={<NoticesPage />} />
+        <Route path="audit-logs" element={<AuditLogsPage />} />
+        <Route path="reports" element={<ReportsPage />} />
+        <Route path="settings" element={<AdminSettingsPage />} />
+      </Route>
     </Routes>
   );
 }

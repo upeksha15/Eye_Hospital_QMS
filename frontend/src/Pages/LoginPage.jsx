@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, User, Eye, EyeOff, LogIn } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import backg1 from '../assets/backg1.png';
 
@@ -17,9 +17,24 @@ const LoginPage = () => {
   const [focusedField, setFocusedField] = useState(null);
 
   const roles = [
-    { value: 'patient', label: 'Patient', icon: '👤', description: 'Book appointments' },
-    { value: 'admin', label: 'Admin', icon: '⚙️', description: 'System management' },
-    { value: 'medical_staff', label: 'Medical Staff', icon: '👨‍⚕️', description: 'Staff dashboard' }
+    {
+      value: 'patient',
+      label: 'Patient',
+      icon: '👤',
+      description: 'Sign in with the email and password you used when registering.',
+    },
+    {
+      value: 'admin',
+      label: 'Admin',
+      icon: '⚙️',
+      description: 'Administrator login issued by your hospital (Staff accounts). Pick Admin only if your account is admin.',
+    },
+    {
+      value: 'medical_staff',
+      label: 'Medical Staff',
+      icon: '👨‍⚕️',
+      description: 'Staff login issued by your administrator. Must match the role on your account.',
+    },
   ];
 
   const handleSubmit = async (e) => {
@@ -38,8 +53,14 @@ const LoginPage = () => {
 
     setLoading(true);
     try {
-      await login({ email: email.trim(), password, role });
-      navigate('/dashboard');
+      const data = await login({ email: email.trim(), password, role });
+      const u = data?.user || data?.patient;
+      if (u?.userType === 'staff') {
+        if (u.role === 'admin') navigate('/admin');
+        else navigate('/staffmanagement');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err) {
       const message = err.response?.data?.message || err.message || 'Login failed. Please try again.';
       setError(message);
@@ -187,9 +208,14 @@ const LoginPage = () => {
 
             {/* Help Text */}
             <div className="text-center text-sm text-white/90 space-y-2">
-              <p>Don't have an account? <Link to="/register" className="font-semibold text-white hover:text-white/80 transition-colors underline">Register here</Link></p>
+              <p>
+                New patients:{' '}
+                <Link to="/register" className="font-semibold text-white hover:text-white/80 transition-colors underline">
+                  Register here
+                </Link>
+              </p>
               <p className="text-xs text-white/70 pt-2">
-                Demo credentials: email@example.com
+                Staff and admin accounts are not self-service — they are created under Admin → Staff accounts.
               </p>
             </div>
           </form>
