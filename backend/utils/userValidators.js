@@ -69,9 +69,7 @@ export const updateValidation = [
     .withMessage('Phone number must be at least 10 characters'),
   body('address')
     .optional()
-    .trim()
-    .notEmpty()
-    .withMessage('Address cannot be empty'),
+    .trim(),
   body('gender')
     .optional()
     .isIn(['Male', 'Female', 'Other'])

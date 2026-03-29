@@ -47,6 +47,12 @@ export default function Navbar({ strings, patient }) {
           >
             {strings.navQueue}
           </NavLink>
+          <NavLink
+            to="/dashboard"
+            className={({ isActive }) => `${navLink} ${isActive ? activeNav : ''}`}
+          >
+            {strings.navDashboard}
+          </NavLink>
           <span className={`${navLink} opacity-50 cursor-not-allowed`}>{strings.navFollowUps}</span>
         </nav>
 

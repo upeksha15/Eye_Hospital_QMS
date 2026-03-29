@@ -53,3 +53,13 @@ export async function fetchMe() {
   const { data } = await api.get('/api/auth/me');
   return data;
 }
+
+export async function updatePatientData(patientData) {
+  const { data } = await api.put('/api/auth/sync-patient', patientData);
+  if (data.token && data.patient) {
+    persistAuth(data.token, data.patient);
+  } else if (data.patient) {
+    persistAuth(getStoredToken(), data.patient);
+  }
+  return data;
+}

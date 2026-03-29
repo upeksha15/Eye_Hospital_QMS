@@ -36,14 +36,24 @@ const UserDashboard = () => {
     fullName: 'Loading...',
     email: '',
     contactNumber: '',
-    nic: ''
+    nic: '',
+    profileImage: ''
   });
+
+  const [currentDateTime, setCurrentDateTime] = useState(new Date());
   
   useEffect(() => {
     if (patient) {
       setUser(patient);
     }
   }, [patient]);
+
+  useEffect(() => {
+    const timerId = setInterval(() => {
+      setCurrentDateTime(new Date());
+    }, 1000);
+    return () => clearInterval(timerId);
+  }, []);
   
   const [queueStatus, setQueueStatus] = useState({
     isInQueue: true,
@@ -168,9 +178,23 @@ const UserDashboard = () => {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <div className="text-right hidden md:block">
-              <p className="text-sm text-white/90">Welcome back,</p>
-              <p className="font-semibold text-white">{user.fullName}</p>
+            <div className="hidden sm:flex items-center gap-3">
+              <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-white bg-white/30 flex items-center justify-center">
+                {user.profileImage ? (
+                  <img
+                    src={user.profileImage}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <User size={20} className="text-white" />
+                )}
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-white/90">Welcome back,</p>
+                <p className="font-semibold text-white">{user.fullName}</p>
+                <p className="text-xs text-white/70">{currentDateTime.toLocaleString()}</p>
+              </div>
             </div>
             <button
               onClick={handleLogout}

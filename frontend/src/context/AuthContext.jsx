@@ -63,6 +63,14 @@ export function AuthProvider({ children }) {
     setRole(null);
   }, []);
 
+  const updatePatient = useCallback((updatedPatientData) => {
+    setPatient(prev => {
+      const merged = { ...prev, ...updatedPatientData };
+      authApi.persistAuth(token, merged);
+      return merged;
+    });
+  }, [token]);
+
   const value = useMemo(
     () => ({
       patient,
@@ -73,8 +81,9 @@ export function AuthProvider({ children }) {
       login,
       register,
       logout,
+      updatePatient,
     }),
-    [patient, token, role, loading, login, register, logout]
+    [patient, token, role, loading, login, register, logout, updatePatient]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

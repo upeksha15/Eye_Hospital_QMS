@@ -106,3 +106,37 @@ export async function login(req, res) {
 export async function me(req, res) {
   res.json({ success: true, patient: stripPatient(req.user) });
 }
+
+export async function syncPatient(req, res) {
+  try {
+    const { fullName, contactNumber, profileImage } = req.body;
+    const patientId = req.user._id;
+
+    if (!patientId) {
+      return res.status(400).json({ success: false, message: 'Patient ID required' });
+    }
+
+    const updateData = {};
+    if (fullName !== undefined) updateData.fullName = fullName;
+    if (contactNumber !== undefined) updateData.contactNumber = contactNumber;
+    if (profileImage !== undefined) updateData.profileImage = profileImage;
+
+    const patient = await Patient.findByIdAndUpdate(
+      patientId,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    if (!patient) {
+      return res.status(404).json({ success: false, message: 'Patient not found' });
+    }
+
+    res.json({
+      success: true,
+      patient: stripPatient(patient),
+    });
+  } catch (error) {
+    console.error('Sync patient error:', error);
+    res.status(500).json({ success: false, message: 'Failed to sync patient data' });
+  }
+}

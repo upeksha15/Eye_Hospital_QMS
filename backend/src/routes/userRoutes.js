@@ -17,6 +17,7 @@ router.post('/register', registerValidation, registerUser);
 
 router.get('/by-email/:email', getUserByEmail);
 router.get('/:id', getUserById);
+// Only apply validation to non-image fields for update
 router.put('/:id', updateValidation, updateUserById);
 router.delete('/:id', deleteUserById);
 

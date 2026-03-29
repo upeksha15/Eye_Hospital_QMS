@@ -15,6 +15,11 @@ const PatientSchema = new mongoose.Schema(
     },
     passwordHash: { type: String, required: true },
     role: { type: String, enum: ['patient', 'admin', 'medical_staff'], default: 'patient' },
+    profileImage: {
+      type: String,
+      default: '',
+      trim: true,
+    },
   },
   { timestamps: true }
 );

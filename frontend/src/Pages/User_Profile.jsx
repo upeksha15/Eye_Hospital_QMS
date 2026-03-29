@@ -27,7 +27,7 @@ import { useAuth } from '../context/AuthContext';
 
 const UserProfile = () => {
   const location = useLocation();
-  const { patient, logout } = useAuth();
+  const { patient, logout, updatePatient } = useAuth();
   const [isEditMode, setIsEditMode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
@@ -43,11 +43,13 @@ const UserProfile = () => {
     address: '',
     gender: '',
     medicalHistory: '',
-    emergencyContact: ''
+    emergencyContact: '',
+    profileImage: ''
   });
   
   const [editedUser, setEditedUser] = useState({ ...user });
   const [errors, setErrors] = useState({});
+  const [currentDateTime, setCurrentDateTime] = useState(new Date());
 
   // Load user data on component mount
   useEffect(() => {
@@ -57,12 +59,23 @@ const UserProfile = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patient]);
 
+  // Update current date/time every second
+  useEffect(() => {
+    const timerId = setInterval(() => {
+      setCurrentDateTime(new Date());
+    }, 1000);
+    return () => clearInterval(timerId);
+  }, []);
+
   const initializeUserData = (data) => {
     setUser(data);
     setEditedUser({
       ...data,
       dob: data.dob ? new Date(data.dob).toISOString().split('T')[0] : ''
     });
+    if (data.profileImage) {
+      setImagePreview(data.profileImage);
+    }
   };
 
   const loadUserData = async () => {
@@ -115,6 +128,7 @@ const UserProfile = () => {
           gender: patient.gender || '',
           medicalHistory: patient.medicalHistory || '',
           emergencyContact: patient.emergencyContact || '',
+          profileImage: patient.profileImage || '',
         };
         console.log('⚠️ Using patient fallback (User record not found):', loadedUser.email);
       }
@@ -159,6 +173,10 @@ const UserProfile = () => {
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result);
+        setEditedUser(prev => ({
+          ...prev,
+          profileImage: reader.result
+        }));
       };
       reader.readAsDataURL(file);
     }
@@ -167,16 +185,16 @@ const UserProfile = () => {
   const validateForm = () => {
     const newErrors = {};
     
-    if (!editedUser.fullName.trim()) {
+    if (!editedUser.fullName || !editedUser.fullName.trim()) {
       newErrors.fullName = 'Full name is required';
     }
-    if (!/\S+@\S+\.\S+/.test(editedUser.email)) {
+    if (!editedUser.email || !/\S+@\S+\.\S+/.test(editedUser.email)) {
       newErrors.email = 'Valid email is required';
     }
-    if (editedUser.phoneNumber.length < 10) {
+    if (!editedUser.phoneNumber || editedUser.phoneNumber.toString().length < 10) {
       newErrors.phoneNumber = 'Valid phone number is required';
     }
-    if (!editedUser.address.trim()) {
+    if (!editedUser.address || !editedUser.address.trim()) {
       newErrors.address = 'Address is required';
     }
     
@@ -185,7 +203,9 @@ const UserProfile = () => {
   };
 
   const handleUpdate = async () => {
+    console.log('🔄 Validating form with data:', editedUser);
     if (!validateForm()) {
+      console.log('❌ Validation failed');
       return;
     }
 
@@ -193,37 +213,65 @@ const UserProfile = () => {
     try {
       // Use User._id from loaded profile, not patient._id
       const userId = user._id;
+      console.log('📝 UserId:', userId);
       
       if (!userId || userId === 'temp-id') {
         alert('User ID not found. Please refresh and try again.');
+        setIsLoading(false);
         return;
       }
 
+      // Always send all fields to ensure complete profile update
       const updateData = {
-        fullName: editedUser.fullName,
-        email: editedUser.email,
-        phoneNumber: editedUser.phoneNumber,
-        address: editedUser.address,
-        gender: editedUser.gender,
-        medicalHistory: editedUser.medicalHistory || '',
-        emergencyContact: editedUser.emergencyContact || ''
+        fullName: editedUser.fullName || user.fullName || '',
+        email: editedUser.email || user.email || '',
+        phoneNumber: editedUser.phoneNumber || user.phoneNumber || '',
+        address: editedUser.address || user.address || '',
+        gender: editedUser.gender || user.gender || '',
+        medicalHistory: editedUser.medicalHistory || user.medicalHistory || '',
+        emergencyContact: editedUser.emergencyContact || user.emergencyContact || '',
+        dob: user.dob || ''
       };
 
+      // Include profileImage if it was changed or exists
+      if (editedUser.profileImage) {
+        console.log('📸 Image size:', editedUser.profileImage.length, 'bytes');
+        updateData.profileImage = editedUser.profileImage;
+      }
+
+      console.log('📤 Sending update data with fields:', Object.keys(updateData));
       const response = await axios.put(`http://localhost:5000/api/users/${userId}`, updateData);
+      console.log('✅ Update response:', response.data);
       
       if (response.data.success) {
-        setUser(response.data.user);
+        const updatedUser = response.data.user;
+        setUser(updatedUser);
         setEditedUser({
-          ...response.data.user,
-          dob: response.data.user.dob ? new Date(response.data.user.dob).toISOString().split('T')[0] : ''
+          ...updatedUser,
+          dob: updatedUser.dob ? new Date(updatedUser.dob).toISOString().split('T')[0] : ''
         });
+        setImagePreview(updatedUser.profileImage || null);
+        setProfileImage(null); // Clear the file input
+        
+        // Sync to auth context to update across all pages
+        updatePatient({
+          fullName: updatedUser.fullName,
+          contactNumber: updatedUser.phoneNumber,
+          profileImage: updatedUser.profileImage || ''
+        });
+        
         setIsEditMode(false);
         alert('Profile updated successfully!');
       }
     } catch (error) {
-      console.error('Update error:', error);
+      console.error('❌ Update error:', error);
+      console.error('Response data:', error.response?.data);
+      console.error('Error message:', error.message);
       if (error.response?.data?.message) {
         alert(error.response.data.message);
+      } else if (error.response?.data?.errors) {
+        const errorMsg = error.response.data.errors.map(e => e.msg).join(', ');
+        alert('Validation error: ' + errorMsg);
       } else {
         alert('Failed to update profile. Please try again.');
       }
@@ -317,9 +365,23 @@ const UserProfile = () => {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <div className="text-right hidden md:block">
-              <p className="text-sm text-white/90">Welcome back,</p>
-              <p className="font-semibold text-white">{user.fullName}</p>
+            <div className="hidden sm:flex items-center gap-3">
+              <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-white bg-white/30 flex items-center justify-center">
+                {user.profileImage ? (
+                  <img
+                    src={user.profileImage}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <User size={20} className="text-white" />
+                )}
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-white/90">Welcome back,</p>
+                <p className="font-semibold text-white">{user.fullName}</p>
+                <p className="text-xs text-white/70">{currentDateTime.toLocaleString()}</p>
+              </div>
             </div>
             <button
               onClick={handleLogout}
