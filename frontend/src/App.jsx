@@ -8,6 +8,8 @@ import UserProfile from "./Pages/User_Profile";
 import BookAppointmentPage from "./Pages/BookAppointmentPage";
 import MyAppointmentsPage from "./Pages/MyAppointmentsPage";
 import QueueStatusPage from "./Pages/QueueStatusPage";
+import QueueManagementPage from "./Pages/DoctorRoomManagement";
+import StaffManagement from "./Pages/StaffManagement";
 
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -70,6 +72,23 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <QueueStatusPage />
+          </ProtectedRoute>
+        }
+      />
+
+            <Route
+        path="/queuemanagement"
+        element={
+          <ProtectedRoute>
+            <QueueManagementPage />
+          </ProtectedRoute>
+        }
+      />
+                  <Route
+        path="/staffmanagement"
+        element={
+          <ProtectedRoute>
+            <StaffManagement />
           </ProtectedRoute>
         }
       />
