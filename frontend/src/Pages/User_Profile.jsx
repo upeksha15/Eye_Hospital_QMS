@@ -23,11 +23,14 @@ import {
   FileText
 } from 'lucide-react';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 
 const UserProfile = () => {
   const location = useLocation();
+  const { patient, logout } = useAuth();
   const [isEditMode, setIsEditMode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [profileImage, setProfileImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [user, setUser] = useState({
@@ -48,52 +51,84 @@ const UserProfile = () => {
 
   // Load user data on component mount
   useEffect(() => {
+    // Clear old stale userId to force fresh lookup by email
+    localStorage.removeItem('oldUserId');
     loadUserData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patient]);
+
+  const initializeUserData = (data) => {
+    setUser(data);
+    setEditedUser({
+      ...data,
+      dob: data.dob ? new Date(data.dob).toISOString().split('T')[0] : ''
+    });
+  };
 
   const loadUserData = async () => {
+    setIsLoadingProfile(true);
     try {
-      // In a real app, you'd get user ID from auth context/localStorage
-      // For now, using a placeholder - you'll need to replace this with actual user ID
-      const userId = localStorage.getItem('userId') || 'YOUR_USER_ID_HERE';
-      
-      if (userId && userId !== 'YOUR_USER_ID_HERE') {
-        const response = await axios.get(`http://localhost:5000/api/users/${userId}`);
-        if (response.data.success) {
-          const userData = response.data.user;
-          setUser(userData);
-          setEditedUser({
-            ...userData,
-            dob: userData.dob ? new Date(userData.dob).toISOString().split('T')[0] : ''
-          });
+      let loadedUser = null;
+
+      console.log('📋 Starting profile load for patient:', patient?.email, 'Patient ID:', patient?._id);
+
+      // IMPORTANT: patient._id is from Patient model, not User model
+      // We must fetch User record by email to get the correct _id
+      if (patient?.email) {
+        try {
+          const encodedEmail = encodeURIComponent(patient.email);
+          console.log('🔍 Fetching User record for email:', patient.email);
+          const res = await axios.get(`http://localhost:5000/api/users/by-email/${encodedEmail}`);
+          if (res.data.success && res.data.user) {
+            loadedUser = res.data.user;
+            localStorage.setItem('userId', res.data.user._id);
+            console.log('✅ Found User record:', {
+              name: loadedUser.fullName,
+              email: loadedUser.email,
+              userID: loadedUser._id
+            });
+          }
+        } catch (err) {
+          console.warn('⚠️ Error fetching User by email:', err.response?.data || err.message);
         }
+      }
+
+      // Verify the loaded user matches logged-in patient
+      if (loadedUser && patient?.email) {
+        const emailMatch = loadedUser.email?.toLowerCase() === patient.email?.toLowerCase();
+        console.log(`🔐 Email verification: ${emailMatch ? '✅ MATCH' : '❌ MISMATCH'}`, {
+          patient_email: patient.email,
+          loaded_email: loadedUser.email
+        });
+      }
+
+      // Fallback: Use patient data from auth context if User record not found
+      if (!loadedUser && patient) {
+        loadedUser = {
+          _id: patient._id || 'temp-id',
+          fullName: patient.fullName || '',
+          email: patient.email || '',
+          phoneNumber: patient.contactNumber || '',
+          nicNumber: patient.nic || '',
+          dob: patient.dateOfBirth ? new Date(patient.dateOfBirth).toISOString() : '',
+          address: patient.address || '',
+          gender: patient.gender || '',
+          medicalHistory: patient.medicalHistory || '',
+          emergencyContact: patient.emergencyContact || '',
+        };
+        console.log('⚠️ Using patient fallback (User record not found):', loadedUser.email);
+      }
+
+      if (loadedUser) {
+        initializeUserData(loadedUser);
+        console.log('✅ Profile initialized for:', loadedUser.fullName, '(' + loadedUser.email + ')');
       } else {
-        // Fallback to default data if no user ID
-        setUser({
-          fullName: 'John Doe',
-          email: 'john.doe@example.com',
-          phoneNumber: '0712345678',
-          nicNumber: '123456789V',
-          dob: '1990-01-01',
-          address: '123 Main Street, Colombo',
-          gender: 'Male',
-          medicalHistory: '',
-          emergencyContact: ''
-        });
-        setEditedUser({
-          fullName: 'John Doe',
-          email: 'john.doe@example.com',
-          phoneNumber: '0712345678',
-          nicNumber: '123456789V',
-          dob: '1990-01-01',
-          address: '123 Main Street, Colombo',
-          gender: 'Male',
-          medicalHistory: '',
-          emergencyContact: ''
-        });
+        console.error('❌ No user data available');
       }
     } catch (error) {
       console.error('Error loading user data:', error);
+    } finally {
+      setIsLoadingProfile(false);
     }
   };
 
@@ -156,10 +191,11 @@ const UserProfile = () => {
 
     setIsLoading(true);
     try {
-      const userId = localStorage.getItem('userId') || user._id;
+      // Use User._id from loaded profile, not patient._id
+      const userId = user._id;
       
-      if (!userId || userId === 'YOUR_USER_ID_HERE') {
-        alert('User ID not found. Please login again.');
+      if (!userId || userId === 'temp-id') {
+        alert('User ID not found. Please refresh and try again.');
         return;
       }
 
@@ -218,9 +254,10 @@ const UserProfile = () => {
 
     setIsLoading(true);
     try {
-      const userId = localStorage.getItem('userId') || user._id;
+      // Use User._id from loaded profile, not patient._id
+      const userId = user._id;
       
-      if (!userId || userId === 'YOUR_USER_ID_HERE') {
+      if (!userId || userId === 'temp-id') {
         alert('User ID not found.');
         return;
       }
@@ -229,8 +266,7 @@ const UserProfile = () => {
       
       if (response.data.success) {
         alert('Account deleted successfully');
-        localStorage.removeItem('userId');
-        localStorage.removeItem('token');
+        logout();
         window.location.href = '/';
       }
     } catch (error) {
@@ -243,8 +279,7 @@ const UserProfile = () => {
 
   const handleLogout = () => {
     if (window.confirm('Are you sure you want to logout?')) {
-      localStorage.removeItem('userId');
-      localStorage.removeItem('token');
+      logout();
       window.location.href = '/';
     }
   };
@@ -339,6 +374,14 @@ const UserProfile = () => {
 
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto bg-gray-50">
+          {isLoadingProfile ? (
+            <div className="h-full flex items-center justify-center">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-[#2A9DF4] mx-auto mb-4"></div>
+                <p className="text-gray-600 font-semibold">Loading your profile...</p>
+              </div>
+            </div>
+          ) : (
           <div className="p-6 space-y-6">
             {/* Profile Header Card */}
             <div className="bg-gradient-to-br from-[#2A9DF4] to-[#0F4C81] rounded-xl p-6 text-white shadow-lg">
@@ -651,6 +694,7 @@ const UserProfile = () => {
               </div>
             </div>
           </div>
+          )}
         </main>
       </div>
 

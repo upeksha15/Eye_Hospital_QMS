@@ -138,6 +138,35 @@ export async function getUserById(req, res) {
   }
 }
 
+export async function getUserByEmail(req, res) {
+  try {
+    const email = String(req.params.email || '').trim().toLowerCase();
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    console.log('🔍 [getUserByEmail] Looking up User with email:', email);
+    const user = await User.findOne({ email });
+    
+    if (!user) {
+      console.warn('⚠️ [getUserByEmail] No User found for email:', email);
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    console.log('✅ [getUserByEmail] Found User:', {
+      name: user.fullName,
+      email: user.email,
+      id: user._id,
+      nic: user.nicNumber
+    });
+    
+    res.json({ success: true, user: stripPassword(user) });
+  } catch (error) {
+    console.error('❌ [getUserByEmail] Error:', error.message);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+}
+
 export async function updateUserById(req, res) {
   try {
     const errors = validationResult(req);
