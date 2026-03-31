@@ -23,6 +23,10 @@ import NoticesPage from "./admin/pages/NoticesPage";
 import AuditLogsPage from "./admin/pages/AuditLogsPage";
 import AdminSettingsPage from "./admin/pages/AdminSettingsPage";
 import ReportsPage from "./admin/pages/ReportsPage";
+import StaffDoctors from "./Pages/StaffDoctors";
+import StaffNotices from "./Pages/StaffNotices";
+import StaffProfile from "./Pages/StaffProfile";
+import FollowUps from "./Pages/Staff_FollowUps";
 
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -103,6 +107,46 @@ function AppRoutes() {
         element={
           <StaffRoute>
             <StaffDashboard />
+          </StaffRoute>
+        }
+      />
+      <Route
+        path="/doctors"
+        element={
+          <StaffRoute>
+            <StaffDoctors />
+          </StaffRoute>
+        }
+      />
+      <Route
+        path="/doctors/:doctorId"
+        element={
+          <StaffRoute>
+            <StaffDoctors />
+          </StaffRoute>
+        }
+      />
+      <Route
+        path="/notices"
+        element={
+          <StaffRoute>
+            <StaffNotices />
+          </StaffRoute>
+        }
+      />
+      <Route
+        path="/staffprofile"
+        element={
+          <StaffRoute>
+            <StaffProfile />
+          </StaffRoute>
+        }
+      />
+      <Route
+        path="/followups"
+        element={
+          <StaffRoute>
+            <FollowUps />
           </StaffRoute>
         }
       />

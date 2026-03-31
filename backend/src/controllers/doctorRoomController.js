@@ -105,3 +105,48 @@ export const getSpecializations = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+  // --- status controls ---
+  export const enableDoctorRoom = async (req, res) => {
+    try {
+      const updated = await DoctorRoom.findByIdAndUpdate(req.params.id, { status: 'Enabled' }, { new: true });
+      if (!updated) return res.status(404).json({ message: 'Doctor room not found' });
+      res.status(200).json(updated);
+    } catch (err) {
+      console.error('Enable Doctor Room Error:', err);
+      res.status(500).json({ message: 'Server error' });
+    }
+  };
+
+  export const disableDoctorRoom = async (req, res) => {
+    try {
+      const updated = await DoctorRoom.findByIdAndUpdate(req.params.id, { status: 'Disabled' }, { new: true });
+      if (!updated) return res.status(404).json({ message: 'Doctor room not found' });
+      res.status(200).json(updated);
+    } catch (err) {
+      console.error('Disable Doctor Room Error:', err);
+      res.status(500).json({ message: 'Server error' });
+    }
+  };
+
+  export const pauseDoctorRoom = async (req, res) => {
+    try {
+      const updated = await DoctorRoom.findByIdAndUpdate(req.params.id, { status: 'Paused' }, { new: true });
+      if (!updated) return res.status(404).json({ message: 'Doctor room not found' });
+      res.status(200).json(updated);
+    } catch (err) {
+      console.error('Pause Doctor Room Error:', err);
+      res.status(500).json({ message: 'Server error' });
+    }
+  };
+
+  export const resumeDoctorRoom = async (req, res) => {
+    try {
+      const updated = await DoctorRoom.findByIdAndUpdate(req.params.id, { status: 'Enabled' }, { new: true });
+      if (!updated) return res.status(404).json({ message: 'Doctor room not found' });
+      res.status(200).json(updated);
+    } catch (err) {
+      console.error('Resume Doctor Room Error:', err);
+      res.status(500).json({ message: 'Server error' });
+    }
+  };

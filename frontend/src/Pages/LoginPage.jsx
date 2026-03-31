@@ -56,8 +56,14 @@ const LoginPage = () => {
       const data = await login({ email: email.trim(), password, role });
       const u = data?.user || data?.patient;
       if (u?.userType === 'staff') {
-        if (u.role === 'admin') navigate('/admin');
-        else navigate('/staffmanagement');
+        if (u.role === 'admin') {
+          navigate('/admin');
+        } else if (u.role === 'medical_staff' || u.role === 'medical-staff') {
+          // medical staff should go to the staff dashboard
+          navigate('/staffdashboard');
+        } else {
+          navigate('/staffmanagement');
+        }
       } else {
         navigate('/dashboard');
       }

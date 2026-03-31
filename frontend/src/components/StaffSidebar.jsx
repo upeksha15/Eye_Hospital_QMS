@@ -6,6 +6,8 @@ import {
   Users,
   ClipboardList,
   UserCircle2,
+  CalendarPlus,
+  Bell,
   ChevronRight,
 } from "lucide-react";
 
@@ -19,8 +21,8 @@ export default function StaffSidebar() {
       icon: <LayoutDashboard className="w-5 h-5" />,
     },
     {
-      name: "Patient Appointment",
-      path: "/appointments",
+      name: "Queue Control",
+      path: "/doctors",
       icon: <CalendarDays className="w-5 h-5" />,
     },
        {
@@ -28,8 +30,18 @@ export default function StaffSidebar() {
       path: "/queuemanagement",
       icon: <ClipboardList className="w-5 h-5" />,
     },
+      {
+        name: "Follow up Scheduling",
+        path: "/followups",
+        icon: <CalendarPlus className="w-5 h-5" />,
+      },
+      {
+        name: "Notices",
+        path: "/notices",
+        icon: <Bell className="w-5 h-5" />,
+      },
     {
-      name: "Staff Management",
+      name: "Staff Panel",
       path: "/staffmanagement",
       icon: <Users className="w-5 h-5" />,
     },
@@ -40,7 +52,10 @@ export default function StaffSidebar() {
     },
   ];
 
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path) => {
+    if (!path) return false;
+    return location.pathname === path || location.pathname.startsWith(`${path}/`);
+  };
 
   return (
     <aside className="w-72 min-h-screen bg-gradient-to-b from-blue-800 via-blue-900 to-cyan-900 text-white shadow-2xl border-r border-white/10 flex flex-col">

@@ -61,11 +61,13 @@ export async function getAppointmentsReport(params) {
 }
 
 export async function downloadAppointmentsReportPdf(params) {
+  // Request as arraybuffer to avoid issues where the response blob has an empty type
+  // and to ensure we construct a proper PDF blob on the client.
   const { data } = await api.get('/api/admin/reports/appointments.pdf', {
     params,
-    responseType: 'blob',
+    responseType: 'arraybuffer',
   });
-  return data;
+  return new Blob([data], { type: 'application/pdf' });
 }
 
 export async function getAnnouncementsAdmin() {

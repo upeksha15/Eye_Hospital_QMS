@@ -2,8 +2,12 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import Patient from '../models/Patient.js';
 import StaffAccount from '../models/StaffAccount.js';
+import { ensureDbConnected } from '../../config/db.js';
 
 function signToken(id, typ) {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET is not configured on the server');
+  }
   return jwt.sign({ id: id.toString(), typ }, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   });
@@ -32,6 +36,9 @@ export async function register(req, res) {
         message: 'fullName, nic, dateOfBirth, and password are required',
       });
     }
+
+    // ensure DB connection when buffering is disabled
+    await ensureDbConnected();
 
     const exists = await Patient.findOne({
       $or: [{ nic: nic.trim() }, ...(email ? [{ email: email.trim().toLowerCase() }] : [])],
@@ -87,7 +94,11 @@ export async function login(req, res) {
 
     const emailTrim = email.trim().toLowerCase();
 
+    // Ensure DB connection before attempting any user lookups
+    await ensureDbConnected();
+
     if (role === 'patient') {
+      await ensureDbConnected();
       const patient = await Patient.findOne({ email: emailTrim });
       if (!patient) {
         return res.status(401).json({ success: false, message: 'Invalid credentials' });
@@ -163,6 +174,7 @@ export async function syncPatient(req, res) {
     if (contactNumber !== undefined) updateData.contactNumber = contactNumber;
     if (profileImage !== undefined) updateData.profileImage = profileImage;
 
+    await ensureDbConnected();
     const patient = await Patient.findByIdAndUpdate(patientId, updateData, {
       new: true,
       runValidators: true,

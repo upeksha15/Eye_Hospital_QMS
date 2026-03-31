@@ -17,7 +17,7 @@ import {
 // will load from backend
 
 const Dashboard = () => {
-  const { user } = useQueue();
+  const { user, doctorStatuses } = useQueue();
   const navigate = useNavigate();
 
   const today = new Date();
@@ -45,19 +45,27 @@ const Dashboard = () => {
   }, []);
 
   const getStatusStyles = (status) => {
-    switch (status) {
-      case 'Active':
+    const s = String(status || '').toLowerCase();
+    switch (s) {
+      case 'active':
+      case 'enabled':
         return 'bg-emerald-50 text-emerald-700 border-emerald-300';
-      case 'Paused':
+      case 'paused':
         return 'bg-amber-50 text-amber-700 border-amber-300';
-      case 'Closed':
+      case 'closed':
         return 'bg-slate-100 text-slate-700 border-slate-300';
-      case 'Inactive':
+      case 'inactive':
         return 'bg-red-50 text-red-600 border-red-300';
       default:
         return 'bg-slate-50 text-slate-700 border-slate-300';
     }
   };
+
+  const activeCount = doctorRooms.filter((d) => {
+    const s = (doctorStatuses && doctorStatuses[d._id]) || d.status || 'Active';
+    const sl = String(s || '').toLowerCase();
+    return sl === 'active' || sl === 'enabled';
+  }).length;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 grid grid-rows-[82px_1fr]">
@@ -102,7 +110,7 @@ const Dashboard = () => {
                     <div className="p-3 rounded-xl bg-white/10"><Activity className="w-6 h-6 text-white" /></div>
                     <div>
                       <p className="text-xs text-white/90 font-medium">Active Queues</p>
-                      <div className="text-2xl font-extrabold text-white">{doctorRooms.filter((d) => (d.status || 'Active') === 'Active').length}</div>
+                      <div className="text-2xl font-extrabold text-white">{activeCount}</div>
                     </div>
                   </div>
 
@@ -137,7 +145,7 @@ const Dashboard = () => {
                   <div className="p-8 text-center col-span-3 text-slate-500">No doctor rooms found.</div>
                 ) : (
                   doctorRooms.map((doctor) => {
-                    const status = doctor.status || 'Active';
+                    const status = (doctorStatuses && doctorStatuses[doctor._id]) || doctor.status || 'Active';
                     const progress = doctor.slotLimit ? Math.min(100, (doctor.slotLimit / Math.max(1, doctor.slotLimit)) * 70) : (status === 'Active' ? 70 : 10);
                     return (
                       <div key={doctor._id} className="relative bg-gradient-to-br from-white to-slate-50 rounded-2xl p-5 shadow-sm hover:shadow-md transition">
@@ -170,7 +178,7 @@ const Dashboard = () => {
                             </button>
                             <button
                               type="button"
-                              onClick={() => navigate('/follow-ups', { state: { doctorId: doctor._id } })}
+                              onClick={() => navigate('/followups', { state: { doctorId: doctor._id } })}
                               className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-slate-100 text-slate-800 border hover:bg-slate-200 transition"
                             >
                               Schedule Follow-Up

@@ -20,6 +20,7 @@ import announcementsRoutes from './routes/announcements.js';
 // ✅ NEW IMPORT
 import doctorRoomRoutes from './routes/doctorRoomRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import noticeRoutes from './routes/noticeRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -59,6 +60,8 @@ app.use('/api/announcements', announcementsRoutes);
 // ✅ NEW ROUTE
 app.use('/api/doctor-rooms', doctorRoomRoutes);
 app.use('/api/admin', adminRoutes);
+// Notices API
+app.use('/api/notices', noticeRoutes);
 
 // ================= Socket.IO =================
 const server = http.createServer(app);
@@ -68,10 +71,17 @@ const io = new Server(server, {
 app.set('io', io);
 initQueueSocket(io);
 
-// ================= Database =================
-connectDB();
+// ================= Database & Start Server =================
+const startServer = async () => {
+  const dbConnected = await connectDB();
 
-// ================= Start Server =================
-server.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+  if (!dbConnected) {
+    console.warn('⚠️ Proceeding without a DB connection. Database operations will error immediately.');
+  }
+
+  server.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+};
+
+startServer();

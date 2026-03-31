@@ -1,6 +1,7 @@
 import { validationResult } from 'express-validator';
 import User from '../models/User.js';
 import Patient from '../models/Patient.js';
+import { ensureDbConnected } from '../../config/db.js';
 
 function stripPassword(userDoc) {
   const obj = userDoc.toObject();
@@ -63,6 +64,7 @@ const user = new User({
     await user.save();
 
     try {
+      await ensureDbConnected();
       await Patient.findOneAndUpdate(
         { nic: nicNumber.trim() },
         {
@@ -236,6 +238,7 @@ export async function updateUserById(req, res) {
     // Sync profileImage to Patient model if it exists
     if (profileImage !== undefined) {
       try {
+        await ensureDbConnected();
         await Patient.findOneAndUpdate(
           { nic: user.nicNumber.trim() },
           { profileImage },
