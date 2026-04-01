@@ -21,6 +21,8 @@ import MyAppointmentsPage from '../Pages/MyAppointmentsPage';
 import QueueStatusPage from '../Pages/QueueStatusPage';
 import UserProfile from '../Pages/User_Profile';
 import PatientFollowUpsPage from '../Pages/PatientFollowUpsPage';
+import { fetchMyAppointments } from '../api/appointmentsApi';
+import { fetchMyQueueStatusToday } from '../api/queueApi';
 
 function getStatusColor(status) {
   switch (status) {
@@ -89,60 +91,105 @@ export default function PatientDashboardLayout() {
   }, []);
 
   const [queueStatus, setQueueStatus] = useState({
-    isInQueue: true,
-    queueNumber: 15,
-    position: 3,
-    estimatedWaitTime: 25,
-    status: 'active',
+    isInQueue: false,
+    queueNumber: null,
+    position: null,
+    estimatedWaitTime: 0,
+    status: 'inactive',
+    doctorName: '',
   });
 
-  const [appointments] = useState({
-    upcoming: [
-      {
-        id: 1,
-        date: '2024-01-15',
-        time: '10:00 AM',
-        doctor: 'Dr. Sarah Johnson',
-        department: 'General Eye Care',
-        status: 'approved',
-        type: 'Regular Checkup',
-      },
-      {
-        id: 2,
-        date: '2024-01-20',
-        time: '02:30 PM',
-        doctor: 'Dr. Michael Chen',
-        department: 'Retina Specialist',
-        status: 'pending',
-        type: 'Follow-up',
-      },
-    ],
-    past: [
-      {
-        id: 3,
-        date: '2023-12-10',
-        time: '11:00 AM',
-        doctor: 'Dr. Sarah Johnson',
-        department: 'General Eye Care',
-        status: 'completed',
-        type: 'Regular Checkup',
-      },
-    ],
-  });
+  const [appointments, setAppointments] = useState({ upcoming: [], past: [] });
+  const [dashLoading, setDashLoading] = useState(false);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (queueStatus.isInQueue && queueStatus.position > 0) {
-        setQueueStatus((prev) => ({
-          ...prev,
-          position: Math.max(0, prev.position - 1),
-          estimatedWaitTime: Math.max(0, prev.estimatedWaitTime - 1),
-        }));
-      }
-    }, 30000);
+    let mounted = true;
+    const load = async () => {
+      setDashLoading(true);
+      try {
+        const data = await fetchMyAppointments();
+        if (!mounted) return;
+        const all = data.appointments || [];
 
-    return () => clearInterval(interval);
-  }, [queueStatus.isInQueue, queueStatus.position]);
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const todayKey = startOfToday.toDateString();
+
+        const upcoming = all
+          .filter((a) => new Date(a.appointmentDate) >= startOfToday && a.status !== 'cancelled')
+          .map((a) => ({
+            id: a._id,
+            date: a.appointmentDate,
+            time: new Date(a.appointmentDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            doctor: a.doctorId?.doctorName || a.doctorId?.fullName || 'Doctor',
+            department: a.doctorId?.specialization || a.doctorId?.speciality || 'General',
+            status: a.status === 'booked' ? 'approved' : a.status,
+            type: (a.visitReason || 'consultation').replace(/_/g, ' '),
+            doctorId: a.doctorId?._id || a.doctorId,
+          }));
+
+        const past = all
+          .filter((a) => new Date(a.appointmentDate) < startOfToday || a.status === 'completed')
+          .map((a) => ({
+            id: a._id,
+            date: a.appointmentDate,
+            time: new Date(a.appointmentDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            doctor: a.doctorId?.doctorName || a.doctorId?.fullName || 'Doctor',
+            department: a.doctorId?.specialization || a.doctorId?.speciality || 'General',
+            status: a.status,
+            type: (a.visitReason || 'consultation').replace(/_/g, ' '),
+          }));
+
+        setAppointments({ upcoming, past });
+
+        const todayAppt = all.find((a) => new Date(a.appointmentDate).toDateString() === todayKey);
+        const todayDoctorId = todayAppt?.doctorId?._id || todayAppt?.doctorId || '';
+        const todayDoctorName =
+          todayAppt?.doctorId?.doctorName || todayAppt?.doctorId?.fullName || '';
+
+        if (todayDoctorId) {
+          try {
+            const q = await fetchMyQueueStatusToday(todayDoctorId);
+            if (!mounted) return;
+            setQueueStatus({
+              isInQueue: Boolean(q?.tokenNumber),
+              queueNumber: q?.tokenNumber || null,
+              position: q?.position ?? null,
+              estimatedWaitTime: q?.estimatedWaitMinutes ?? 0,
+              status: q?.queueStatus || 'inactive',
+              doctorName: todayDoctorName,
+            });
+          } catch {
+            setQueueStatus({
+              isInQueue: false,
+              queueNumber: null,
+              position: null,
+              estimatedWaitTime: 0,
+              status: 'inactive',
+              doctorName: todayDoctorName,
+            });
+          }
+        } else {
+          setQueueStatus({
+            isInQueue: false,
+            queueNumber: null,
+            position: null,
+            estimatedWaitTime: 0,
+            status: 'inactive',
+            doctorName: '',
+          });
+        }
+      } finally {
+        if (mounted) setDashLoading(false);
+      }
+    };
+
+    // load only for dashboard view; other routes render their own pages
+    if (location.pathname === '/dashboard') load();
+    return () => {
+      mounted = false;
+    };
+  }, [location.pathname]);
 
   const handleLogout = () => {
     if (window.confirm('Are you sure you want to logout?')) {
@@ -172,7 +219,11 @@ export default function PatientDashboardLayout() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white rounded-lg p-5 border border-[#E5E7EB] shadow-[0_1px_3px_0_rgba(0,0,0,0.08)]">
+            <button
+              type="button"
+              onClick={() => navigate('/appointments/mine?filter=upcoming')}
+              className="text-left bg-white rounded-lg p-5 border border-[#E5E7EB] shadow-[0_1px_3px_0_rgba(0,0,0,0.08)] hover:shadow-md transition"
+            >
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm mb-1 text-[#6B7280]">Upcoming</p>
@@ -182,8 +233,13 @@ export default function PatientDashboardLayout() {
                   <Calendar size={24} className="text-[#2563EB]" />
                 </div>
               </div>
-            </div>
-            <div className="bg-white rounded-lg p-5 border border-[#E5E7EB] shadow-[0_1px_3px_0_rgba(0,0,0,0.08)]">
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/queue')}
+              className="text-left bg-white rounded-lg p-5 border border-[#E5E7EB] shadow-[0_1px_3px_0_rgba(0,0,0,0.08)] hover:shadow-md transition"
+            >
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm mb-1 text-[#6B7280]">In Queue</p>
@@ -193,8 +249,13 @@ export default function PatientDashboardLayout() {
                   <Activity size={24} className="text-[#0D9488]" />
                 </div>
               </div>
-            </div>
-            <div className="bg-white rounded-lg p-5 border border-[#E5E7EB] shadow-[0_1px_3px_0_rgba(0,0,0,0.08)]">
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/appointments/mine?filter=completed')}
+              className="text-left bg-white rounded-lg p-5 border border-[#E5E7EB] shadow-[0_1px_3px_0_rgba(0,0,0,0.08)] hover:shadow-md transition"
+            >
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm mb-1 text-[#6B7280]">Completed</p>
@@ -204,8 +265,13 @@ export default function PatientDashboardLayout() {
                   <CheckCircle size={24} className="text-[#16A34A]" />
                 </div>
               </div>
-            </div>
-            <div className="bg-white rounded-lg p-5 border border-[#E5E7EB] shadow-[0_1px_3px_0_rgba(0,0,0,0.08)]">
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/queue')}
+              className="text-left bg-white rounded-lg p-5 border border-[#E5E7EB] shadow-[0_1px_3px_0_rgba(0,0,0,0.08)] hover:shadow-md transition"
+            >
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm mb-1 text-[#6B7280]">Wait Time</p>
@@ -217,10 +283,10 @@ export default function PatientDashboardLayout() {
                   <Timer size={24} className="text-[#EA580C]" />
                 </div>
               </div>
-            </div>
+            </button>
           </div>
 
-          {queueStatus.isInQueue && (
+          <div className="bg-[#F0F9FF] rounded-xl shadow-lg border-2 border-[#BAE6FD] p-6">
             <div className="bg-[#F0F9FF] rounded-xl shadow-lg border-2 border-[#BAE6FD] p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -230,20 +296,25 @@ export default function PatientDashboardLayout() {
                   <div>
                     <h3 className="text-xl font-bold text-[#0F4C81]">Current Queue Status</h3>
                     <p className="text-sm text-[#6B7280]">Real-time updates</p>
+                    {queueStatus.doctorName && (
+                      <p className="text-xs text-[#6B7280] mt-1">Today: {queueStatus.doctorName}</p>
+                    )}
                   </div>
                 </div>
                 <div className="bg-[#DCFCE7] px-4 py-2 rounded-full">
-                  <span className="font-semibold text-sm text-[#15803D]">Active</span>
+                  <span className="font-semibold text-sm text-[#15803D]">
+                    {dashLoading ? 'Loading…' : String(queueStatus.status || 'inactive')}
+                  </span>
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="bg-white rounded-lg p-4 border border-[#E5E7EB]">
                   <p className="text-sm mb-1 text-[#6B7280]">Queue Number</p>
-                  <p className="text-3xl font-bold text-[#0F4C81]">#{queueStatus.queueNumber}</p>
+                  <p className="text-3xl font-bold text-[#0F4C81]">{queueStatus.queueNumber || '--'}</p>
                 </div>
                 <div className="bg-white rounded-lg p-4 border border-[#E5E7EB]">
                   <p className="text-sm mb-1 text-[#6B7280]">Position</p>
-                  <p className="text-3xl font-bold text-[#0F4C81]">{queueStatus.position}</p>
+                  <p className="text-3xl font-bold text-[#0F4C81]">{queueStatus.position ?? '--'}</p>
                   <p className="text-xs mt-1 text-[#6B7280]">people ahead</p>
                 </div>
                 <div className="bg-white rounded-lg p-4 border border-[#E5E7EB]">
@@ -259,7 +330,7 @@ export default function PatientDashboardLayout() {
                 </p>
               </div>
             </div>
-          )}
+          </div>
 
           <div className="bg-[#F0F9FF] rounded-xl shadow-md border-2 border-[#BAE6FD] p-6">
             <div className="flex items-center justify-between mb-4">

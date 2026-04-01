@@ -33,12 +33,6 @@ export default function AppointmentCalendar({
   }, [slots]);
 
   const todayStr = formatYMD(nowColombo());
-  const maxAdvanceStr = useMemo(() => {
-    const base = nowColombo();
-    const max = new Date(base);
-    max.setMonth(max.getMonth() + 3);
-    return formatYMD(startOfDayColombo(max));
-  }, []);
 
   const weekdayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const allowedSet = new Set((allowedWeekdays || []).map((s) => String(s || '').toLowerCase()));
@@ -74,26 +68,10 @@ export default function AppointmentCalendar({
     const allowed = allowedSet.size === 0 ? true : allowedSet.has(String(weekdayName).toLowerCase());
     if (!allowed) return;
     if (key < todayStr) return;
-    if (key > maxAdvanceStr) return;
     if (slot.isFull) return;
     if (slot.available <= 0) return;
     onSelectDate(key);
   };
-
-  const prevDisabled = useMemo(() => {
-    const prev = new Date(y, m - 2, 1);
-    const prevKey = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
-    const now = nowColombo();
-    const minKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    return prevKey < minKey;
-  }, [y, m]);
-
-  const nextDisabled = useMemo(() => {
-    const next = new Date(y, m, 1);
-    const nextMonthEnd = new Date(next.getFullYear(), next.getMonth() + 1, 0);
-    const nextMonthEndStr = formatYMD(startOfDayColombo(nextMonthEnd));
-    return nextMonthEndStr > maxAdvanceStr;
-  }, [y, m, maxAdvanceStr]);
 
   return (
     <div className="space-y-4">
@@ -108,8 +86,7 @@ export default function AppointmentCalendar({
           <button
             type="button"
             onClick={() => go(-1)}
-            disabled={prevDisabled}
-            className="p-2 rounded-lg hover:bg-white/10 transition disabled:opacity-40 disabled:cursor-not-allowed"
+            className="p-2 rounded-lg hover:bg-white/10 transition"
             aria-label="Previous month"
           >
             <ChevronLeft className="w-5 h-5" />
@@ -118,8 +95,7 @@ export default function AppointmentCalendar({
           <button
             type="button"
             onClick={() => go(1)}
-            disabled={nextDisabled}
-            className="p-2 rounded-lg hover:bg-white/10 transition disabled:opacity-40 disabled:cursor-not-allowed"
+            className="p-2 rounded-lg hover:bg-white/10 transition"
             aria-label="Next month"
           >
             <ChevronRight className="w-5 h-5" />
@@ -182,23 +158,19 @@ export default function AppointmentCalendar({
             }
 
             const disabled = isPast || !allowed || full || !slot || loading;
-            const beyondWindow = key > maxAdvanceStr;
-            const disabledFinal = disabled || beyondWindow;
 
             return (
               <button
                 key={key}
                 type="button"
-                disabled={disabledFinal}
+                disabled={disabled}
                 onClick={() => handleCell(c)}
                 className={`min-h-[88px] text-left p-2 flex flex-col gap-1 transition rounded-none ${
                   isSelected
                     ? 'bg-gradient-to-br from-blue-500 to-blue-700 text-white ring-2 ring-blue-300 z-10'
                     : !allowed
                       ? 'bg-slate-50/80 cursor-not-allowed opacity-70'
-                      : beyondWindow
-                        ? 'bg-slate-50/80 cursor-not-allowed opacity-70'
-                        : full || isPast
+                      : full || isPast
                         ? 'bg-red-50/50 cursor-not-allowed opacity-70'
                         : 'bg-white hover:bg-blue-50/80 cursor-pointer'
                 }`}

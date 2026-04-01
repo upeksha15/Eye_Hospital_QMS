@@ -16,13 +16,13 @@ import appointmentsRoutes from './routes/appointments.js';
 import queueRoutes from './routes/queue.js';
 import checkinRoutes from './routes/checkin.js';
 import announcementsRoutes from './routes/announcements.js';
+import staffRoutes from './routes/staff.js';
 
 
 // ✅ NEW IMPORT
 import doctorRoomRoutes from './routes/doctorRoomRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import noticeRoutes from './routes/noticeRoutes.js';
-import staffRoutes from './routes/staff.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -59,15 +59,13 @@ app.use('/api/appointments', appointmentsRoutes);
 app.use('/api/queue', queueRoutes);
 app.use('/api/checkin', checkinRoutes);
 app.use('/api/announcements', announcementsRoutes);
+app.use('/api/staff', staffRoutes);
 
 // ✅ NEW ROUTE
 app.use('/api/doctor-rooms', doctorRoomRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/staff', staffRoutes);
 // Notices API
 app.use('/api/notices', noticeRoutes);
-// Staff-specific routes
-app.use('/api/staff', staffRoutes);
 
 // ================= Socket.IO =================
 const server = http.createServer(app);
