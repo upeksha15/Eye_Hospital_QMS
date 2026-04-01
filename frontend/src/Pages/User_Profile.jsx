@@ -11,14 +11,12 @@ import {
   MapPin,
   Home,
   History,
-  Settings,
   Activity,
   Bell,
   Edit2,
   Trash2,
   Save,
   X,
-  Upload,
   Camera,
   FileText
 } from 'lucide-react';
@@ -31,7 +29,6 @@ const UserProfile = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
-  const [profileImage, setProfileImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [user, setUser] = useState({
     _id: '',
@@ -169,7 +166,6 @@ const UserProfile = () => {
         alert('Image size should be less than 5MB');
         return;
       }
-      setProfileImage(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result);
@@ -251,7 +247,6 @@ const UserProfile = () => {
           dob: updatedUser.dob ? new Date(updatedUser.dob).toISOString().split('T')[0] : ''
         });
         setImagePreview(updatedUser.profileImage || null);
-        setProfileImage(null); // Clear the file input
         
         // Sync to auth context to update across all pages
         updatePatient({
@@ -288,7 +283,6 @@ const UserProfile = () => {
     setErrors({});
     setIsEditMode(false);
     setImagePreview(null);
-    setProfileImage(null);
   };
 
   const handleDelete = async () => {

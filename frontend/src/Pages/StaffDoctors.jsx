@@ -1,0 +1,281 @@
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import Navbar from '../components/StaffTopBar';
+import SidebarNav from '../components/StaffSidebar';
+import QueueControls from '../components/QueueControls';
+import WaitingQueue from '../components/WaitingQueue';
+import RecallQueue from '../components/RecallQueue';
+import { useQueue } from '../context/QueueContext';
+import api from '../api/client';
+
+const DOCTOR_ROOMS = [
+  {
+    id: 'dr-silva',
+    name: 'Dr Silva',
+    department: 'General Ophthalmology',
+    room: '101',
+  },
+  {
+    id: 'dr-nimal',
+    name: 'Dr Nimal',
+    department: 'Retina Clinic',
+    room: '102',
+  },
+  {
+    id: 'dr-kasuni',
+    name: 'Dr Kasuni',
+    department: 'Glaucoma Clinic',
+    room: '103',
+  },
+];
+
+const Doctors = () => {
+  const { doctorId } = useParams();
+  const [doctorRooms, setDoctorRooms] = useState([]);
+  const [selectedDoctorObj, setSelectedDoctorObj] = useState(null);
+  const {
+    isActive,
+    currentToken,
+    waitingQueue,
+    recallQueue,
+    removePatientFromQueue,
+    markPatientMissed,
+    doctorStatuses,
+  } = useQueue();
+
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchRooms = async () => {
+        try {
+        const res = await api.get('/api/doctor-rooms');
+        if (!mounted) return;
+        setDoctorRooms(res.data || []);
+      } catch (err) {
+        console.error('Failed to load doctor rooms', err);
+        setDoctorRooms([]);
+      }
+    };
+
+    fetchRooms();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // If a doctorId param is present, try to fetch that doctor's record directly
+  useEffect(() => {
+    let mounted = true;
+    const fetchDoctor = async () => {
+      if (!doctorId) return;
+      try {
+        const res = await api.get(`/api/doctor-rooms/${doctorId}`);
+        if (!mounted) return;
+        setSelectedDoctorObj(res.data || null);
+      } catch (err) {
+        // not found or API error - clear selectedDoctorObj
+        setSelectedDoctorObj(null);
+      }
+    };
+
+    fetchDoctor();
+    return () => {
+      mounted = false;
+    };
+  }, [doctorId]);
+
+  const selectedDoctor =
+    // prefer explicit fetched doctor, then backend list match, then legacy list, then fallbacks
+    selectedDoctorObj ||
+    (doctorRooms && doctorRooms.find((d) => String(d._id) === String(doctorId))) ||
+    DOCTOR_ROOMS.find((d) => d.id === doctorId) ||
+    doctorRooms[0] ||
+    DOCTOR_ROOMS[0];
+
+  // normalize display fields for API vs static entries
+  const displayName = selectedDoctor?.doctorName || selectedDoctor?.name || 'Doctor';
+  const displayDepartment = selectedDoctor?.specialization || selectedDoctor?.department || '';
+
+  const totalCheckedIn = waitingQueue.length + (currentToken ? 1 : 0);
+
+  // derive per-doctor status (falls back to selectedDoctor.status or global isActive)
+  const rawStatus =
+    (selectedDoctor && selectedDoctor._id && doctorStatuses && doctorStatuses[selectedDoctor._id]) ||
+    selectedDoctor?.status ||
+    (isActive ? 'Enabled' : 'Disabled');
+
+  let queueStatus;
+  const rs = String(rawStatus || '').toLowerCase();
+  if (rs === 'enabled') queueStatus = 'Active';
+  else if (rs === 'paused') queueStatus = 'Paused';
+  else if (rs === 'disabled') queueStatus = 'Stopped';
+  else queueStatus = rawStatus;
+  // prefer showing 'Enabled' label rather than 'Active' for clarity
+  if (String(rawStatus || '').toLowerCase() === 'enabled') queueStatus = 'Enabled';
+
+  return (
+    <div className="min-h-screen bg-staff-blue-50 grid grid-rows-[82px_1fr] h-screen">
+      <Navbar />
+
+      <div className="h-full flex overflow-hidden">
+        <SidebarNav />
+
+        <main className="flex-1 overflow-y-auto scrollbar-thin p-6 lg:p-8">
+          <div className="max-w-6xl mx-auto space-y-6">
+              {/* Doctor header and stats */}
+              <section className="grid gap-6 lg:grid-cols-[2fr_1fr] md:grid-cols-1">
+                <div className="bg-gradient-to-r from-blue-50 to-white rounded-2xl shadow-md border border-slate-200 p-6 flex flex-col justify-between border-l-8 border-blue-500">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-[0.2em] mb-1">
+                        Queue Control
+                      </p>
+                      <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight mb-1">
+                        {displayName}
+                      </h1>
+                      <p className="text-sm text-slate-600 font-medium">
+                        {displayDepartment} {displayDepartment ? '·' : ''} Room {selectedDoctor.room}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-bold border ${
+                          queueStatus === 'Active'
+                            ? 'bg-staff-green-50 border-staff-green-100 text-staff-green-600'
+                            : 'bg-amber-50 border-amber-300 text-amber-800'
+                        }`}
+                      >
+                        {queueStatus}
+                      </span>
+                      <button
+                        onClick={() => navigate('/staff-dashboard')}
+                        className="text-xs font-semibold text-staff-blue-600 hover:text-staff-blue-700 hover:underline"
+                      >
+                        Back to Dashboard
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                
+                <div className="grid grid-cols-3 gap-3 md:grid-cols-3 sm:grid-cols-1">
+                  <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-md border border-slate-200/60 p-4">
+                    <p className="text-xs font-semibold text-slate-500 mb-1">
+                      Current Token
+                    </p>
+                    <p className="text-2xl font-extrabold text-slate-900">
+                      {currentToken ? currentToken.token : '--'}
+                    </p>
+                  </div>
+                  <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-md border border-slate-200/60 p-4">
+                    <p className="text-xs font-semibold text-slate-500 mb-1">
+                      Total Checked-In
+                    </p>
+                    <p className="text-2xl font-extrabold text-slate-900">
+                      {totalCheckedIn}
+                    </p>
+                  </div>
+                  <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-md border border-slate-200/60 p-4">
+                    <p className="text-xs font-semibold text-slate-500 mb-1">
+                      Recall Queue
+                    </p>
+                    <p className="text-2xl font-extrabold text-slate-900">
+                      {recallQueue.length}
+                    </p>
+                  </div>
+                </div>
+              </section>
+
+              {/* Queue controls and lists */}
+              <section className="grid grid-cols-[380px_1fr_320px] gap-6 lg:gap-8 lg:grid-cols-[1fr_1fr] lg:[&>*:last-child]:col-span-2 md:grid-cols-1 md:[&>*:last-child]:col-span-1">
+                <QueueControls doctorId={selectedDoctor._id || selectedDoctor.id} />
+                <WaitingQueue />
+                <RecallQueue />
+              </section>
+
+              {/* Patient removal / control table */}
+              <section className="bg-white/80 backdrop-blur-md rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-200/60 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-lg font-extrabold text-slate-900">
+                      Patient Queue Control
+                    </h2>
+                    <p className="text-xs text-slate-500 font-medium">
+                      Remove patients who do not appear when called
+                    </p>
+                  </div>
+                </div>
+
+                {waitingQueue.length === 0 ? (
+                  <div className="py-8 text-center text-sm text-slate-500 font-medium">
+                    No patients currently waiting in the queue.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-sm">
+                      <thead>
+                        <tr className="bg-slate-50">
+                          <th className="px-4 py-2 text-left font-semibold text-slate-600">
+                            Token
+                          </th>
+                          <th className="px-4 py-2 text-left font-semibold text-slate-600">
+                            Patient Name
+                          </th>
+                          <th className="px-4 py-2 text-left font-semibold text-slate-600">
+                            Status
+                          </th>
+                          <th className="px-4 py-2 text-left font-semibold text-slate-600">
+                            Action
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {waitingQueue.map((p) => (
+                          <tr key={p._id || p.id} className="hover:bg-slate-50/70">
+                            <td className="px-4 py-2 font-semibold text-slate-800">
+                              {p.token}
+                            </td>
+                            <td className="px-4 py-2 text-slate-700">
+                              {p.name || 'Walk-in Patient'}
+                            </td>
+                            <td className="px-4 py-2">
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                Checked-In
+                              </span>
+                            </td>
+                            <td className="px-4 py-2 space-x-2">
+                              <button
+                                onClick={() =>
+                                  removePatientFromQueue(
+                                    selectedDoctor._id || selectedDoctor.id,
+                                    p._id || p.id
+                                  )
+                                }
+                                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200"
+                              >
+                                Remove
+                              </button>
+                              <button
+                                onClick={() => markPatientMissed(p.id)}
+                                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-50 text-red-700 border border-red-300 hover:bg-red-100"
+                              >
+                                Mark as Missed
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+};
+
+export default Doctors;
+

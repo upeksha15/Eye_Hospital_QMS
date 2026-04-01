@@ -41,7 +41,7 @@ export default function StaffTopBar() {
 
   return (
     <header className="sticky top-0 z-50 bg-gradient-to-r from-blue-700 via-blue-800 to-cyan-700 text-white shadow-lg border-b border-white/10">
-      <div className="w-full px-4 sm:px-6 lg:px-8 h-[82px] flex items-center justify-between">
+      <div className="w-full px-4 sm:px-6 lg:px-8 h-[70px] flex items-center justify-between">
         
         {/* Left */}
         <div className="flex items-center gap-4">

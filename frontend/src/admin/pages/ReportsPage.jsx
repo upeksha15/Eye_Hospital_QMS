@@ -42,16 +42,29 @@ export default function ReportsPage() {
 
   const downloadPdf = async () => {
     try {
-      const blob = await adminApi.downloadAppointmentsReportPdf({
-        granularity,
-        referenceDate,
-      });
+      const blob = await adminApi.downloadAppointmentsReportPdf({ granularity, referenceDate });
+
+      // if server returned JSON error wrapped as blob, try to decode and show message
+      if (blob.type && blob.type !== 'application/pdf') {
+        try {
+          const text = await blob.text();
+          const json = JSON.parse(text);
+          throw new Error(json.message || 'PDF generation failed');
+        } catch (e) {
+          // If parsing fails, fall through and attempt download anyway
+          console.warn('Downloaded blob is not PDF, attempting to save anyway');
+        }
+      }
+
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `qms-appointments-${granularity}-${referenceDate}.pdf`;
+      document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
+      a.remove();
+      // Delay revoke to ensure browser has started the download
+      setTimeout(() => window.URL.revokeObjectURL(url), 1500);
     } catch (e) {
       setErr(e.message || 'PDF download failed');
     }

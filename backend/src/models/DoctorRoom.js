@@ -32,6 +32,11 @@ const doctorRoomSchema = new mongoose.Schema(
       required: true,
       min: 1,
     },
+    status: {
+      type: String,
+      enum: ['Enabled', 'Paused', 'Disabled'],
+      default: 'Enabled',
+    },
   },
   { timestamps: true }
 );
