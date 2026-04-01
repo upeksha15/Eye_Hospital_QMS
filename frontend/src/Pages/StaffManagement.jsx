@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import StaffSidebar from '../components/StaffSidebar';
 import StaffTopBar from "../components/StaffTopBar";
-import { fetchStaffDirectory } from '../api/staffApi';
+import { getStaffAccounts } from '../api/adminApi';
 
 export default function StaffManagement() {
   const [staffList, setStaffList] = useState([]);
@@ -14,7 +14,7 @@ export default function StaffManagement() {
       try {
         setLoading(true);
         setErr('');
-        const data = await fetchStaffDirectory();
+        const data = await getStaffAccounts();
         if (!mounted) return;
         setStaffList(data.staff || []);
       } catch (e) {
