@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import { useQueue } from "../context/QueueContext";
 import {
   Eye,
   ShieldCheck,
@@ -12,6 +13,7 @@ import {
 
 export default function StaffTopBar() {
   const { staff, logout } = useAuth();
+  const { user: queueUser } = useQueue();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -19,12 +21,23 @@ export default function StaffTopBar() {
     navigate("/");
   };
 
-  const displayStaff = staff || {
+  const displayStaff = staff || queueUser || {
     fullName: "Staff Member",
     role: "Hospital Staff",
     department: "Administration",
-    profilePic: "https://i.pravatar.cc/100?img=12",
+    profileImage: "https://i.pravatar.cc/100?img=12",
   };
+
+  const [avatarSrc, setAvatarSrc] = useState(
+    displayStaff.profileImage || displayStaff.profilePic || displayStaff.profilePicUrl || ''
+  );
+
+  useEffect(() => {
+    const src = (staff && (staff.profileImage || staff.profilePic || staff.profilePicUrl))
+      || (queueUser && (queueUser.profileImage || queueUser.profilePic || queueUser.profilePicUrl))
+      || '';
+    setAvatarSrc(src);
+  }, [staff, queueUser]);
 
   const today = new Date();
   const formattedDate = today.toLocaleDateString("en-GB", {
@@ -90,7 +103,7 @@ export default function StaffTopBar() {
           {/* Profile */}
           <div className="flex items-center gap-3 bg-white/10 border border-white/15 rounded-2xl px-3 py-2 backdrop-blur-md shadow-sm hover:bg-white/15 transition-all">
             <img
-              src={displayStaff.profilePic}
+              src={avatarSrc || displayStaff.profileImage || displayStaff.profilePic || displayStaff.profilePicUrl || ''}
               alt="Staff Avatar"
               className="w-11 h-11 rounded-full object-cover border-2 border-white shadow"
             />

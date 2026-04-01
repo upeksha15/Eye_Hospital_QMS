@@ -12,6 +12,11 @@ const staffAccountSchema = new mongoose.Schema(
       trim: true,
       match: [/^\S+@\S+\.\S+$/, 'Invalid email'],
     },
+    // Optional profile fields used by staff profile UI
+    staffId: { type: String, trim: true },
+    contactNumber: { type: String, trim: true, default: '' },
+    profileImage: { type: String, trim: true, default: '' },
+    dateOfBirth: { type: Date },
     passwordHash: { type: String, required: true },
     role: {
       type: String,

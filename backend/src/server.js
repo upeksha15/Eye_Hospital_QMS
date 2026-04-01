@@ -21,6 +21,7 @@ import announcementsRoutes from './routes/announcements.js';
 import doctorRoomRoutes from './routes/doctorRoomRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import noticeRoutes from './routes/noticeRoutes.js';
+import staffRoutes from './routes/staff.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -62,6 +63,8 @@ app.use('/api/doctor-rooms', doctorRoomRoutes);
 app.use('/api/admin', adminRoutes);
 // Notices API
 app.use('/api/notices', noticeRoutes);
+// Staff-specific routes
+app.use('/api/staff', staffRoutes);
 
 // ================= Socket.IO =================
 const server = http.createServer(app);

@@ -2,11 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/StaffTopBar';
 import SidebarNav from '../components/StaffSidebar';
-import { Mail, Phone, BadgeCheck, CheckCircle, User, UploadCloud, CalendarDays } from 'lucide-react';
+import { Mail, Phone, BadgeCheck, CheckCircle, User, UploadCloud, CalendarDays, Eye, EyeOff } from 'lucide-react';
 import { useQueue } from '../context/QueueContext';
+import { useAuth } from '../hooks/useAuth';
+import { updateStaffData, fetchMe } from '../api/authApi';
+import { changePasswordStaff } from '../api/staffApi';
 
 const Profile = () => {
   const { user, setUser } = useQueue();
+  const { logout } = useAuth();
   const navigate = useNavigate();
   const [saved, setSaved] = useState(false);
 
@@ -23,23 +27,51 @@ const Profile = () => {
     confirmPassword: '',
   });
 
+  const [showPassword, setShowPassword] = useState(false);
+  const [pwErrors, setPwErrors] = useState({ current: '', new: '', confirm: '', general: '' });
+
   useEffect(() => {
     if (!user) return;
 
     setFormData({
-      fullName: user.name || '',
+      fullName: user.fullName || user.name || '',
       staffId: user.staffId || String(user.id || ''),
       email: user.email || '',
-      phone: user.phone || '',
-      profilePic: user.profilePic || user.profilePicUrl || '',
-      dob: user.dob || user.dateOfBirth || '',
+      phone: user.contactNumber || user.phone || '',
+      profilePic: user.profileImage || user.profilePic || user.profilePicUrl || '',
+      dob: user.dateOfBirth ? (new Date(user.dateOfBirth)).toISOString().slice(0,10) : (user.dob || ''),
     });
   }, [user]);
+
+  // Fetch fresh staff info when the page loads and populate the form
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await fetchMe();
+        const u = res.user || res.staff || res.patient || null;
+        if (!u) return;
+        const normalized = { ...u, userType: res.userType || u.userType || 'staff' };
+        if (mounted) setUser(normalized);
+      } catch (err) {
+        // ignore — user may not be authenticated
+        console.debug('fetchMe failed', err?.message || err);
+      }
+    })();
+    return () => {
+      mounted = false;
+    };
+  }, [setUser]);
 
 
   const handleChange = (field) => (e) => {
     setFormData((prev) => ({ ...prev, [field]: e.target.value }));
     if (saved) setSaved(false);
+    // clear inline errors for password fields
+    if (field === 'currentPassword' || field === 'newPassword' || field === 'confirmPassword') {
+      const key = field === 'confirmPassword' ? 'confirm' : field === 'newPassword' ? 'new' : 'current';
+      setPwErrors((prev) => ({ ...prev, [key]: '', general: '' }));
+    }
   };
 
   const handlePhotoChange = (e) => {
@@ -53,42 +85,100 @@ const Profile = () => {
     reader.readAsDataURL(file);
   };
 
-  const handlePasswordSubmit = (e) => {
+  const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     const { currentPassword, newPassword, confirmPassword } = formData;
+    // client-side validation with inline errors
+    const nextErrors = { current: '', new: '', confirm: '', general: '' };
+    let hasError = false;
+    if (!currentPassword || currentPassword.trim() === '') {
+      nextErrors.current = 'Enter current password';
+      hasError = true;
+    }
     if (!newPassword || newPassword.length < 6) {
-      alert('New password must be at least 6 characters');
-      return;
+      nextErrors.new = 'New password must be at least 6 characters';
+      hasError = true;
     }
     if (newPassword !== confirmPassword) {
-      alert('New password and confirmation do not match');
+      nextErrors.confirm = 'New password and confirmation do not match';
+      hasError = true;
+    }
+    if (hasError) {
+      setPwErrors(nextErrors);
       return;
     }
 
-    // Frontend-only: if existing user.password present, check current
-    if (user && user.password && currentPassword !== user.password) {
-      alert('Current password is incorrect (frontend check)');
-      return;
+    try {
+      const res = await changePasswordStaff({ currentPassword, newPassword });
+      if (res && res.success) {
+        setFormData((prev) => ({ ...prev, currentPassword: '', newPassword: '', confirmPassword: '' }));
+        // clear any previous errors
+        setPwErrors({ current: '', new: '', confirm: '', general: '' });
+        // logout user to invalidate session locally
+        try {
+          setUser(null);
+        } catch (e) {}
+        try {
+          logout();
+        } catch (e) {}
+        alert('Password updated — you have been logged out. Please log in again.');
+        navigate('/');
+      } else {
+        // try to map server-side field errors to inline fields
+        const msg = res?.message || res?.error || 'Failed to change password';
+        const errors = res?.errors || res?.data?.errors || null;
+        if (errors && typeof errors === 'object') {
+          setPwErrors((prev) => ({
+            current: errors.currentPassword || errors.current || '',
+            new: errors.newPassword || errors.new || '',
+            confirm: errors.confirmPassword || errors.confirm || '',
+            general: msg || '',
+          }));
+        } else {
+          setPwErrors((prev) => ({ ...prev, general: msg }));
+        }
+      }
+    } catch (err) {
+      console.error('changePassword error', err);
+      const data = err?.response?.data || {};
+      const msg = data?.message || data?.error || 'Failed to change password';
+      const errors = data?.errors || null;
+      if (errors && typeof errors === 'object') {
+        setPwErrors({
+          current: errors.currentPassword || errors.current || '',
+          new: errors.newPassword || errors.new || '',
+          confirm: errors.confirmPassword || errors.confirm || '',
+          general: msg || '',
+        });
+      } else {
+        setPwErrors((prev) => ({ ...prev, general: msg }));
+      }
     }
-
-    // Update local user object only (frontend-only)
-    setUser({ ...user, password: newPassword });
-    setFormData((prev) => ({ ...prev, currentPassword: '', newPassword: '', confirmPassword: '' }));
-    alert('Password updated locally (frontend-only)');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setUser({
-      ...user,
-      name: formData.fullName,
-      staffId: formData.staffId,
-      email: formData.email,
-      phone: formData.phone,
-      profilePic: formData.profilePic,
-      dob: formData.dob,
-    });
-    setSaved(true);
+    try {
+      const body = {
+        fullName: formData.fullName,
+        email: formData.email,
+        contactNumber: formData.phone,
+        dateOfBirth: formData.dob || null,
+        profileImage: formData.profilePic || null,
+        staffId: formData.staffId,
+      };
+      const res = await updateStaffData(body);
+      const returned = res.user || res.staff || (res.data && (res.data.user || res.data.staff)) || null;
+      if (returned) {
+        setUser(returned);
+      } else {
+        setUser({ ...user, fullName: formData.fullName, email: formData.email });
+      }
+      setSaved(true);
+    } catch (err) {
+      console.error('Failed to update staff profile', err);
+      alert(err?.response?.data?.message || 'Failed to save profile');
+    }
   };
 
   const profileFields = [formData.fullName, formData.email, formData.phone, formData.dob, formData.profilePic];
@@ -234,10 +324,33 @@ const Profile = () => {
 
                 <div>
                   <h3 className="text-lg font-semibold mb-3">Change Password</h3>
-                  <form onSubmit={handlePasswordSubmit} className="grid gap-3 max-w-xl">
-                    <input type="password" placeholder="Current password" value={formData.currentPassword} onChange={handleChange('currentPassword')} className="px-4 py-3 border rounded-xl bg-slate-50" />
-                    <input type="password" placeholder="New password" value={formData.newPassword} onChange={handleChange('newPassword')} className="px-4 py-3 border rounded-xl bg-slate-50" />
-                    <input type="password" placeholder="Confirm new password" value={formData.confirmPassword} onChange={handleChange('confirmPassword')} className="px-4 py-3 border rounded-xl bg-slate-50" />
+                  <form onSubmit={handlePasswordSubmit} className="grid gap-3 max-w-xl relative">
+                    <div className="relative">
+                      <input type={showPassword ? 'text' : 'password'} placeholder="Current password" value={formData.currentPassword} onChange={handleChange('currentPassword')} className="w-full px-4 py-3 border rounded-xl bg-slate-50 pr-10" />
+                      <button type="button" onClick={() => setShowPassword((s) => !s)} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500">
+                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                      {pwErrors.current && <div className="text-sm text-red-600 mt-1">{pwErrors.current}</div>}
+                    </div>
+
+                    <div className="relative">
+                      <input type={showPassword ? 'text' : 'password'} placeholder="New password" value={formData.newPassword} onChange={handleChange('newPassword')} className="w-full px-4 py-3 border rounded-xl bg-slate-50 pr-10" />
+                      <div className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500">
+                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </div>
+                      {pwErrors.new && <div className="text-sm text-red-600 mt-1">{pwErrors.new}</div>}
+                    </div>
+
+                    <div className="relative">
+                      <input type={showPassword ? 'text' : 'password'} placeholder="Confirm new password" value={formData.confirmPassword} onChange={handleChange('confirmPassword')} className="w-full px-4 py-3 border rounded-xl bg-slate-50 pr-10" />
+                      <div className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500">
+                        {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </div>
+                      {pwErrors.confirm && <div className="text-sm text-red-600 mt-1">{pwErrors.confirm}</div>}
+                    </div>
+
+                    {pwErrors.general && <div className="text-sm text-red-600">{pwErrors.general}</div>}
+
                     <div className="flex justify-end">
                       <button type="submit" className="px-5 py-2 rounded-xl bg-emerald-600 text-white font-semibold">Change Password</button>
                     </div>
