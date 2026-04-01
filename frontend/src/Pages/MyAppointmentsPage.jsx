@@ -1,16 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { fetchMyAppointments } from '../api/appointmentsApi';
-import Navbar from '../components/Navbar';
-import TopBar from '../components/TopBar';
-import HoursStrip from '../components/HoursStrip';
-import NoticeBar from '../components/NoticeBar';
-import { bookingStrings } from '../i18n/bookingStrings';
-import { useAuth } from '../hooks/useAuth';
 
 export default function MyAppointmentsPage() {
-  const { patient } = useAuth();
-  const strings = bookingStrings.en;
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -28,11 +20,7 @@ export default function MyAppointmentsPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#EBF4FF] font-['Nunito']">
-      <TopBar lang="en" onLangChange={() => {}} strings={strings} />
-      <Navbar strings={strings} patient={patient} />
-      <HoursStrip strings={strings} />
-      <NoticeBar />
+    <div className="min-h-full bg-gray-50 font-['Nunito']">
       <div className="max-w-4xl mx-auto px-4 py-10">
         <Link to="/appointments/book" className="text-blue-600 font-semibold text-sm hover:underline">
           ← Back to booking

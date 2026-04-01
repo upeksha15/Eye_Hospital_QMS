@@ -1,9 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import TopBar from '../components/TopBar';
-import Navbar from '../components/Navbar';
-import HoursStrip from '../components/HoursStrip';
-import NoticeBar from '../components/NoticeBar';
 import HeroSection from '../components/HeroSection';
 import StepBar from '../components/StepBar';
 import DoctorDropdown from '../components/DoctorDropdown';
@@ -213,11 +209,7 @@ export default function BookAppointmentPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#EBF4FF] font-['Nunito'] text-slate-800">
-      <TopBar lang={lang} onLangChange={setLang} strings={strings} />
-      <Navbar strings={strings} patient={patient} />
-      <HoursStrip strings={strings} />
-      <NoticeBar />
+    <div className="min-h-full bg-gray-50 font-['Nunito'] text-slate-800">
       <HeroSection strings={strings} consultantCount={doctors.length} />
       <StepBar strings={strings} />
 

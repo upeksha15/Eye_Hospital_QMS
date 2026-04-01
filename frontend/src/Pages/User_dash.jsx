@@ -158,7 +158,7 @@ const UserDashboard = () => {
   const sidebarItems = [
     { id: 'dashboard', icon: Home, label: 'Dashboard', path: '/dashboard' },
     { id: 'appointments', icon: Calendar, label: 'Get Appointment', path: '/appointments/book' },
-    { id: 'history', icon: History, label: 'Past Appointments', path: '/appointments/mine' },
+    { id: 'history', icon: History, label: 'My Appointments', path: '/appointments/mine' },
     { id: 'queue', icon: Activity, label: 'Queue Status', path: '/queue' },
     { id: 'profile', icon: User, label: 'Profile', path: '/profile' },
   ];
