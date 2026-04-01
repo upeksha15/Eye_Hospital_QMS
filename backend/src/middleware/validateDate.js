@@ -5,8 +5,9 @@ import {
   formatYMD,
   nowColombo,
 } from '../utils/dateUtils.js';
+import SystemSettings from '../models/SystemSettings.js';
 
-export function validateAppointmentDate(req, res, next) {
+export async function validateAppointmentDate(req, res, next) {
   try {
     const { appointmentDate } = req.body;
     if (!appointmentDate) {
@@ -50,6 +51,25 @@ export function validateAppointmentDate(req, res, next) {
           });
         }
       }
+    }
+
+    // Enforce max advance booking window (default: 90 days ≈ 3 months)
+    // If admin has configured maxAdvanceBookingDays, use that.
+    let maxDays = 90;
+    try {
+      const s = await SystemSettings.findOne().select('maxAdvanceBookingDays').lean();
+      if (s?.maxAdvanceBookingDays && Number.isFinite(Number(s.maxAdvanceBookingDays))) {
+        maxDays = Number(s.maxAdvanceBookingDays);
+      }
+    } catch {
+      // ignore settings load errors; use default
+    }
+    const maxDate = new Date(todayStart.getTime() + maxDays * 24 * 60 * 60 * 1000);
+    if (dayStart > maxDate) {
+      return res.status(400).json({
+        success: false,
+        message: `Appointments can only be booked up to ${maxDays} days in advance`,
+      });
     }
 
     const totalSlots = totalSlotsForDate(dayStart);
