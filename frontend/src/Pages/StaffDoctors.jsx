@@ -8,39 +8,18 @@ import RecallQueue from '../components/RecallQueue';
 import { useQueue } from '../context/QueueContext';
 import api from '../api/client';
 
-const DOCTOR_ROOMS = [
-  {
-    id: 'dr-silva',
-    name: 'Dr Silva',
-    department: 'General Ophthalmology',
-    room: '101',
-  },
-  {
-    id: 'dr-nimal',
-    name: 'Dr Nimal',
-    department: 'Retina Clinic',
-    room: '102',
-  },
-  {
-    id: 'dr-kasuni',
-    name: 'Dr Kasuni',
-    department: 'Glaucoma Clinic',
-    room: '103',
-  },
-];
-
 const Doctors = () => {
   const { doctorId } = useParams();
   const [doctorRooms, setDoctorRooms] = useState([]);
   const [selectedDoctorObj, setSelectedDoctorObj] = useState(null);
   const {
-    isActive,
     currentToken,
     waitingQueue,
     recallQueue,
     removePatientFromQueue,
     markPatientMissed,
     doctorStatuses,
+    setActiveDoctorId,
   } = useQueue();
 
   const navigate = useNavigate();
@@ -86,12 +65,16 @@ const Doctors = () => {
   }, [doctorId]);
 
   const selectedDoctor =
-    // prefer explicit fetched doctor, then backend list match, then legacy list, then fallbacks
+    // prefer explicit fetched doctor, then backend list match, then first backend record
     selectedDoctorObj ||
     (doctorRooms && doctorRooms.find((d) => String(d._id) === String(doctorId))) ||
-    DOCTOR_ROOMS.find((d) => d.id === doctorId) ||
     doctorRooms[0] ||
-    DOCTOR_ROOMS[0];
+    null;
+
+  useEffect(() => {
+    const id = selectedDoctor?._id ? String(selectedDoctor._id) : '';
+    if (id) setActiveDoctorId(id);
+  }, [selectedDoctor?._id, setActiveDoctorId]);
 
   // normalize display fields for API vs static entries
   const displayName = selectedDoctor?.doctorName || selectedDoctor?.name || 'Doctor';
@@ -103,7 +86,7 @@ const Doctors = () => {
   const rawStatus =
     (selectedDoctor && selectedDoctor._id && doctorStatuses && doctorStatuses[selectedDoctor._id]) ||
     selectedDoctor?.status ||
-    (isActive ? 'Enabled' : 'Disabled');
+    'Enabled';
 
   let queueStatus;
   const rs = String(rawStatus || '').toLowerCase();
@@ -113,6 +96,22 @@ const Doctors = () => {
   else queueStatus = rawStatus;
   // prefer showing 'Enabled' label rather than 'Active' for clarity
   if (String(rawStatus || '').toLowerCase() === 'enabled') queueStatus = 'Enabled';
+
+  if (!selectedDoctor) {
+    return (
+      <div className="min-h-screen bg-staff-blue-50 grid grid-rows-[82px_1fr] h-screen">
+        <Navbar />
+        <div className="h-full flex overflow-hidden">
+          <SidebarNav />
+          <main className="flex-1 overflow-y-auto scrollbar-thin p-6 lg:p-8">
+            <div className="max-w-4xl mx-auto bg-white rounded-2xl border border-slate-200 p-8 text-center text-slate-600">
+              No doctor rooms found. Add a doctor room in Queue Management first.
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-staff-blue-50 grid grid-rows-[82px_1fr] h-screen">
@@ -135,7 +134,7 @@ const Doctors = () => {
                         {displayName}
                       </h1>
                       <p className="text-sm text-slate-600 font-medium">
-                        {displayDepartment} {displayDepartment ? '·' : ''} Room {selectedDoctor.room}
+                        {displayDepartment} {displayDepartment ? '·' : ''} Room {selectedDoctor?.room || '--'}
                       </p>
                     </div>
                     <div className="flex flex-col items-end gap-2">
@@ -189,7 +188,7 @@ const Doctors = () => {
 
               {/* Queue controls and lists */}
               <section className="grid grid-cols-[380px_1fr_320px] gap-6 lg:gap-8 lg:grid-cols-[1fr_1fr] lg:[&>*:last-child]:col-span-2 md:grid-cols-1 md:[&>*:last-child]:col-span-1">
-                <QueueControls doctorId={selectedDoctor._id || selectedDoctor.id} />
+                <QueueControls doctorId={selectedDoctor?._id || ''} />
                 <WaitingQueue />
                 <RecallQueue />
               </section>
@@ -248,7 +247,7 @@ const Doctors = () => {
                               <button
                                 onClick={() =>
                                   removePatientFromQueue(
-                                    selectedDoctor._id || selectedDoctor.id,
+                                    selectedDoctor?._id || '',
                                     p._id || p.id
                                   )
                                 }
@@ -257,7 +256,7 @@ const Doctors = () => {
                                 Remove
                               </button>
                               <button
-                                onClick={() => markPatientMissed(p.id)}
+                                onClick={() => markPatientMissed(p._id || p.id)}
                                 className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-50 text-red-700 border border-red-300 hover:bg-red-100"
                               >
                                 Mark as Missed

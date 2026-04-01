@@ -4,7 +4,7 @@ import { useQueue } from '../context/QueueContext';
 import Navbar from '../components/StaffTopBar';
 import { bookingStrings } from '../i18n/bookingStrings';
 import SidebarNav from '../components/StaffSidebar';
-import axios from 'axios';
+import api from '../api/client';
 import {
   Users,
   CalendarDays,
@@ -25,12 +25,12 @@ const Dashboard = () => {
   const [doctorRooms, setDoctorRooms] = useState([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
 
-  const API_URL = "http://localhost:5000/api/doctor-rooms";
+  const API_URL = "/api/doctor-rooms";
 
   const fetchDoctorRooms = async () => {
     try {
       setLoadingRooms(true);
-      const res = await axios.get(API_URL);
+      const res = await api.get(API_URL);
       setDoctorRooms(res.data || []);
     } catch (err) {
       console.error('Failed to load doctor rooms', err);

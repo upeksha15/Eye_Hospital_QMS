@@ -51,7 +51,7 @@ export default function MyAppointmentsPage() {
               >
                 <p className="font-semibold text-slate-900">{a.bookingRef}</p>
                 <p className="text-sm text-slate-600 mt-1">
-                  {a.doctorId?.fullName} · {new Date(a.appointmentDate).toLocaleDateString()}
+                  {a.doctorId?.doctorName || a.doctorId?.fullName || 'Doctor'} · {new Date(a.appointmentDate).toLocaleDateString()}
                 </p>
                 <p className="text-xs text-slate-500 mt-1 capitalize">{a.status?.replace('_', ' ')}</p>
               </li>

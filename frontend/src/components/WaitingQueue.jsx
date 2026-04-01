@@ -36,7 +36,7 @@ const WaitingQueue = () => {
           </li>
         ) : (
           waitingQueue.map((p, index) => (
-            <li key={p.id} className="flex justify-between items-center p-4 bg-gradient-to-r from-white to-blue-50/50 border border-slate-200/60 rounded-xl transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-200/30 hover:border-blue-300 border-l-4 border-l-blue-500 group">
+            <li key={p._id || p.id} className="flex justify-between items-center p-4 bg-gradient-to-r from-white to-blue-50/50 border border-slate-200/60 rounded-xl transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-200/30 hover:border-blue-300 border-l-4 border-l-blue-500 group">
               <div className="flex items-center gap-4 flex-1">
                 <div className="flex items-center justify-center w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg text-white font-bold text-sm shadow-sm">
                   #{index + 1}
@@ -44,6 +44,7 @@ const WaitingQueue = () => {
                 <div className="flex flex-col flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-3 py-1 rounded-lg font-bold text-lg shadow-md">{p.token}</span>
+                    <span className="text-xs font-semibold text-slate-700 truncate">{p.name}</span>
                     <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-md text-xs font-semibold">Check-In</span>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-gray-500">

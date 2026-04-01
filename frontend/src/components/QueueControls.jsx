@@ -1,27 +1,22 @@
 import React from 'react';
 import { useQueue } from '../context/QueueContext';
-import api from '../api/client';
 
 const QueueControls = ({ doctorId }) => {
   const { 
-    isActive, 
     currentToken, 
     timer, 
-    enableQueue, 
-    disableQueue, 
     pauseQueue,
     resumeQueue,
     enableDoctor,
     disableDoctor,
     callNext, 
     skipToken, 
-    simulateJoin,
     doctorStatuses,
   } = useQueue();
 
-  const status = doctorId ? (doctorStatuses || {})[doctorId] : (isActive ? 'Enabled' : 'Disabled');
+  const status = doctorId ? (doctorStatuses || {})[doctorId] : 'Enabled';
   // keep the serving panel visible for Enabled or Paused, only hide when Disabled
-  const localActive = doctorId ? (String(status) === 'Enabled' || String(status) === 'Paused') : isActive;
+  const localActive = String(status) === 'Enabled' || String(status) === 'Paused';
 
   if (!localActive) {
     return (
@@ -39,10 +34,7 @@ const QueueControls = ({ doctorId }) => {
           className="w-full px-6 py-4 bg-blue-600 text-white font-bold text-base rounded-xl shadow-xl border-2 border-blue-700 hover:bg-blue-700 hover:border-blue-800 hover:shadow-2xl hover:border-white/30 transition-all duration-200 hover:-translate-y-1 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2" 
           onClick={async () => {
             try {
-              if (!doctorId) return enableQueue();
-              // optimistically update UI
-              enableDoctor(doctorId);
-              await api.post(`/api/doctor-rooms/${doctorId}/enable`);
+              await enableDoctor(doctorId);
             } catch (err) {
               console.error('Enable queue failed', err);
             }
@@ -78,10 +70,7 @@ const QueueControls = ({ doctorId }) => {
               className="px-6 py-3 bg-red-600 border-[3px] border-red-700 text-white rounded-xl text-base font-black transition-all hover:bg-red-700 hover:border-red-800 hover:shadow-xl active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg" 
               onClick={async () => {
                 try {
-                  if (!doctorId) return disableQueue();
-                  // optimistically update UI
-                  disableDoctor(doctorId);
-                  await api.post(`/api/doctor-rooms/${doctorId}/disable`);
+                  await disableDoctor(doctorId);
                 } catch (err) {
                   console.error('Disable queue failed', err);
                 }
@@ -98,17 +87,11 @@ const QueueControls = ({ doctorId }) => {
                     onClick={async () => {
                       try {
                         if (doctorId) {
-                          // optimistically update UI first
                           if (isPaused) {
-                            resumeQueue(doctorId);
-                            try { await api.post(`/api/doctor-rooms/${doctorId}/resume`); } catch (e) { console.error('Resume API failed', e); }
+                            await resumeQueue(doctorId);
                           } else {
-                            pauseQueue(doctorId);
-                            try { await api.post(`/api/doctor-rooms/${doctorId}/pause`); } catch (e) { console.error('Pause API failed', e); }
+                            await pauseQueue(doctorId);
                           }
-                        } else {
-                          // global toggle
-                          if (isActive) disableQueue(); else enableQueue();
                         }
                       } catch (err) {
                         console.error('Toggle pause/resume failed', err);
@@ -182,15 +165,9 @@ const QueueControls = ({ doctorId }) => {
 
       {/* Dev Tool / Simulate */}
       <div className="bg-gray-50 rounded-xl border-2 border-dashed border-gray-300 shadow-sm p-4">
-        <button 
-          className="w-full px-5 py-3 bg-white border-2 border-gray-400 text-gray-800 rounded-lg text-sm font-bold transition-all hover:bg-gray-50 hover:border-gray-500 hover:shadow-md active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2 shadow-sm" 
-          onClick={() => simulateJoin(doctorId)}
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Simulate New Patient
-        </button>
+        <p className="text-xs text-slate-600 font-medium text-center">
+          Patients join the queue by checking in from their account.
+        </p>
       </div>
     </div>
   );

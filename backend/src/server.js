@@ -14,6 +14,7 @@ import doctorsRoutes from './routes/doctors.js';
 import slotsRoutes from './routes/slots.js';
 import appointmentsRoutes from './routes/appointments.js';
 import queueRoutes from './routes/queue.js';
+import checkinRoutes from './routes/checkin.js';
 import announcementsRoutes from './routes/announcements.js';
 
 
@@ -55,6 +56,7 @@ app.use('/api/doctors', doctorsRoutes);
 app.use('/api/slots', slotsRoutes);
 app.use('/api/appointments', appointmentsRoutes);
 app.use('/api/queue', queueRoutes);
+app.use('/api/checkin', checkinRoutes);
 app.use('/api/announcements', announcementsRoutes);
 
 // ✅ NEW ROUTE

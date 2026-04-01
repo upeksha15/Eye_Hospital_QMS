@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import Appointment from '../models/Appointment.js';
 import DailySlot from '../models/DailySlot.js';
 import Patient from '../models/Patient.js';
+import DoctorRoom from '../models/DoctorRoom.js';
 import { formatYMD, nowColombo } from '../utils/dateUtils.js';
 
 async function generateBookingRef() {
@@ -71,7 +72,7 @@ export async function createAppointment(req, res) {
     }
 
     const populated = await Appointment.findById(appointment._id)
-      .populate('doctorId', 'fullName speciality room initials status')
+      .populate({ path: 'doctorId', model: 'DoctorRoom', select: 'doctorName specialization room status' })
       .lean();
 
     // Emit socket event to notify clients about slot change for this doctor/date
@@ -105,7 +106,7 @@ export async function createAppointment(req, res) {
 export async function getMyAppointments(req, res) {
   try {
     const list = await Appointment.find({ patientId: req.user._id })
-      .populate('doctorId', 'fullName speciality room initials status')
+      .populate({ path: 'doctorId', model: 'DoctorRoom', select: 'doctorName specialization room status' })
       .sort({ appointmentDate: -1 })
       .lean();
     res.json({ success: true, appointments: list });
@@ -121,7 +122,7 @@ export async function getAppointmentById(req, res) {
       _id: req.params.id,
       patientId: req.user._id,
     })
-      .populate('doctorId', 'fullName speciality room initials status')
+      .populate({ path: 'doctorId', model: 'DoctorRoom', select: 'doctorName specialization room status' })
       .lean();
 
     if (!appt) {

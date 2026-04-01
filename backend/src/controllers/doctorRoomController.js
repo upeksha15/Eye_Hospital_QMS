@@ -1,5 +1,8 @@
 import DoctorRoom from "../models/DoctorRoom.js";
 
+const CHECKIN_WINDOW_MINUTES = 30;
+const CHECKIN_WINDOW_MS = CHECKIN_WINDOW_MINUTES * 60 * 1000;
+
 export const createDoctorRoom = async (req, res) => {
   try {
     const { doctorName, room, slotLimit, queueLimit, specialization, availability } = req.body;
@@ -109,8 +112,25 @@ export const getSpecializations = async (req, res) => {
   // --- status controls ---
   export const enableDoctorRoom = async (req, res) => {
     try {
-      const updated = await DoctorRoom.findByIdAndUpdate(req.params.id, { status: 'Enabled' }, { new: true });
+      const enabledAt = new Date();
+      const updated = await DoctorRoom.findByIdAndUpdate(
+        req.params.id,
+        { status: 'Enabled', queueEnabledAt: enabledAt },
+        { new: true }
+      );
       if (!updated) return res.status(404).json({ message: 'Doctor room not found' });
+    try {
+      const io = req.app.get('io');
+      io?.to(`queue:${String(updated._id)}`).emit('queue:status', {
+        doctorId: String(updated._id),
+        status: 'Enabled',
+        queueEnabledAt: enabledAt.toISOString(),
+        checkinClosesAt: new Date(enabledAt.getTime() + CHECKIN_WINDOW_MS).toISOString(),
+        checkinWindowMinutes: CHECKIN_WINDOW_MINUTES,
+      });
+    } catch (e) {
+      // ignore socket emit errors
+    }
       res.status(200).json(updated);
     } catch (err) {
       console.error('Enable Doctor Room Error:', err);
@@ -122,6 +142,12 @@ export const getSpecializations = async (req, res) => {
     try {
       const updated = await DoctorRoom.findByIdAndUpdate(req.params.id, { status: 'Disabled' }, { new: true });
       if (!updated) return res.status(404).json({ message: 'Doctor room not found' });
+    try {
+      const io = req.app.get('io');
+      io?.to(`queue:${String(updated._id)}`).emit('queue:status', { doctorId: String(updated._id), status: 'Disabled' });
+    } catch (e) {
+      // ignore socket emit errors
+    }
       res.status(200).json(updated);
     } catch (err) {
       console.error('Disable Doctor Room Error:', err);
@@ -133,6 +159,12 @@ export const getSpecializations = async (req, res) => {
     try {
       const updated = await DoctorRoom.findByIdAndUpdate(req.params.id, { status: 'Paused' }, { new: true });
       if (!updated) return res.status(404).json({ message: 'Doctor room not found' });
+    try {
+      const io = req.app.get('io');
+      io?.to(`queue:${String(updated._id)}`).emit('queue:status', { doctorId: String(updated._id), status: 'Paused' });
+    } catch (e) {
+      // ignore socket emit errors
+    }
       res.status(200).json(updated);
     } catch (err) {
       console.error('Pause Doctor Room Error:', err);
@@ -144,6 +176,12 @@ export const getSpecializations = async (req, res) => {
     try {
       const updated = await DoctorRoom.findByIdAndUpdate(req.params.id, { status: 'Enabled' }, { new: true });
       if (!updated) return res.status(404).json({ message: 'Doctor room not found' });
+    try {
+      const io = req.app.get('io');
+      io?.to(`queue:${String(updated._id)}`).emit('queue:status', { doctorId: String(updated._id), status: 'Enabled' });
+    } catch (e) {
+      // ignore socket emit errors
+    }
       res.status(200).json(updated);
     } catch (err) {
       console.error('Resume Doctor Room Error:', err);

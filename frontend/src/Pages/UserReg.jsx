@@ -127,9 +127,6 @@ const EyeCareRegistration = () => {
     setIsSubmitting(true);
     setErrors({});
 
-    const nic = formData.nicNumber;
-    const plainPassword = formData.password;
-
     try {
       const response = await axios.post('http://localhost:5000/api/users/register', {
         fullName: formData.fullName,
@@ -175,7 +172,10 @@ const EyeCareRegistration = () => {
       if (error.response) {
         // Server responded with error
         const serverErrors = error.response.data.errors || [];
-        const errorMessage = error.response.data.message || 'Registration failed';
+        const errorMessage =
+          error.response.data.error ||
+          error.response.data.message ||
+          'Registration failed';
         
         // Handle validation errors from server
         if (serverErrors.length > 0) {
@@ -188,6 +188,12 @@ const EyeCareRegistration = () => {
           });
           setErrors(newErrors);
         } else {
+          // Map backend duplicate messages to field-level messages when possible.
+          if (/email/i.test(errorMessage)) {
+            setErrors((prev) => ({ ...prev, email: errorMessage }));
+          } else if (/nic/i.test(errorMessage)) {
+            setErrors((prev) => ({ ...prev, nicNumber: errorMessage }));
+          }
           alert(errorMessage);
         }
       } else if (error.request) {

@@ -1,28 +1,22 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useCallback, useEffect, useContext, useState } from 'react';
 import api from '../api/client';
+import { useSocket } from '../hooks/useSocket';
+import { fetchQueueBoardToday } from '../api/queueApi';
 
 const QueueContext = createContext();
 
-const SAMPLE_PATIENT_NAMES = [
-  'Nimal Perera',
-  'Kasuni Silva',
-  'Amal Perera',
-  'Ishara Fernando',
-  'Sajith Jayasuriya',
-  'Tharushi Lakmini',
-];
-
 export const QueueProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [isActive, setIsActive] = useState(false);
+
+  // Staff screens operate on one active doctor at a time.
+  const [activeDoctorId, setActiveDoctorId] = useState('');
+
   const [doctorStatuses, setDoctorStatuses] = useState({});
-  const [tokenNumber, setTokenNumber] = useState(1);
   const [waitingQueue, setWaitingQueue] = useState([]);
   const [recallQueue, setRecallQueue] = useState([]);
   const [currentToken, setCurrentToken] = useState(null);
   const [timer, setTimer] = useState('00:00');
   const [toasts, setToasts] = useState([]);
-  const [patientSeed, setPatientSeed] = useState(0);
 
   // --- Toast Logic ---
   const addToast = (message, type) => {
@@ -62,105 +56,65 @@ export const QueueProvider = ({ children }) => {
     return () => clearInterval(interval);
   }, [currentToken]);
 
-  // --- Queue Logic ---
-  const formatToken = (num) => `E-${String(num).padStart(3, '0')}`;
+  const setDoctorStatus = useCallback((doctorId, status) => {
+    setDoctorStatuses((prev) => ({ ...prev, [doctorId]: status }));
+  }, []);
 
-  const enableQueue = () => {
-    setIsActive(true);
-    setTokenNumber(1);
-    addToast("Queue Enabled! Token numbering started.", "success");
-  };
+  const syncFromBoard = useCallback((board) => {
+    const tokens = board?.tokens || [];
+    const called = tokens.find((t) => t.status === 'called') || null;
+    const waiting = tokens.filter((t) => t.status === 'waiting');
 
-  const disableQueue = () => {
-    if (window.confirm("Stop the queue?")) {
-      setIsActive(false);
-      setCurrentToken(null);
-      addToast("Queue Disabled.", "info");
+    setWaitingQueue(
+      waiting.map((t) => ({
+        _id: t._id,
+        token: t.tokenNumber,
+        name: t.patientName,
+        status: 'Waiting',
+      }))
+    );
+
+    setCurrentToken(
+      called
+        ? {
+            _id: called._id,
+            token: called.tokenNumber,
+            name: called.patientName,
+            startedAt: Date.now(),
+            elapsed: 0,
+            doctorId: activeDoctorId,
+          }
+        : null
+    );
+
+    if (activeDoctorId && board?.status) {
+      setDoctorStatus(activeDoctorId, board.status);
     }
-  };
+  }, [activeDoctorId, setDoctorStatus]);
 
-  // Per-doctor controls (local state mirror for UI)
-  const setDoctorStatus = (doctorId, status) => {
-    setDoctorStatuses(prev => ({ ...prev, [doctorId]: status }));
-  };
+  const reloadBoard = useCallback(async () => {
+    if (!activeDoctorId) return;
+    try {
+      const board = await fetchQueueBoardToday(activeDoctorId);
+      syncFromBoard(board);
+    } catch (e) {
+      // do not toast on every poll/update failure
+      console.error('Failed to reload queue board', e);
+    }
+  }, [activeDoctorId, syncFromBoard]);
 
-  const enableDoctor = (doctorId) => {
-    if (!doctorId) return;
-    setDoctorStatus(doctorId, 'Enabled');
-    addToast('Queue enabled for doctor.', 'success');
-  };
+  useEffect(() => {
+    reloadBoard();
+  }, [reloadBoard]);
 
-  const disableDoctor = (doctorId) => {
-    if (!doctorId) return;
-    if (!window.confirm('Stop the queue for this doctor?')) return;
-    setDoctorStatus(doctorId, 'Disabled');
-    addToast('Queue disabled for doctor.', 'info');
-  };
-
-  const pauseQueue = (doctorId) => {
-    if (!doctorId) return;
-    setCurrentToken((ct) => {
-      if (!ct) return ct;
-      if (ct.doctorId !== doctorId) return ct;
-      const startedAt = ct.startedAt || Date.now();
-      const elapsed = (ct.elapsed || 0) + (Date.now() - startedAt);
-      return { ...ct, startedAt: null, elapsed };
-    });
-    setDoctorStatus(doctorId, 'Paused');
-    addToast('Queue paused for doctor.', 'info');
-  };
-
-  const resumeQueue = (doctorId) => {
-    if (!doctorId) return;
-    setCurrentToken((ct) => {
-      if (!ct) return ct;
-      if (ct.doctorId !== doctorId) return ct;
-      return { ...ct, startedAt: Date.now(), elapsed: ct.elapsed || 0 };
-    });
-    setDoctorStatus(doctorId, 'Enabled');
-    addToast('Queue resumed for doctor.', 'success');
-  };
-
-  const simulateJoin = (doctorId) => {
-    const active = doctorId ? ((doctorStatuses || {})[doctorId] === 'Enabled') : isActive;
-    if (!active) return addToast("Queue not active.", "error");
-
-    const tokenStr = formatToken(tokenNumber);
-    const name = SAMPLE_PATIENT_NAMES[patientSeed % SAMPLE_PATIENT_NAMES.length];
-
-    const newPatient = {
-      id: Date.now() + Math.random(),
-      number: tokenNumber,
-      token: tokenStr,
-      joinedAt: Date.now(),
-      name,
-      status: 'Waiting',
-    };
-
-    setWaitingQueue(prev => [...prev, newPatient]);
-    setTokenNumber(prev => prev + 1);
-    setPatientSeed(prev => prev + 1);
-    addToast(`Patient ${tokenStr} joined.`, "success");
-  };
+  useSocket(activeDoctorId, reloadBoard, null);
 
   const callNext = async (doctorId) => {
-    const active = doctorId ? ((doctorStatuses || {})[doctorId] === 'Enabled') : isActive;
-    if (!active) {
-      addToast('Cannot call next — queue is paused or disabled for this doctor.', 'error');
-      return;
-    }
-
     try {
       const res = await api.post(`/api/queue/${doctorId}/call-next`);
       if (res.data && res.data.success) {
-        const next = res.data.token;
-        if (next) {
-          setCurrentToken({ ...next, startedAt: Date.now(), elapsed: 0 });
-          addToast(`📱 SMS: Token ${next.tokenNumber} to counter.`, 'sms');
-        } else {
-          setCurrentToken(null);
-          addToast('No patients in queue.', 'info');
-        }
+        await reloadBoard();
+        addToast('Called next patient.', 'success');
       } else {
         addToast('Call next failed.', 'error');
       }
@@ -175,9 +129,8 @@ export const QueueProvider = ({ children }) => {
     try {
       const res = await api.post(`/api/queue/${doctorId}/skip`);
       if (res.data && res.data.success) {
-        const next = res.data.next;
-        setCurrentToken(next ? { ...next, startedAt: Date.now(), elapsed: 0 } : null);
-        addToast(`📱 SMS: Token ${res.data.skipped?.tokenNumber || ''} skipped.`, 'sms');
+        await reloadBoard();
+        addToast('Skipped current patient.', 'info');
       } else {
         addToast('Skip failed.', 'error');
       }
@@ -192,6 +145,7 @@ export const QueueProvider = ({ children }) => {
       const res = await api.post(`/api/queue/${doctorId}/remove/${tokenId}`);
       if (res.data && res.data.success) {
         addToast('Patient removed from queue.', 'info');
+        await reloadBoard();
       } else {
         addToast('Remove failed.', 'error');
       }
@@ -202,7 +156,7 @@ export const QueueProvider = ({ children }) => {
   };
 
   const markPatientMissed = (id) => {
-    setWaitingQueue(prev => prev.filter(p => p.id !== id));
+    setWaitingQueue(prev => prev.filter(p => String(p._id || p.id) !== String(id)));
     addToast("Patient marked as missed.", "error");
   };
 
@@ -212,18 +166,62 @@ export const QueueProvider = ({ children }) => {
     addToast("Token Cancelled.", "error");
   };
 
+  const enableDoctor = async (doctorId) => {
+    if (!doctorId) return;
+    setDoctorStatus(doctorId, 'Enabled');
+    try {
+      await api.post(`/api/doctor-rooms/${doctorId}/enable`);
+      await reloadBoard();
+    } catch (e) {
+      console.error('Enable doctor room failed', e);
+    }
+  };
+
+  const disableDoctor = async (doctorId) => {
+    if (!doctorId) return;
+    if (!window.confirm('Stop the queue for this doctor?')) return;
+    setDoctorStatus(doctorId, 'Disabled');
+    try {
+      await api.post(`/api/doctor-rooms/${doctorId}/disable`);
+      await reloadBoard();
+    } catch (e) {
+      console.error('Disable doctor room failed', e);
+    }
+  };
+
+  const pauseQueue = async (doctorId) => {
+    if (!doctorId) return;
+    setDoctorStatus(doctorId, 'Paused');
+    try {
+      await api.post(`/api/doctor-rooms/${doctorId}/pause`);
+      await reloadBoard();
+    } catch (e) {
+      console.error('Pause doctor room failed', e);
+    }
+  };
+
+  const resumeQueue = async (doctorId) => {
+    if (!doctorId) return;
+    setDoctorStatus(doctorId, 'Enabled');
+    try {
+      await api.post(`/api/doctor-rooms/${doctorId}/resume`);
+      await reloadBoard();
+    } catch (e) {
+      console.error('Resume doctor room failed', e);
+    }
+  };
+
   return (
     <QueueContext.Provider value={{
       user, setUser,
-      isActive, setIsActive,
       currentToken, timer,
       waitingQueue, recallQueue,
       addToast, removeToast, toasts,
-      enableQueue, disableQueue,
       pauseQueue, resumeQueue, enableDoctor, disableDoctor,
       doctorStatuses,
-      simulateJoin, callNext, skipToken, cancelToken,
+      callNext, skipToken, cancelToken,
       removePatientFromQueue, markPatientMissed
+      ,activeDoctorId, setActiveDoctorId
     }}>
       {children}
     </QueueContext.Provider>

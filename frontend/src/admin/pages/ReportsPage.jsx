@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   BarChart,
   Bar,
@@ -20,7 +20,7 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     setErr('');
     try {
@@ -34,11 +34,11 @@ export default function ReportsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [granularity, referenceDate]);
 
   useEffect(() => {
     load();
-  }, [granularity, referenceDate]);
+  }, [load]);
 
   const downloadPdf = async () => {
     try {

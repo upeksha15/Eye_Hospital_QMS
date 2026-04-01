@@ -15,10 +15,21 @@ export function useSocket(selectedDoctorId, onQueueUpdate, onSlotsUpdate) {
     });
     socketRef.current = socket;
 
+    if (selectedDoctorId) {
+      socket.emit('queue:join', String(selectedDoctorId));
+    }
+
     socket.on('queue:update', (data) => {
       if (!selectedDoctorId) return;
       if (String(data.doctorId) === String(selectedDoctorId)) {
         onQueueUpdate?.(data);
+      }
+    });
+
+    socket.on('queue:status', (data) => {
+      if (!selectedDoctorId) return;
+      if (String(data.doctorId) === String(selectedDoctorId)) {
+        onQueueUpdate?.({ ...data, action: 'status' });
       }
     });
 
@@ -30,6 +41,11 @@ export function useSocket(selectedDoctorId, onQueueUpdate, onSlotsUpdate) {
     });
 
     return () => {
+      try {
+        if (selectedDoctorId) socket.emit('queue:leave', String(selectedDoctorId));
+      } catch {
+        // ignore
+      }
       socket.disconnect();
     };
   }, [selectedDoctorId, onQueueUpdate, onSlotsUpdate]);

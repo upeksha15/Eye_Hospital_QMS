@@ -7,30 +7,22 @@ import {
   LogOut, 
   Eye, 
   CheckCircle, 
-  XCircle, 
   AlertCircle,
   Activity,
   Bell,
-  MapPin,
-  Phone,
-  Mail,
   FileText,
   Home,
   History,
-  Settings,
-  TrendingUp,
-  Users,
   Timer
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
 
     
 
 const UserDashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { patient, logout, role } = useAuth();
+  const { patient, logout } = useAuth();
   
   const [user, setUser] = useState(patient || {
     fullName: 'Loading...',
@@ -63,7 +55,7 @@ const UserDashboard = () => {
     status: 'active'
   });
 
-  const [appointments, setAppointments] = useState({
+  const [appointments] = useState({
     upcoming: [
       {
         id: 1,

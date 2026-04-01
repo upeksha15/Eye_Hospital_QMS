@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import Appointment from '../models/Appointment.js';
 import QueueToken from '../models/QueueToken.js';
+import DoctorRoom from '../models/DoctorRoom.js';
 import {
   startOfDayColombo,
   formatYMD,
@@ -46,6 +47,38 @@ export async function checkIn(req, res) {
         success: false,
         message: hours.reason || 'Outside operating hours',
       });
+    }
+
+    // Queue availability is controlled by staff (DoctorRoom.status).
+    // If there's no matching DoctorRoom record, default to allowing check-in (backward compatible).
+    const doctorRoom = await DoctorRoom.findById(appointment.doctorId)
+      .select('status queueEnabledAt')
+      .lean()
+      .session(session);
+
+    if (doctorRoom && String(doctorRoom.status).toLowerCase() !== 'enabled') {
+      await session.abortTransaction();
+      return res.status(400).json({
+        success: false,
+        message: 'Still queue is not available',
+        code: 'QUEUE_NOT_AVAILABLE',
+      });
+    }
+
+    if (doctorRoom?.queueEnabledAt) {
+      const CHECKIN_WINDOW_MS = 30 * 60 * 1000;
+      const enabledAtMs = new Date(doctorRoom.queueEnabledAt).getTime();
+      const closesAtMs = enabledAtMs + CHECKIN_WINDOW_MS;
+      const nowMs = Date.now();
+      if (nowMs > closesAtMs) {
+        await session.abortTransaction();
+        return res.status(400).json({
+          success: false,
+          message: 'Check-in window closed',
+          code: 'QUEUE_CHECKIN_CLOSED',
+          checkinClosesAt: new Date(closesAtMs).toISOString(),
+        });
+      }
     }
 
     const existingToken = await QueueToken.findOne({ appointmentId }).session(session);
@@ -95,7 +128,7 @@ export async function checkIn(req, res) {
 
     const io = req.app.get('io');
     if (io) {
-      io.emit('queue:update', {
+      io.to(`queue:${String(appointment.doctorId)}`).emit('queue:update', {
         doctorId: String(appointment.doctorId),
         action: 'checkin',
         tokenNumber,
