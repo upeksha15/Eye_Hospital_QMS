@@ -56,8 +56,13 @@ const LoginPage = () => {
       const data = await login({ email: email.trim(), password, role });
       const u = data?.user || data?.patient;
       if (u?.userType === 'staff') {
-        if (u.role === 'admin') navigate('/admin');
-        else navigate('/staffmanagement');
+        if (u.role === 'admin') {
+          navigate('/admin');
+        } else if (u.role === 'medical_staff' || u.role === 'medical-staff') {
+          navigate('/staffdashboard');
+        } else {
+          navigate('/staffmanagement');
+        }
       } else {
         navigate('/dashboard');
       }
@@ -77,8 +82,7 @@ const LoginPage = () => {
         backgroundAttachment: 'fixed'
       }}
     >
-      {/* Dark overlay for transparency effect */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+      {/* Background image now displayed clearly without overlay */}
 
       <div className="w-full max-w-md relative z-10">
         {/* Header Section */}
@@ -96,7 +100,7 @@ const LoginPage = () => {
         <div className="bg-white/10 backdrop-blur-2xl rounded-2xl shadow-2xl overflow-hidden border border-white/20">
           {/* Role Selection */}
           <div className="p-8 border-b border-white/10">
-            <label className="block text-sm font-semibold text-white/90 mb-4">Select Your Role</label>
+            <label className="block text-lg font-semibold text-white/90 mb-4">Select Your Role</label>
             <div className="grid grid-cols-3 gap-3">
               {roles.map((r) => (
                 <button
@@ -104,7 +108,13 @@ const LoginPage = () => {
                   onClick={() => setRole(r.value)}
                   className={`relative p-3 rounded-xl transition-all duration-300 ${
                     role === r.value
-                      ? 'bg-white/30 backdrop-blur-md text-white shadow-lg scale-105 border-white/50'
+                      ? `${
+                          r.value === 'patient'
+                            ? 'bg-purple-500'
+                            : r.value === 'admin'
+                            ? 'bg-orange-500'
+                            : 'bg-sky-500'
+                        } backdrop-blur-md text-white shadow-lg scale-105 border-white/50`
                       : 'bg-white/10 text-white/80 hover:bg-white/20 border border-white/20'
                   } border`}
                 >
@@ -191,7 +201,7 @@ const LoginPage = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 px-4 bg-white/30 hover:bg-white/40 text-white font-semibold rounded-xl focus:outline-none focus:ring-4 focus:ring-white/50 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-300 flex items-center justify-center gap-2 shadow-lg border border-white/30 backdrop-blur-sm"
+              className="w-full py-3 px-4 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-300 flex items-center justify-center gap-2 shadow-lg border border-blue-500 backdrop-blur-sm"
             >
               {loading ? (
                 <>
@@ -225,7 +235,7 @@ const LoginPage = () => {
         <div className="text-center mt-6 text-sm text-white/80">
           <p>Protected by enterprise-grade security</p>
           <div className="flex justify-center gap-4 mt-3">
-            <span className="text-xs 🔒">🔒 Encrypted</span>
+            <span className="text-xs">🔒 Encrypted</span>
             <span className="text-xs">✓ Verified</span>
             <span className="text-xs">🛡️ Secure</span>
           </div>
@@ -265,12 +275,10 @@ const LoginPage = () => {
           animation: shake 0.5s ease-in-out;
         }
 
-        /* Smooth scrolling on the login card */
         input::placeholder {
           color: rgba(255, 255, 255, 0.4);
         }
 
-        /* Smooth transition for input focus states */
         input:focus::placeholder {
           color: rgba(255, 255, 255, 0.2);
         }
