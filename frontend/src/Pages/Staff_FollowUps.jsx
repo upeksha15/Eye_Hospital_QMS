@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Navigate } from 'react-router-dom';
 import Navbar from '../components/StaffTopBar';
 import SidebarNav from '../components/StaffSidebar';
+import { useQueue } from '../context/QueueContext';
 
 const DOCTOR_OPTIONS = [
   { id: 'dr-silva', name: 'Dr Silva' },
@@ -10,6 +11,7 @@ const DOCTOR_OPTIONS = [
 ];
 
 const FollowUps = () => {
+  const { user } = useQueue();
   const location = useLocation();
 
   const initialDoctorId =

@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import Patient from '../models/Patient.js';
 import StaffAccount from '../models/StaffAccount.js';
+import StaffProfile from '../models/StaffProfile.js';
 
 export async function authMiddleware(req, res, next) {
   try {
@@ -20,7 +21,10 @@ export async function authMiddleware(req, res, next) {
       if (!staff.isActive) {
         return res.status(401).json({ success: false, message: 'Account disabled' });
       }
+      // also load profile document if present
+      const profile = await StaffProfile.findOne({ staff: staff._id }).lean();
       req.user = staff;
+      req.staffProfile = profile || null;
       req.userType = 'staff';
       return next();
     }

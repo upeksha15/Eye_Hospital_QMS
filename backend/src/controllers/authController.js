@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import Patient from '../models/Patient.js';
 import StaffAccount from '../models/StaffAccount.js';
+import StaffProfile from '../models/StaffProfile.js';
 import { ensureDbConnected } from '../../config/db.js';
 
 function signToken(id, typ) {
@@ -24,7 +25,30 @@ function stripStaff(s) {
   const o = s.toObject ? s.toObject() : { ...s };
   delete o.passwordHash;
   o.userType = 'staff';
+  // normalize name / profile keys for frontend convenience
+  if (!o.name && o.fullName) o.name = o.fullName;
+  if (!o.profilePic && o.profileImage) o.profilePic = o.profileImage;
   return o;
+}
+
+function mergeStaff(staffDoc, profileDoc) {
+  const base = staffDoc.toObject ? staffDoc.toObject() : { ...staffDoc };
+  delete base.passwordHash;
+  const profile = profileDoc || {};
+  // overlay profile fields
+  const merged = {
+    ...base,
+    fullName: profile.fullName || base.fullName,
+    staffId: profile.staffId || base.staffId,
+    contactNumber: profile.contactNumber || base.contactNumber || '',
+    profileImage: profile.profileImage || base.profileImage || '',
+    dateOfBirth: profile.dateOfBirth || base.dateOfBirth || undefined,
+  };
+  // convenience keys for frontend
+  if (!merged.name && merged.fullName) merged.name = merged.fullName;
+  if (!merged.profilePic && merged.profileImage) merged.profilePic = merged.profileImage;
+  merged.userType = 'staff';
+  return merged;
 }
 
 export async function register(req, res) {
@@ -136,7 +160,9 @@ export async function login(req, res) {
       }
 
       const token = signToken(staff._id, 'staff');
-      const user = stripStaff(staff);
+      // include merged profile data if available so frontend receives up-to-date profile
+      const profile = await StaffProfile.findOne({ staff: staff._id });
+      const user = mergeStaff(staff, profile);
       return res.json({
         success: true,
         token,
@@ -155,7 +181,8 @@ export async function login(req, res) {
 
 export async function me(req, res) {
   if (req.userType === 'staff') {
-    return res.json({ success: true, patient: stripStaff(req.user), user: stripStaff(req.user), userType: 'staff' });
+    const merged = mergeStaff(req.user, req.staffProfile);
+    return res.json({ success: true, patient: merged, user: merged, userType: 'staff' });
   }
   return res.json({ success: true, patient: stripPatient(req.user), user: stripPatient(req.user), userType: 'patient' });
 }
@@ -193,5 +220,51 @@ export async function syncPatient(req, res) {
   } catch (error) {
     console.error('Sync patient error:', error);
     res.status(500).json({ success: false, message: 'Failed to sync patient data' });
+  }
+}
+
+export async function syncStaff(req, res) {
+  try {
+    if (req.userType !== 'staff') {
+      return res.status(403).json({ success: false, message: 'Only staff accounts can update this profile' });
+    }
+
+    const { fullName, email, contactNumber, profileImage, dateOfBirth, staffId } = req.body;
+    const id = req.user._id;
+
+    // split fields between account and profile
+    const accountUpdate = {};
+    const profileUpdate = {};
+    if (email !== undefined) accountUpdate.email = String(email).trim().toLowerCase();
+    if (fullName !== undefined) profileUpdate.fullName = fullName;
+    if (contactNumber !== undefined) profileUpdate.contactNumber = contactNumber;
+    if (profileImage !== undefined) profileUpdate.profileImage = profileImage;
+    if (dateOfBirth !== undefined) profileUpdate.dateOfBirth = dateOfBirth ? new Date(dateOfBirth) : undefined;
+    if (staffId !== undefined) profileUpdate.staffId = staffId;
+
+    await ensureDbConnected();
+    // update account (email) and upsert profile
+    const staff = Object.keys(accountUpdate).length
+      ? await StaffAccount.findByIdAndUpdate(id, accountUpdate, { new: true, runValidators: true })
+      : await StaffAccount.findById(id);
+
+    if (!staff) {
+      return res.status(404).json({ success: false, message: 'Staff account not found' });
+    }
+
+    const profile = await StaffProfile.findOneAndUpdate(
+      { staff: staff._id },
+      { $set: profileUpdate },
+      { new: true, upsert: true, setDefaultsOnInsert: true }
+    );
+
+    const merged = mergeStaff(staff, profile);
+    res.json({ success: true, staff: merged, user: merged, userType: 'staff' });
+  } catch (error) {
+    console.error('Sync staff error:', error);
+    if (error.code === 11000) {
+      return res.status(400).json({ success: false, message: 'Email already in use' });
+    }
+    res.status(500).json({ success: false, message: 'Failed to sync staff data' });
   }
 }

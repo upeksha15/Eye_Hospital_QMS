@@ -76,3 +76,14 @@ export async function updatePatientData(patientData) {
   }
   return data;
 }
+
+export async function updateStaffData(staffData) {
+  const { data } = await api.put('/api/auth/sync-staff', staffData);
+  const u = data.user || data.staff;
+  if (data.token && u) {
+    persistAuth(data.token, u);
+  } else if (u) {
+    persistAuth(getStoredToken(), u);
+  }
+  return data;
+}
