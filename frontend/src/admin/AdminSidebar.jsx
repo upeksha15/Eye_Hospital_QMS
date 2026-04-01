@@ -44,7 +44,11 @@ export default function AdminSidebar() {
   return (
     <aside className="w-72 min-h-screen flex flex-col bg-admin-navy text-white shrink-0 font-admin shadow-xl">
       <div className="p-6 border-b border-white/10">
-        <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          className="flex items-center gap-3 focus:outline-none"
+        >
           <div className="w-11 h-11 rounded-xl bg-[#007bff] flex items-center justify-center shadow-lg">
             <Eye className="w-6 h-6 text-white" strokeWidth={2} />
           </div>
@@ -54,7 +58,7 @@ export default function AdminSidebar() {
             </p>
             <p className="text-sm font-bold leading-snug">OPD Queue Management</p>
           </div>
-        </div>
+        </button>
       </div>
 
       <div className="p-4 mx-4 mt-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm">

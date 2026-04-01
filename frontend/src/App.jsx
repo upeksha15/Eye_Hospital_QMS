@@ -3,11 +3,7 @@ import { Navigate } from "react-router-dom";
 import Home from "./Pages/Home";
 import UserReg from "./Pages/UserReg";
 import LoginPage from "./Pages/LoginPage";
-import UserDashboard from "./Pages/User_dash";
-import UserProfile from "./Pages/User_Profile";
-import BookAppointmentPage from "./Pages/BookAppointmentPage";
-import MyAppointmentsPage from "./Pages/MyAppointmentsPage";
-import QueueStatusPage from "./Pages/QueueStatusPage";
+import PatientDashboardLayout from "./components/PatientDashboardLayout";
 import QueueManagementPage from "./Pages/DoctorRoomManagement";
 import StaffManagement from "./Pages/StaffManagement";
 import StaffDashboard from "./Pages/StaffDashboard";
@@ -57,7 +53,7 @@ function AppRoutes() {
         path="/dashboard"
         element={
           <PatientRoute>
-            <UserDashboard />
+            <PatientDashboardLayout />
           </PatientRoute>
         }
       />
@@ -65,7 +61,7 @@ function AppRoutes() {
         path="/profile"
         element={
           <PatientRoute>
-            <UserProfile />
+            <PatientDashboardLayout />
           </PatientRoute>
         }
       />
@@ -73,7 +69,7 @@ function AppRoutes() {
         path="/appointments/book"
         element={
           <PatientRoute>
-            <BookAppointmentPage />
+            <PatientDashboardLayout />
           </PatientRoute>
         }
       />
@@ -81,7 +77,15 @@ function AppRoutes() {
         path="/appointments/mine"
         element={
           <PatientRoute>
-            <MyAppointmentsPage />
+            <PatientDashboardLayout />
+          </PatientRoute>
+        }
+      />
+      <Route
+        path="/appointments/followups"
+        element={
+          <PatientRoute>
+            <PatientDashboardLayout />
           </PatientRoute>
         }
       />
@@ -89,7 +93,7 @@ function AppRoutes() {
         path="/queue"
         element={
           <PatientRoute>
-            <QueueStatusPage />
+            <PatientDashboardLayout />
           </PatientRoute>
         }
       />

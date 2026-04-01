@@ -1,30 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { 
-  User, 
-  LogOut, 
-  Eye,
+import {
+  User,
   Mail,
   Phone,
   CreditCard,
   Calendar,
   MapPin,
-  Home,
-  History,
-  Activity,
-  Bell,
   Edit2,
   Trash2,
   Save,
   X,
   Camera,
-  FileText
+  FileText,
 } from 'lucide-react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 
 const UserProfile = () => {
-  const location = useLocation();
   const { patient, logout, updatePatient } = useAuth();
   const [isEditMode, setIsEditMode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -46,7 +38,6 @@ const UserProfile = () => {
   
   const [editedUser, setEditedUser] = useState({ ...user });
   const [errors, setErrors] = useState({});
-  const [currentDateTime, setCurrentDateTime] = useState(new Date());
 
   // Load user data on component mount
   useEffect(() => {
@@ -56,13 +47,8 @@ const UserProfile = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patient]);
 
-  // Update current date/time every second
-  useEffect(() => {
-    const timerId = setInterval(() => {
-      setCurrentDateTime(new Date());
-    }, 1000);
-    return () => clearInterval(timerId);
-  }, []);
+  // no-op effect placeholder kept in case of future timers
+  useEffect(() => {}, []);
 
   const initializeUserData = (data) => {
     setUser(data);
@@ -319,21 +305,6 @@ const UserProfile = () => {
     }
   };
 
-  const handleLogout = () => {
-    if (window.confirm('Are you sure you want to logout?')) {
-      logout();
-      window.location.href = '/';
-    }
-  };
-
-  const sidebarItems = [
-    { id: 'dashboard', icon: Home, label: 'Dashboard', path: '/dashboard' },
-    { id: 'appointments', icon: Calendar, label: 'Get Appointment', path: '/appointments/book' },
-    { id: 'history', icon: History, label: 'Past Appointments', path: '/appointments/mine' },
-    { id: 'queue', icon: Activity, label: 'Queue Status', path: '/queue' },
-    { id: 'profile', icon: User, label: 'Profile', path: '/profile' },
-  ];
-
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -346,99 +317,16 @@ const UserProfile = () => {
   };
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-gray-50 flex flex-col">
-      {/* Header */}
-      <header className="bg-gradient-to-r from-[#0F4C81] to-[#2A9DF4] text-white shadow-xl z-10">
-        <div className="px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-white/25 p-2 rounded-lg shadow-md">
-              <Eye size={24} className="text-white" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-white">Queue Management System</h2>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="hidden sm:flex items-center gap-3">
-              <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-white bg-white/30 flex items-center justify-center">
-                {user.profileImage ? (
-                  <img
-                    src={user.profileImage}
-                    alt="Profile"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <User size={20} className="text-white" />
-                )}
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-white/90">Welcome back,</p>
-                <p className="font-semibold text-white">{user.fullName}</p>
-                <p className="text-xs text-white/70">{currentDateTime.toLocaleString()}</p>
-              </div>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 bg-white/25 hover:bg-white/35 px-4 py-2 rounded-lg transition-all duration-200 shadow-md text-white"
-            >
-              <LogOut size={18} />
-              <span className="hidden sm:inline">Logout</span>
-            </button>
+    <div className="min-h-full bg-gray-50">
+      {isLoadingProfile ? (
+        <div className="h-full flex items-center justify-center py-16">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-[#2A9DF4] mx-auto mb-4"></div>
+            <p className="text-gray-600 font-semibold">Loading your profile...</p>
           </div>
         </div>
-      </header>
-
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
-        <aside className="w-64 bg-gradient-to-b from-[#0E7490] to-[#14B8A6] text-white border-r border-gray-200 flex flex-col shadow-sm h-full">
-          <nav className="flex-1 p-4 space-y-2">
-            {sidebarItems.map((item) => {
-              const Icon = item.icon;
-              const isActive =
-                item.path === '/dashboard'
-                  ? location.pathname === '/dashboard'
-                  : location.pathname === item.path;
-
-              return (
-                <Link
-                  key={item.id}
-                  to={item.path}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
-                    isActive
-                      ? 'bg-[#14B8A6] text-white shadow-md'
-                      : 'text-white/90 hover:bg-[#0D9488]'
-                  }`}
-                >
-                  <Icon size={20} />
-                  <span className="font-medium">{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
-          <div className="p-2 border-t border-white/20 mt-auto">
-            <div className="bg-gradient-to-b from-[#0E7490] to-[#14B8A6] rounded-lg p-2 text-white shadow-md">
-              <div className="flex items-center gap-1.5 mb-1">
-                <Bell size={14} className="text-white" />
-                <span className="text-xs font-semibold text-white">Quick Help</span>
-              </div>
-              <p className="text-xs text-white/90 leading-tight">
-                Need assistance? Contact us at +94 11 234 5678
-              </p>
-            </div>
-          </div>
-        </aside>
-
-        {/* Main Content */}
-        <main className="flex-1 overflow-y-auto bg-gray-50">
-          {isLoadingProfile ? (
-            <div className="h-full flex items-center justify-center">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-[#2A9DF4] mx-auto mb-4"></div>
-                <p className="text-gray-600 font-semibold">Loading your profile...</p>
-              </div>
-            </div>
-          ) : (
-          <div className="p-6 space-y-6">
+      ) : (
+        <div className="p-6 space-y-6">
             {/* Profile Header Card */}
             <div className="bg-gradient-to-br from-[#2A9DF4] to-[#0F4C81] rounded-xl p-6 text-white shadow-lg">
               <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
@@ -750,11 +638,7 @@ const UserProfile = () => {
               </div>
             </div>
           </div>
-          )}
-        </main>
-      </div>
-
-      
+      )}
     </div>
   );
 };

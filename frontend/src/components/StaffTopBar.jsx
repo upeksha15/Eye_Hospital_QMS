@@ -58,9 +58,13 @@ export default function StaffTopBar() {
         
         {/* Left */}
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-md">
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center border border-white/20 shadow-md focus:outline-none"
+          >
             <Eye className="w-6 h-6 text-white" />
-          </div>
+          </button>
 
           <div className="leading-tight">
             <Link

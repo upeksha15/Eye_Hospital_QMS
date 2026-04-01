@@ -1,20 +1,27 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import backg1 from '../assets/backg1.png';
 import eyeImg from '../assets/Eye.png'; // Transparent eye image
 import doctorImg from '../assets/doctor.png'; // Doctor image
 import QueueI from '../assets/queue.png'; // Queue image
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { 
   Eye, Bell, ChevronDown, AlertTriangle, ClipboardList, Clock, ShieldPlus, Megaphone, 
-  PenIcon
+  PenIcon, User
 } from 'lucide-react';
 import backg2 from '../assets/backg2.png';
 import backg3 from '../assets/back3g.png';
 import backg4 from '../assets/back4g.png';
+import { useAuth } from '../hooks/useAuth';
 
 
 const Home = () => {
+
+  const navigate = useNavigate();
+  const { patient, isAuthenticated, userType, logout } = useAuth();
+  const isPatientLoggedIn = Boolean(isAuthenticated && userType === 'patient' && patient);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
 
   const backgrounds = [backg1, backg2, backg3,backg4];
 const [bgIndex, setBgIndex] = React.useState(0);
@@ -59,10 +66,16 @@ useEffect(() => {
       {/* --- NAVBAR --- */}
       <nav className="flex items-center justify-between px-12 py-4 bg-white shadow-sm sticky top-0 z-50 w-full">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 bg-blue-600 rounded-full">
-            <Eye className="text-white w-6 h-6" />
-          </div>
-          <span className="text-2xl font-bold text-[#004a99]">Sri Lanka National Eye Hospital Colombo</span>
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="flex items-center gap-2 focus:outline-none"
+          >
+            <div className="p-1.5 bg-blue-600 rounded-full">
+              <Eye className="text-white w-6 h-6" />
+            </div>
+            <span className="text-2xl font-bold text-[#004a99]">Sri Lanka National Eye Hospital Colombo</span>
+          </button>
             <div className="flex items-center gap-3">
   <div className="flex items-center gap-3">
   <img
@@ -96,11 +109,73 @@ useEffect(() => {
           <a href="#">Contact</a>
           
           <Bell className="w-6 h-6 text-slate-600 cursor-pointer" />
-          <Link to="/login">
-            <button className="bg-[#2d9d78] text-white px-6 py-2 rounded-lg font-bold hover:bg-[#248263] transition">
-              Login
-            </button>
-          </Link>
+
+          {/* Right side: Login button (guest) or patient profile (logged-in) */}
+          {!isPatientLoggedIn ? (
+            <Link to="/login">
+              <button className="bg-[#2d9d78] text-white px-6 py-2 rounded-lg font-bold hover:bg-[#248263] transition">
+                Login
+              </button>
+            </Link>
+          ) : (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setProfileMenuOpen((o) => !o)}
+                className="flex items-center gap-3 px-3 py-2 rounded-lg border border-blue-100 bg-blue-50/70 hover:bg-blue-100 transition"
+              >
+                <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-[#2d9d78] bg-[#e0f7f0] flex items-center justify-center">
+                  {patient?.profileImage && !avatarError ? (
+                    <img
+                      src={patient.profileImage}
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                      onError={() => setAvatarError(true)}
+                    />
+                  ) : (
+                    <User className="w-5 h-5 text-[#2d9d78]" />
+                  )}
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-semibold text-[#004a99] leading-tight">
+                    {patient?.fullName || 'Patient'}
+                  </p>
+                  <p className="text-xs text-slate-500 leading-tight">
+                    {patient?.email || patient?.nic || ''}
+                  </p>
+                </div>
+                <ChevronDown className="w-4 h-4 text-slate-500" />
+              </button>
+
+              {profileMenuOpen && (
+                <div className="absolute right-0 mt-2 w-44 rounded-lg bg-white shadow-lg border border-slate-100 py-1 text-sm text-slate-700">
+                  <button
+                    type="button"
+                    className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center gap-2"
+                    onClick={() => {
+                      setProfileMenuOpen(false);
+                      navigate('/dashboard');
+                    }}
+                  >
+                    <ClipboardList className="w-4 h-4 text-slate-500" />
+                    Dashboard
+                  </button>
+                  <button
+                    type="button"
+                    className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center gap-2 border-t border-slate-100"
+                    onClick={() => {
+                      setProfileMenuOpen(false);
+                      logout();
+                      navigate('/');
+                    }}
+                  >
+                    <User className="w-4 h-4 text-slate-500" />
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </nav>
 
