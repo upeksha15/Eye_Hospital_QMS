@@ -16,6 +16,9 @@ import {
   Timer
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { fetchMyAppointments } from '../api/appointmentsApi';
+import { fetchMyQueueStatusToday, fetchQueueBoardToday } from '../api/queueApi';
+import { formatYMD } from '../utils/dateHelpers';
 
     
 
@@ -48,61 +51,119 @@ const UserDashboard = () => {
   }, []);
   
   const [queueStatus, setQueueStatus] = useState({
-    isInQueue: true,
-    queueNumber: 15,
-    position: 3,
-    estimatedWaitTime: 25,
-    status: 'active'
+    isInQueue: false,
+    queueNumber: null,
+    position: null,
+    estimatedWaitTime: 0,
+    status: 'inactive'
   });
 
-  const [appointments] = useState({
-    upcoming: [
-      {
-        id: 1,
-        date: '2024-01-15',
-        time: '10:00 AM',
-        doctor: 'Dr. Sarah Johnson',
-        department: 'General Eye Care',
-        status: 'approved',
-        type: 'Regular Checkup'
-      },
-      {
-        id: 2,
-        date: '2024-01-20',
-        time: '02:30 PM',
-        doctor: 'Dr. Michael Chen',
-        department: 'Retina Specialist',
-        status: 'pending',
-        type: 'Follow-up'
-      }
-    ],
-    past: [
-      {
-        id: 3,
-        date: '2023-12-10',
-        time: '11:00 AM',
-        doctor: 'Dr. Sarah Johnson',
-        department: 'General Eye Care',
-        status: 'completed',
-        type: 'Regular Checkup'
-      }
-    ]
+  const [appointments, setAppointments] = useState({
+    upcoming: [],
+    past: []
   });
+  const [todayQueueAppointment, setTodayQueueAppointment] = useState(null);
 
-  // Simulate real-time queue updates
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (queueStatus.isInQueue && queueStatus.position > 0) {
-        setQueueStatus(prev => ({
-          ...prev,
-          position: Math.max(0, prev.position - 1),
-          estimatedWaitTime: Math.max(0, prev.estimatedWaitTime - 1)
-        }));
-      }
-    }, 30000); // Update every 30 seconds
+    let mounted = true;
+    const loadDashboardData = async () => {
+      try {
+        const data = await fetchMyAppointments();
+        if (!mounted) return;
+        const all = data.appointments || [];
 
-    return () => clearInterval(interval);
-  }, [queueStatus.isInQueue, queueStatus.position]);
+        const now = new Date();
+        const mapped = all.map((a) => ({
+          id: a._id,
+          date: a.appointmentDate,
+          time: new Date(a.appointmentDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          doctor: a.doctorId?.doctorName || a.doctorId?.fullName || 'Doctor',
+          department: a.doctorId?.specialization || a.doctorId?.speciality || 'General',
+          status: a.status === 'booked' ? 'approved' : a.status,
+          type: (a.visitReason || 'consultation').replace(/_/g, ' '),
+          doctorId: a.doctorId?._id || a.doctorId,
+        }));
+
+        const upcoming = mapped.filter((a) => new Date(a.date) >= now && a.status !== 'cancelled');
+        const past = mapped.filter((a) => new Date(a.date) < now || a.status === 'completed');
+
+        setAppointments({ upcoming, past });
+
+        // Resolve today's queue appointment independent of current time.
+        const todayYmd = formatYMD(new Date());
+        const todayAppt =
+          mapped.find((a) => formatYMD(a.date) === todayYmd && a.status !== 'cancelled') || null;
+        setTodayQueueAppointment(todayAppt);
+
+        if (todayAppt?.doctorId) {
+          try {
+            const q = await fetchMyQueueStatusToday(todayAppt.doctorId);
+            if (!mounted) return;
+
+            let resolvedPosition = q?.position ?? null;
+            // Fallback: sometimes position may be null while token exists.
+            // Compute from queue board token order.
+            if (q?.tokenNumber && (resolvedPosition === null || resolvedPosition === undefined)) {
+              try {
+                const board = await fetchQueueBoardToday(todayAppt.doctorId);
+                const idx = (board?.tokens || []).findIndex(
+                  (t) => String(t.tokenNumber) === String(q.tokenNumber)
+                );
+                if (idx >= 0) resolvedPosition = idx + 1;
+              } catch {
+                // keep original position
+              }
+            }
+
+            setQueueStatus({
+              isInQueue: Boolean(q?.tokenNumber),
+              queueNumber: q?.tokenNumber || null,
+              position: resolvedPosition,
+              estimatedWaitTime: q?.estimatedWaitMinutes ?? 0,
+              status: q?.queueStatus || 'inactive',
+            });
+          } catch {
+            // If my-status endpoint fails, still fetch board status so dashboard shows queue state.
+            try {
+              const board = await fetchQueueBoardToday(todayAppt.doctorId);
+              if (!mounted) return;
+              setQueueStatus({
+                isInQueue: false,
+                queueNumber: null,
+                position: null,
+                estimatedWaitTime: 0,
+                status: board?.status || 'inactive',
+              });
+            } catch {
+              setQueueStatus({
+                isInQueue: false,
+                queueNumber: null,
+                position: null,
+                estimatedWaitTime: 0,
+                status: 'inactive'
+              });
+            }
+          }
+        } else {
+          setQueueStatus({
+            isInQueue: false,
+            queueNumber: null,
+            position: null,
+            estimatedWaitTime: 0,
+            status: 'inactive'
+          });
+        }
+      } catch (e) {
+        if (!mounted) return;
+        setAppointments({ upcoming: [], past: [] });
+      }
+    };
+
+    loadDashboardData();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleLogout = () => {
     if (window.confirm('Are you sure you want to logout?')) {
@@ -306,7 +367,7 @@ const UserDashboard = () => {
               </div>
 
               {/* Queue Status Card */}
-              {queueStatus.isInQueue && (
+              {todayQueueAppointment && (
                 <div className="bg-[#F0F9FF] rounded-xl shadow-lg border-2 border-[#BAE6FD] p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
@@ -315,21 +376,23 @@ const UserDashboard = () => {
                       </div>
                       <div>
                         <h3 className="text-xl font-bold text-[#0F4C81]">Current Queue Status</h3>
-                        <p className="text-sm text-[#6B7280]">Real-time updates</p>
+                        <p className="text-sm text-[#6B7280]">
+                          {todayQueueAppointment.doctor} · {formatDate(todayQueueAppointment.date)}
+                        </p>
                       </div>
                     </div>
                     <div className="bg-[#DCFCE7] px-4 py-2 rounded-full">
-                      <span className="font-semibold text-sm text-[#15803D]">Active</span>
+                      <span className="font-semibold text-sm text-[#15803D]">{String(queueStatus.status || 'active')}</span>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="bg-white rounded-lg p-4 border border-[#E5E7EB]">
                       <p className="text-sm mb-1 text-[#6B7280]">Queue Number</p>
-                      <p className="text-3xl font-bold text-[#0F4C81]">#{queueStatus.queueNumber}</p>
+                      <p className="text-3xl font-bold text-[#0F4C81]">{queueStatus.queueNumber || '--'}</p>
                     </div>
                     <div className="bg-white rounded-lg p-4 border border-[#E5E7EB]">
                       <p className="text-sm mb-1 text-[#6B7280]">Position</p>
-                      <p className="text-3xl font-bold text-[#0F4C81]">{queueStatus.position}</p>
+                      <p className="text-3xl font-bold text-[#0F4C81]">{queueStatus.position ?? '--'}</p>
                       <p className="text-xs mt-1 text-[#6B7280]">people ahead</p>
                     </div>
                     <div className="bg-white rounded-lg p-4 border border-[#E5E7EB]">
@@ -341,7 +404,9 @@ const UserDashboard = () => {
                   <div className="mt-4 p-3 bg-[#F0F9FF] rounded-lg border border-[#BAE6FD]">
                     <p className="text-sm flex items-center gap-2 text-[#0F4C81]">
                       <Bell size={16} />
-                      You'll be notified when it's your turn. Please stay nearby.
+                      {queueStatus.isInQueue
+                        ? "You'll be notified when it's your turn. Please stay nearby."
+                        : 'You have an appointment today. Check in from Queue Status page when queue is enabled.'}
                     </p>
                   </div>
                 </div>

@@ -63,6 +63,7 @@ app.use('/api/announcements', announcementsRoutes);
 // ✅ NEW ROUTE
 app.use('/api/doctor-rooms', doctorRoomRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/staff', staffRoutes);
 // Notices API
 app.use('/api/notices', noticeRoutes);
 // Staff-specific routes
