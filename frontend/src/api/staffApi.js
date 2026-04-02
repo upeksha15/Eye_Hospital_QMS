@@ -5,3 +5,8 @@ export async function changePasswordStaff(body) {
   return data;
 }
 
+export async function fetchStaffDirectory() {
+  const { data } = await api.get('/api/admin/staff-accounts');
+  return data;
+}
+

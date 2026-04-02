@@ -60,27 +60,29 @@ export default function BookAppointmentPage() {
     (async () => {
       try {
         // prefer doctor rooms data (doctorName, specialization, room)
-        const { data } = await api.get('/api/doctor-rooms');
+          const { data } = await api.get('/api/doctor-rooms');
         const mapped = (data || []).map((d) => ({
           _id: d._id,
           fullName: d.doctorName || d.fullname || 'Doctor',
           speciality: d.specialization || d.speciality || '',
           room: d.room || '',
           availability: Array.isArray(d.availability) ? d.availability : [],
-          // derive a simple status based on slot/queue limits
-          status: (d.slotLimit && d.slotLimit > 0) ? 'available' : 'full',
+          queueLimit: d.queueLimit ?? null,
+          // derive a simple status based on queue limit
+          status: (d.queueLimit && d.queueLimit > 0) ? 'available' : 'full',
         }));
         setDoctors(mapped);
       } catch (err) {
         try {
           const data = await fetchDoctors();
           setDoctors((data.doctors || []).map(d=>({
-            _id: d._id,
-            fullName: d.fullName || d.name || '',
-            speciality: d.speciality || d.specialization || '',
-            room: d.room || '',
-            availability: Array.isArray(d.availability) ? d.availability : [],
-          })));
+              _id: d._id,
+              fullName: d.fullName || d.name || '',
+              speciality: d.speciality || d.specialization || '',
+              room: d.room || '',
+              availability: Array.isArray(d.availability) ? d.availability : [],
+              queueLimit: d.queueLimit ?? null,
+            })));
         } catch {
           setDoctors([]);
         }
@@ -144,6 +146,14 @@ export default function BookAppointmentPage() {
     return slots.find((s) => s.date === selectedDate) || null;
   }, [slots, selectedDate]);
 
+  // Cap available slots by selected doctor's queue limit (if provided)
+  const effectiveSlotForDay = useMemo(() => {
+    if (!slotForDay) return null;
+    const qLimit = Number(selectedDoctor?.queueLimit ?? Infinity);
+    const available = typeof slotForDay.available === 'number' ? Math.max(0, Math.min(slotForDay.available, qLimit)) : slotForDay.available;
+    return { ...slotForDay, available };
+  }, [slotForDay, selectedDoctor]);
+
   const handleDoctorChange = (id) => {
     setDoctorId(id);
   };
@@ -176,7 +186,7 @@ export default function BookAppointmentPage() {
       setFormError('Select a consultant and an available date.');
       return;
     }
-    if (!slotForDay || slotForDay.available <= 0) {
+    if (!effectiveSlotForDay || effectiveSlotForDay.available <= 0) {
       setFormError('No slots left for this date.');
       return;
     }
@@ -247,7 +257,7 @@ export default function BookAppointmentPage() {
                 />
                 <SlotDetailPanel
                   dateStr={selectedDate}
-                  slot={slotForDay}
+                  slot={effectiveSlotForDay}
                   lang={lang}
                   strings={strings}
                 />
@@ -300,7 +310,7 @@ export default function BookAppointmentPage() {
             lang={lang}
             doctor={selectedDoctor}
             selectedDate={selectedDate}
-            slot={slotForDay}
+            slot={effectiveSlotForDay}
             patientName={form.fullName}
             visitReasonLabel={REASON_LABELS[form.visitReason]}
             queueWaiting={queueWaiting}

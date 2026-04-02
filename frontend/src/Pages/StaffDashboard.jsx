@@ -146,7 +146,8 @@ const Dashboard = () => {
                 ) : (
                   doctorRooms.map((doctor) => {
                     const status = (doctorStatuses && doctorStatuses[doctor._id]) || doctor.status || 'Active';
-                    const progress = doctor.slotLimit ? Math.min(100, (doctor.slotLimit / Math.max(1, doctor.slotLimit)) * 70) : (status === 'Active' ? 70 : 10);
+                    const sLower = String(status || '').toLowerCase();
+                    const progress = (sLower === 'active' || sLower === 'enabled') ? 70 : 10;
                     return (
                       <div key={doctor._id} className="relative bg-gradient-to-br from-white to-slate-50 rounded-2xl p-5 shadow-sm hover:shadow-md transition">
                         <div className="flex items-start justify-between">
@@ -154,7 +155,7 @@ const Dashboard = () => {
                             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Room {doctor.room}</p>
                             <h3 className="text-lg font-bold text-slate-900 mt-1">{doctor.doctorName}</h3>
                             <p className="text-xs text-slate-500 mt-1">{doctor.specialization || 'General Ophthalmology'}</p>
-                            <p className="text-xs text-slate-400 mt-1">Slot limit: {doctor.slotLimit || '—'} · Queue: {doctor.queueLimit || '—'}</p>
+                            <p className="text-xs text-slate-400 mt-1">Queue: {doctor.queueLimit || '—'}</p>
                           </div>
 
                           <div className="text-right">
@@ -176,13 +177,7 @@ const Dashboard = () => {
                             >
                               View Queue
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => navigate('/followups', { state: { doctorId: doctor._id } })}
-                              className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-slate-100 text-slate-800 border hover:bg-slate-200 transition"
-                            >
-                              Schedule Follow-Up
-                            </button>
+                           
                           </div>
                         </div>
                       </div>

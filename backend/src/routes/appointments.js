@@ -7,6 +7,8 @@ import {
   getMyAppointments,
   getAppointmentById,
   cancelAppointment,
+  checkAvailability,
+  getAppointmentsByDate,
 } from '../controllers/appointmentController.js';
 
 const router = express.Router();
@@ -20,6 +22,8 @@ router.post(
 );
 
 router.get('/mine', authMiddleware, getMyAppointments);
+router.get('/by-date', authMiddleware, getAppointmentsByDate);
+router.get('/check-availability', authMiddleware, checkAvailability);
 router.get('/:id', authMiddleware, getAppointmentById);
 router.patch('/:id/cancel', authMiddleware, cancelAppointment);
 

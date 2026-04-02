@@ -67,10 +67,15 @@ export async function getSlotsForDoctorMonth(req, res) {
         continue;
       }
 
-      // allowed day: compute total from DailySlot override or doctor's slotLimit or default
-      const total = doc?.totalSlots ?? (doctorRoom?.slotLimit ?? totalSlotsForDate(dayStart));
-      const booked = doc?.bookedCount ?? 0;
-      const available = Math.max(0, total - booked);
+        // allowed day: compute total from DailySlot override or default rules
+          // DoctorRoom.slotLimit has been removed; rely on DailySlot override or default per weekday
+          let total = doc?.totalSlots ?? totalSlotsForDate(dayStart);
+        // cap total by doctorRoom.queueLimit when configured
+        if (doctorRoom && typeof doctorRoom.queueLimit === 'number') {
+          total = Math.min(total, doctorRoom.queueLimit);
+        }
+        const booked = doc?.bookedCount ?? 0;
+        const available = Math.max(0, total - booked);
       const isSaturday = dow === 6;
 
       result.push({

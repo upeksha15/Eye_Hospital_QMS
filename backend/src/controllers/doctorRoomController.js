@@ -5,10 +5,10 @@ const CHECKIN_WINDOW_MS = CHECKIN_WINDOW_MINUTES * 60 * 1000;
 
 export const createDoctorRoom = async (req, res) => {
   try {
-    const { doctorName, room, slotLimit, queueLimit, specialization, availability } = req.body;
+    const { doctorName, room, queueLimit, specialization, availability } = req.body;
 
-    if (!doctorName || !room || !slotLimit || !queueLimit) {
-      return res.status(400).json({ message: "All fields are required" });
+    if (!doctorName || !room || queueLimit == null) {
+      return res.status(400).json({ message: "doctorName, room and queueLimit are required" });
     }
 
     const newDoctorRoom = new DoctorRoom({
@@ -16,7 +16,6 @@ export const createDoctorRoom = async (req, res) => {
       room,
       specialization,
       availability: Array.isArray(availability) ? availability : [],
-      slotLimit,
       queueLimit,
     });
 
@@ -55,20 +54,16 @@ export const getDoctorRoomById = async (req, res) => {
 
 export const updateDoctorRoom = async (req, res) => {
   try {
-    const { doctorName, room, slotLimit, queueLimit, specialization, availability } = req.body;
+    const { doctorName, room, queueLimit, specialization, availability } = req.body;
 
-    const updatedDoctorRoom = await DoctorRoom.findByIdAndUpdate(
-      req.params.id,
-      {
-        doctorName,
-        room,
-        specialization,
-        availability: Array.isArray(availability) ? availability : [],
-        slotLimit,
-        queueLimit,
-      },
-      { new: true, runValidators: true }
-    );
+    const patch = {};
+    if (doctorName !== undefined) patch.doctorName = doctorName;
+    if (room !== undefined) patch.room = room;
+    if (specialization !== undefined) patch.specialization = specialization;
+    if (availability !== undefined) patch.availability = Array.isArray(availability) ? availability : [];
+    if (queueLimit !== undefined) patch.queueLimit = queueLimit;
+
+    const updatedDoctorRoom = await DoctorRoom.findByIdAndUpdate(req.params.id, patch, { new: true, runValidators: true });
 
     if (!updatedDoctorRoom) {
       return res.status(404).json({ message: "Doctor room not found" });
