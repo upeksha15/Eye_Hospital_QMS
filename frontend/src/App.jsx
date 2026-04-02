@@ -1,6 +1,9 @@
 import React from "react";
 import { Navigate } from "react-router-dom";
 import Home from "./Pages/Home";
+import AboutPage from "./Pages/AboutPage";
+import ServicesPage from "./Pages/ServicesPage";
+import ContactPage from "./Pages/ContactPage";
 import UserReg from "./Pages/UserReg";
 import LoginPage from "./Pages/LoginPage";
 import PatientDashboardLayout from "./components/PatientDashboardLayout";
@@ -49,6 +52,9 @@ function AppRoutes() {
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<UserReg />} />
+      <Route path="/about" element={<AboutPage />} />
+      <Route path="/services" element={<ServicesPage />} />
+      <Route path="/contact" element={<ContactPage />} />
       <Route
         path="/dashboard"
         element={
@@ -91,6 +97,14 @@ function AppRoutes() {
       />
       <Route
         path="/queue"
+        element={
+          <PatientRoute>
+            <PatientDashboardLayout />
+          </PatientRoute>
+        }
+      />
+      <Route
+        path="/notifications"
         element={
           <PatientRoute>
             <PatientDashboardLayout />

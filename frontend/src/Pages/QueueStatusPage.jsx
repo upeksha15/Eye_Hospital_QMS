@@ -1,18 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import Navbar from '../components/Navbar';
-import TopBar from '../components/TopBar';
 import HoursStrip from '../components/HoursStrip';
 import NoticeBar from '../components/NoticeBar';
 import { bookingStrings } from '../i18n/bookingStrings';
-import { useAuth } from '../hooks/useAuth';
 import { fetchMyAppointments, checkIn as checkInApi } from '../api/appointmentsApi';
 import { fetchQueueBoardToday, fetchMyQueueStatusToday } from '../api/queueApi';
 import { useSocket } from '../hooks/useSocket';
 import { formatYMD, nowColombo } from '../utils/dateHelpers';
 
 export default function QueueStatusPage() {
-  const { patient } = useAuth();
   const strings = bookingStrings.en;
 
   const [appointments, setAppointments] = useState([]);
@@ -86,8 +82,6 @@ export default function QueueStatusPage() {
 
   return (
     <div className="min-h-screen bg-[#EBF4FF] font-['Nunito']">
-      <TopBar lang="en" onLangChange={() => {}} strings={strings} />
-      <Navbar strings={strings} patient={patient} />
       <HoursStrip strings={strings} />
       <NoticeBar />
       <div className="max-w-5xl mx-auto px-4 py-10">

@@ -103,10 +103,10 @@ useEffect(() => {
   </div>
         </div>
         <div className="flex items-center gap-8 font-semibold text-[#004a99]">
-          <a href="#" className="border-b-2 border-blue-600">Home</a>
-          <a href="#">Services</a>
-          <a href="#">About Us</a>
-          <a href="#">Contact</a>
+          <Link to="/" className="border-b-2 border-blue-600">Home</Link>
+          <Link to="/services">Services</Link>
+          <Link to="/about">About Us</Link>
+          <Link to="/contact">Contact</Link>
           
           <Bell className="w-6 h-6 text-slate-600 cursor-pointer" />
 
@@ -232,14 +232,7 @@ useEffect(() => {
   </svg>
 
          
-          <div className="mt-10 flex flex-col gap-4">
-            <button className="bg-[#2d9d78] text-white px-10 py-4  rounded-xl font-bold text-xl flex items-center gap-3 shadow-lg hover:scale-105 transition">
-              <ClipboardList /> Schedule an Appointment
-            </button>
-            <button className="bg-[#fee2c5] text-[#8a5d2e] px-10 py-4 rounded-xl font-bold text-xl flex items-center gap-3 border border-orange-200 shadow-sm hover:bg-[#fdd6ae] transition">
-              <Clock /> Check Queue Status
-            </button>
-          </div>
+          {/* Removed hero action buttons (Schedule Appointment & Queue Status) as requested */}
         </div>
       </section>
 
@@ -344,10 +337,10 @@ useEffect(() => {
           <div>
             <h3 className="font-bold text-lg mb-4">Quick Links</h3>
             <ul className="space-y-2 text-sm">
-              <li><a href="#" className="hover:underline">Home</a></li>
-              <li><a href="#" className="hover:underline">Services</a></li>
-              <li><a href="#" className="hover:underline">About Us</a></li>
-              <li><a href="#" className="hover:underline">Contact</a></li>
+              <li><Link to="/" className="hover:underline">Home</Link></li>
+              <li><Link to="/services" className="hover:underline">Services</Link></li>
+              <li><Link to="/about" className="hover:underline">About Us</Link></li>
+              <li><Link to="/contact" className="hover:underline">Contact</Link></li>
             </ul>
           </div>
           <div>

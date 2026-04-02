@@ -21,6 +21,7 @@ import MyAppointmentsPage from '../Pages/MyAppointmentsPage';
 import QueueStatusPage from '../Pages/QueueStatusPage';
 import UserProfile from '../Pages/User_Profile';
 import PatientFollowUpsPage from '../Pages/PatientFollowUpsPage';
+import NotificationsPage from '../Pages/NotificationsPage';
 
 function getStatusColor(status) {
   switch (status) {
@@ -143,6 +144,10 @@ export default function PatientDashboardLayout() {
 
     return () => clearInterval(interval);
   }, [queueStatus.isInQueue, queueStatus.position]);
+
+  const handleLogoClick = () => {
+    navigate('/');
+  };
 
   const handleLogout = () => {
     if (window.confirm('Are you sure you want to logout?')) {
@@ -341,6 +346,10 @@ export default function PatientDashboardLayout() {
       return <UserProfile />;
     }
 
+    if (pathname === '/notifications') {
+      return <NotificationsPage />;
+    }
+
     return (
       <div className="p-6">
         <p className="text-sm text-slate-600">Page not found.</p>
@@ -352,15 +361,29 @@ export default function PatientDashboardLayout() {
     <div className="h-screen w-screen overflow-hidden bg-gray-50 flex flex-col">
       <header className="bg-gradient-to-r from-[#0F4C81] to-[#2A9DF4] text-white shadow-xl z-10">
         <div className="px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleLogoClick}
+            className="flex items-center gap-3 focus:outline-none hover:opacity-90 transition"
+            aria-label="Go to home page"
+          >
             <div className="bg-white/25 p-2 rounded-lg shadow-md">
               <Eye size={24} className="text-white" />
             </div>
             <div>
               <h2 className="text-xl font-bold text-white">Queue Management System</h2>
             </div>
-          </div>
+          </button>
           <div className="flex items-center gap-4">
+            {/* Notification bell icon */}
+            <button
+              type="button"
+              onClick={() => navigate('/notifications')}
+              className="relative p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors focus:outline-none focus:ring-2 focus:ring-white/60"
+              aria-label="Notifications"
+            >
+              <Bell size={20} className="text-white" />
+            </button>
             <div className="hidden sm:flex items-center gap-3">
               <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-white bg-white/30 flex items-center justify-center">
                 {user.profileImage ? (

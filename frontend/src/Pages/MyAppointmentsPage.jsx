@@ -31,20 +31,53 @@ export default function MyAppointmentsPage() {
         ) : items.length === 0 ? (
           <p className="mt-4 text-slate-600">No appointments yet.</p>
         ) : (
-          <ul className="mt-6 space-y-4">
-            {items.map((a) => (
-              <li
-                key={a._id}
-                className="rounded-2xl bg-white border border-blue-100 p-4 shadow-sm"
-              >
-                <p className="font-semibold text-slate-900">{a.bookingRef}</p>
-                <p className="text-sm text-slate-600 mt-1">
-                  {a.doctorId?.doctorName || a.doctorId?.fullName || 'Doctor'} · {new Date(a.appointmentDate).toLocaleDateString()}
-                </p>
-                <p className="text-xs text-slate-500 mt-1 capitalize">{a.status?.replace('_', ' ')}</p>
-              </li>
-            ))}
-          </ul>
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            {items.map((a) => {
+              const statusLabel = a.status?.replace('_', ' ') || 'unknown';
+              const status = String(a.status || '').toLowerCase();
+              const statusColor =
+                status === 'approved'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : status === 'pending'
+                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                  : status === 'cancelled'
+                  ? 'bg-rose-50 text-rose-700 border-rose-200'
+                  : 'bg-slate-50 text-slate-700 border-slate-200';
+
+              const cardColor =
+                status === 'approved'
+                  ? 'bg-emerald-50 border-emerald-100'
+                  : status === 'pending'
+                  ? 'bg-amber-50 border-amber-100'
+                  : status === 'cancelled'
+                  ? 'bg-rose-50 border-rose-100'
+                  : 'bg-sky-50 border-sky-100';
+
+              return (
+                <div
+                  key={a._id}
+                  className={`rounded-2xl border p-5 shadow-sm flex flex-col justify-between ${cardColor}`}
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-semibold text-slate-900 truncate">{a.bookingRef}</p>
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-semibold border ${statusColor}`}
+                      >
+                        {statusLabel}
+                      </span>
+                    </div>
+                    <p className="text-sm text-slate-600 mt-2">
+                      {a.doctorId?.doctorName || a.doctorId?.fullName || 'Doctor'}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      {new Date(a.appointmentDate).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
     </div>

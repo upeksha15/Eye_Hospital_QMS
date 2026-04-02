@@ -85,14 +85,18 @@ const LoginPage = () => {
       {/* Background image now displayed clearly without overlay */}
 
       <div className="w-full max-w-md relative z-10">
-        {/* Header Section */}
+        {/* Header Section with Home-style Eye Logo */}
         <div className="text-center mb-8 animate-fade-in">
-          <div className="inline-block p-3 bg-white/20 backdrop-blur-md rounded-xl shadow-lg mb-4 transform hover:scale-110 transition-transform border border-white/30">
-            <Eye className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-4xl font-bold text-white drop-shadow-lg mb-2">
-            Eye Hospital QMS
-          </h1>
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="inline-flex items-center justify-center p-3 bg-white/10 backdrop-blur-md rounded-full shadow-lg mb-3 border border-white/30 hover:bg-white/20 transition-transform hover:scale-110"
+            aria-label="Go to home page"
+          >
+            <div className="p-1.5 bg-blue-600 rounded-full">
+              <Eye className="text-white w-7 h-7" />
+            </div>
+          </button>
           <p className="text-white/90 text-lg drop-shadow-md">Welcome Back</p>
         </div>
 
@@ -183,6 +187,15 @@ const LoginPage = () => {
                   className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white/60 hover:text-white transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+              <div className="mt-2 text-right">
+                <button
+                  type="button"
+                  onClick={() => navigate('/forgot-password')}
+                  className="text-xs text-white/80 hover:text-white underline-offset-2 hover:underline transition-colors"
+                >
+                  Forgot password?
                 </button>
               </div>
             </div>
