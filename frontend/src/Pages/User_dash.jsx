@@ -16,6 +16,8 @@ import {
   Timer
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { fetchMyAppointments } from '../api/appointmentsApi';
+import { fetchMyQueueStatusToday } from '../api/queueApi';
 
     
 
@@ -48,61 +50,102 @@ const UserDashboard = () => {
   }, []);
   
   const [queueStatus, setQueueStatus] = useState({
-    isInQueue: true,
-    queueNumber: 15,
-    position: 3,
-    estimatedWaitTime: 25,
-    status: 'active'
+    isInQueue: false,
+    queueNumber: null,
+    position: null,
+    estimatedWaitTime: 0,
+    status: 'inactive'
   });
 
-  const [appointments] = useState({
-    upcoming: [
-      {
-        id: 1,
-        date: '2024-01-15',
-        time: '10:00 AM',
-        doctor: 'Dr. Sarah Johnson',
-        department: 'General Eye Care',
-        status: 'approved',
-        type: 'Regular Checkup'
-      },
-      {
-        id: 2,
-        date: '2024-01-20',
-        time: '02:30 PM',
-        doctor: 'Dr. Michael Chen',
-        department: 'Retina Specialist',
-        status: 'pending',
-        type: 'Follow-up'
-      }
-    ],
-    past: [
-      {
-        id: 3,
-        date: '2023-12-10',
-        time: '11:00 AM',
-        doctor: 'Dr. Sarah Johnson',
-        department: 'General Eye Care',
-        status: 'completed',
-        type: 'Regular Checkup'
-      }
-    ]
+  const [appointments, setAppointments] = useState({
+    upcoming: [],
+    past: []
   });
 
-  // Simulate real-time queue updates
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (queueStatus.isInQueue && queueStatus.position > 0) {
-        setQueueStatus(prev => ({
-          ...prev,
-          position: Math.max(0, prev.position - 1),
-          estimatedWaitTime: Math.max(0, prev.estimatedWaitTime - 1)
-        }));
-      }
-    }, 30000); // Update every 30 seconds
+    let mounted = true;
+    const loadDashboardData = async () => {
+      try {
+        const data = await fetchMyAppointments();
+        if (!mounted) return;
+        const all = data.appointments || [];
 
-    return () => clearInterval(interval);
-  }, [queueStatus.isInQueue, queueStatus.position]);
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+        const upcoming = all
+          // Treat appointments on "today" as upcoming for the whole day (appointmentDate is stored at 00:00).
+          .filter((a) => new Date(a.appointmentDate) >= startOfToday && a.status !== 'cancelled')
+          .map((a) => ({
+            id: a._id,
+            date: a.appointmentDate,
+            time: new Date(a.appointmentDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            doctor: a.doctorId?.doctorName || a.doctorId?.fullName || 'Doctor',
+            department: a.doctorId?.specialization || a.doctorId?.speciality || 'General',
+            status: a.status === 'booked' ? 'approved' : a.status,
+            type: (a.visitReason || 'consultation').replace(/_/g, ' '),
+            doctorId: a.doctorId?._id || a.doctorId,
+          }));
+
+        const past = all
+          .filter((a) => new Date(a.appointmentDate) < startOfToday || a.status === 'completed')
+          .map((a) => ({
+            id: a._id,
+            date: a.appointmentDate,
+            time: new Date(a.appointmentDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            doctor: a.doctorId?.doctorName || a.doctorId?.fullName || 'Doctor',
+            department: a.doctorId?.specialization || a.doctorId?.speciality || 'General',
+            status: a.status,
+            type: (a.visitReason || 'consultation').replace(/_/g, ' '),
+          }));
+
+        setAppointments({ upcoming, past });
+
+        // Try loading queue details for today's appointment (from ALL appointments, not only upcoming).
+        const todayKey = new Date().toDateString();
+        const todayApptRaw = all.find((a) => new Date(a.appointmentDate).toDateString() === todayKey);
+        const todayDoctorId = todayApptRaw?.doctorId?._id || todayApptRaw?.doctorId;
+
+        if (todayDoctorId) {
+          try {
+            const q = await fetchMyQueueStatusToday(todayDoctorId);
+            if (!mounted) return;
+            setQueueStatus({
+              isInQueue: Boolean(q?.tokenNumber),
+              queueNumber: q?.tokenNumber || null,
+              position: q?.position ?? null,
+              estimatedWaitTime: q?.estimatedWaitMinutes ?? 0,
+              status: q?.queueStatus || 'inactive',
+            });
+          } catch {
+            setQueueStatus({
+              isInQueue: false,
+              queueNumber: null,
+              position: null,
+              estimatedWaitTime: 0,
+              status: 'inactive'
+            });
+          }
+        } else {
+          setQueueStatus({
+            isInQueue: false,
+            queueNumber: null,
+            position: null,
+            estimatedWaitTime: 0,
+            status: 'inactive'
+          });
+        }
+      } catch (e) {
+        if (!mounted) return;
+        setAppointments({ upcoming: [], past: [] });
+      }
+    };
+
+    loadDashboardData();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const handleLogout = () => {
     if (window.confirm('Are you sure you want to logout?')) {
@@ -150,7 +193,7 @@ const UserDashboard = () => {
   const sidebarItems = [
     { id: 'dashboard', icon: Home, label: 'Dashboard', path: '/dashboard' },
     { id: 'appointments', icon: Calendar, label: 'Get Appointment', path: '/appointments/book' },
-    { id: 'history', icon: History, label: 'My Appointments', path: '/appointments/mine' },
+    { id: 'history', icon: History, label: 'Past Appointments', path: '/appointments/mine' },
     { id: 'queue', icon: Activity, label: 'Queue Status', path: '/queue' },
     { id: 'profile', icon: User, label: 'Profile', path: '/profile' },
   ];
@@ -306,7 +349,7 @@ const UserDashboard = () => {
               </div>
 
               {/* Queue Status Card */}
-              {queueStatus.isInQueue && (
+              <div className="bg-[#F0F9FF] rounded-xl shadow-lg border-2 border-[#BAE6FD] p-6">
                 <div className="bg-[#F0F9FF] rounded-xl shadow-lg border-2 border-[#BAE6FD] p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
@@ -319,17 +362,17 @@ const UserDashboard = () => {
                       </div>
                     </div>
                     <div className="bg-[#DCFCE7] px-4 py-2 rounded-full">
-                      <span className="font-semibold text-sm text-[#15803D]">Active</span>
+                      <span className="font-semibold text-sm text-[#15803D]">{String(queueStatus.status || 'active')}</span>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="bg-white rounded-lg p-4 border border-[#E5E7EB]">
                       <p className="text-sm mb-1 text-[#6B7280]">Queue Number</p>
-                      <p className="text-3xl font-bold text-[#0F4C81]">#{queueStatus.queueNumber}</p>
+                      <p className="text-3xl font-bold text-[#0F4C81]">{queueStatus.queueNumber || '--'}</p>
                     </div>
                     <div className="bg-white rounded-lg p-4 border border-[#E5E7EB]">
                       <p className="text-sm mb-1 text-[#6B7280]">Position</p>
-                      <p className="text-3xl font-bold text-[#0F4C81]">{queueStatus.position}</p>
+                      <p className="text-3xl font-bold text-[#0F4C81]">{queueStatus.position ?? '--'}</p>
                       <p className="text-xs mt-1 text-[#6B7280]">people ahead</p>
                     </div>
                     <div className="bg-white rounded-lg p-4 border border-[#E5E7EB]">
@@ -345,7 +388,7 @@ const UserDashboard = () => {
                     </p>
                   </div>
                 </div>
-              )}
+              </div>
 
               {/* Upcoming Appointments */}
               <div className="bg-[#F0F9FF] rounded-xl shadow-md border-2 border-[#BAE6FD] p-6">

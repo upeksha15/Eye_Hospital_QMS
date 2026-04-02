@@ -1,7 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import HoursStrip from '../components/HoursStrip';
-import NoticeBar from '../components/NoticeBar';
 import { bookingStrings } from '../i18n/bookingStrings';
 import { fetchMyAppointments, checkIn as checkInApi } from '../api/appointmentsApi';
 import { fetchQueueBoardToday, fetchMyQueueStatusToday } from '../api/queueApi';
@@ -82,8 +80,6 @@ export default function QueueStatusPage() {
 
   return (
     <div className="min-h-screen bg-[#EBF4FF] font-['Nunito']">
-      <HoursStrip strings={strings} />
-      <NoticeBar />
       <div className="max-w-5xl mx-auto px-4 py-10">
         <div className="flex items-start justify-between gap-6 flex-col md:flex-row">
           <div>

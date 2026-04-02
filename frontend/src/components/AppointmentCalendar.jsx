@@ -20,6 +20,8 @@ export default function AppointmentCalendar({
   loading,
   strings,
   allowedWeekdays, // array of weekday names e.g. ['Monday','Wednesday']
+  hideAvailableCount = false,
+  compact = false,
 }) {
   const [y, m] = monthKey.split('-').map(Number);
   const firstOfMonth = new Date(y, m - 1, 1);
@@ -74,31 +76,31 @@ export default function AppointmentCalendar({
   };
 
   return (
-    <div className="space-y-4">
+    <div className={`space-y-4 ${compact ? 'text-sm' : ''}`}>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="font-['Playfair_Display'] text-xl text-[#1E3A8A] font-semibold">
+        <h3 className={`font-['Playfair_Display'] ${compact ? 'text-xl' : 'text-xl'} text-[#1E3A8A] font-semibold`}>
           {strings.chooseDate}
         </h3>
       </div>
 
-      <div className="rounded-[14px] overflow-hidden border border-blue-100 shadow-[0_4px_24px_rgba(37,99,235,0.08)] bg-white">
+      <div className={`rounded-[14px] overflow-hidden border border-blue-100 shadow-[0_4px_24px_rgba(37,99,235,0.08)] bg-white ${compact ? 'max-w-[480px]' : ''}`}>
         <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
           <button
             type="button"
             onClick={() => go(-1)}
-            className="p-2 rounded-lg hover:bg-white/10 transition"
+            className={`${compact ? 'p-1.5' : 'p-2'} rounded-lg hover:bg-white/10 transition`}
             aria-label="Previous month"
           >
-            <ChevronLeft className="w-5 h-5" />
+            <ChevronLeft className={`${compact ? 'w-4 h-4' : 'w-5 h-5'}`} />
           </button>
-          <p className="font-['Playfair_Display'] text-lg font-semibold">{monthLabel}</p>
+          <p className={`font-['Playfair_Display'] ${compact ? 'text-lg' : 'text-lg'} font-semibold`}>{monthLabel}</p>
           <button
             type="button"
             onClick={() => go(1)}
-            className="p-2 rounded-lg hover:bg-white/10 transition"
+            className={`${compact ? 'p-1' : 'p-2'} rounded-lg hover:bg-white/10 transition`}
             aria-label="Next month"
           >
-            <ChevronRight className="w-5 h-5" />
+            <ChevronRight className={`${compact ? 'w-4 h-4' : 'w-5 h-5'}`} />
           </button>
         </div>
 
@@ -119,7 +121,7 @@ export default function AppointmentCalendar({
           {cells.map((c, idx) => {
             if (c.type === 'empty') {
               return (
-                <div key={`e-${idx}`} className="min-h-[88px] bg-slate-50/80" />
+                <div key={`e-${idx}`} className={`${compact ? 'min-h-[72px]' : 'min-h-[88px]'} bg-slate-50/80`} />
               );
             }
 
@@ -142,17 +144,17 @@ export default function AppointmentCalendar({
               badge = { text: 'Full', className: 'bg-red-100 text-red-700' };
             } else if (sat) {
               badge = {
-                text: `${slot.available} left`,
+                text: hideAvailableCount ? 'Available' : `${slot.available} left`,
                 className: 'bg-blue-100 text-blue-800 border border-blue-200',
               };
             } else if (slot && slot.available > 5) {
               badge = {
-                text: `${slot.available} left`,
+                text: hideAvailableCount ? 'Available' : `${slot.available} left`,
                 className: 'bg-emerald-100 text-emerald-800 border border-emerald-200',
               };
             } else if (slot) {
               badge = {
-                text: `${slot.available} left`,
+                text: hideAvailableCount ? 'Available' : `${slot.available} left`,
                 className: 'bg-amber-100 text-amber-900 border border-amber-200',
               };
             }
@@ -165,7 +167,7 @@ export default function AppointmentCalendar({
                 type="button"
                 disabled={disabled}
                 onClick={() => handleCell(c)}
-                className={`min-h-[88px] text-left p-2 flex flex-col gap-1 transition rounded-none ${
+                className={`${compact ? 'min-h-[72px] p-1.5' : 'min-h-[88px] p-2'} text-left flex flex-col gap-1 transition rounded-none ${
                   isSelected
                     ? 'bg-gradient-to-br from-blue-500 to-blue-700 text-white ring-2 ring-blue-300 z-10'
                     : !allowed
@@ -176,7 +178,7 @@ export default function AppointmentCalendar({
                 }`}
               >
                 <span
-                  className={`text-sm font-semibold inline-flex items-center justify-center w-7 h-7 rounded-full ${
+                  className={`font-semibold inline-flex items-center justify-center ${compact ? 'w-8 h-8 text-sm' : 'w-7 h-7 text-sm'} rounded-full ${
                     isSelected
                       ? 'bg-white text-blue-700'
                       : isToday

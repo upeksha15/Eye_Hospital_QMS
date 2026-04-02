@@ -3,7 +3,7 @@ import Appointment from '../models/Appointment.js';
 import DailySlot from '../models/DailySlot.js';
 import Patient from '../models/Patient.js';
 import DoctorRoom from '../models/DoctorRoom.js';
-import { formatYMD, nowColombo } from '../utils/dateUtils.js';
+import { formatYMD, nowColombo, startOfDayColombo, getDayOfWeekColombo, totalSlotsForDate } from '../utils/dateUtils.js';
 
 async function generateBookingRef() {
   const year = new Date().getFullYear();
@@ -35,39 +35,51 @@ export async function createAppointment(req, res) {
       console.warn('Failed to update patient data during booking:', uErr.message || uErr);
     }
 
-    let bookingRef;
+    // Attempt to create the appointment with a unique bookingRef.
+    // Retry a few times if a duplicate-key error occurs (race condition).
+    const MAX_REF_ATTEMPTS = 5;
+    let appointment = null;
     try {
-      bookingRef = await generateBookingRef();
-    } catch (e) {
-      await DailySlot.updateOne(
-        { _id: req.dailySlotDoc._id },
-        { $inc: { bookedCount: -1 } }
-      );
-      throw e;
-    }
+      for (let attempt = 0; attempt < MAX_REF_ATTEMPTS; attempt++) {
+        let ref = await generateBookingRef();
+        // On retries, append a small random suffix to reduce collision chance
+        if (attempt > 0) {
+          const suffix = Math.floor(Math.random() * 900) + 100; // 100-999
+          ref = `${ref}-${suffix}`;
+        }
 
-    let appointment;
-    try {
-      appointment = await Appointment.create({
-        patientId,
-        doctorId,
-        appointmentDate: dayStart,
-        visitReason,
-        notes: notes || '',
-        bookingRef,
-        status: 'booked',
-      });
-    } catch (e) {
-      await DailySlot.updateOne(
-        { _id: req.dailySlotDoc._id },
-        { $inc: { bookedCount: -1 } }
-      );
-      if (e.code === 11000) {
-        return res.status(400).json({
-          success: false,
-          message: 'Could not generate unique booking reference. Try again.',
-        });
+        try {
+          appointment = await Appointment.create({
+            patientId,
+            doctorId,
+            appointmentDate: dayStart,
+            visitReason,
+            notes: notes || '',
+            bookingRef: ref,
+            status: 'booked',
+          });
+          break; // success
+        } catch (errCreate) {
+          // If duplicate key, retry; otherwise propagate
+          if (errCreate.code === 11000) {
+            // last attempt -> rollback bookedCount and notify client
+            if (attempt === MAX_REF_ATTEMPTS - 1) {
+              if (req.dailySlotDoc && req.dailySlotDoc._id) {
+                await DailySlot.updateOne({ _id: req.dailySlotDoc._id }, { $inc: { bookedCount: -1 } });
+              }
+              return res.status(400).json({ success: false, message: 'Could not generate unique booking reference. Try again.' });
+            }
+            // otherwise continue to next attempt
+            continue;
+          }
+          // non-duplicate error: rollback and rethrow
+          if (req.dailySlotDoc && req.dailySlotDoc._id) {
+            await DailySlot.updateOne({ _id: req.dailySlotDoc._id }, { $inc: { bookedCount: -1 } });
+          }
+          throw errCreate;
+        }
       }
+    } catch (e) {
       throw e;
     }
 
@@ -189,5 +201,93 @@ export async function cancelAppointment(req, res) {
     res.status(500).json({ success: false, message: e.message || 'Cancel failed' });
   } finally {
     session.endSession();
+  }
+}
+
+export async function getAppointmentsByDate(req, res) {
+  try {
+    if (req.userType !== 'staff') {
+      return res.status(403).json({ success: false, message: 'Forbidden' });
+    }
+
+    const dateStr = req.query.date;
+    if (!dateStr) {
+      return res.status(400).json({ success: false, message: 'Missing date parameter' });
+    }
+
+    const dayStart = startOfDayColombo(dateStr);
+    const dayEnd = new Date(dayStart);
+    dayEnd.setDate(dayEnd.getDate() + 1);
+
+    const list = await Appointment.find({
+      appointmentDate: { $gte: dayStart, $lt: dayEnd },
+    })
+      .populate({ path: 'patientId', model: 'Patient', select: 'fullName contactNumber nic' })
+      .populate({ path: 'doctorId', model: 'DoctorRoom', select: 'doctorName' })
+      .sort({ appointmentDate: 1 })
+      .lean();
+
+    // map to a simpler shape
+    const mapped = (list || []).map((a) => ({
+      _id: a._id,
+      patientName: a.patientId?.fullName || a.patientId || '',
+      patientNIC: a.patientId?.nic || '',
+      patientContact: a.patientId?.contactNumber || '',
+      doctorId: a.doctorId?._id || null,
+      doctorName: a.doctorId?.doctorName || a.doctorId?.fullName || a.doctorId || '',
+      appointmentDate: a.appointmentDate,
+      visitReason: a.visitReason,
+      status: a.status,
+    }));
+
+    res.json({ success: true, appointments: mapped });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ success: false, message: e.message || 'Failed to load appointments' });
+  }
+}
+
+export async function checkAvailability(req, res) {
+  try {
+    const { doctorId, date } = req.query;
+    if (!doctorId || !date) {
+      return res.status(400).json({ success: false, message: 'doctorId and date are required' });
+    }
+
+    const dayStart = startOfDayColombo(date);
+
+    // load doctor room
+    const doctorRoom = await DoctorRoom.findById(doctorId).lean();
+
+    // determine weekday name
+    const WEEKDAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const dow = getDayOfWeekColombo(dayStart);
+    const weekdayName = WEEKDAY_NAMES[dow] || '';
+
+    // check availability
+    let isAvailable = true;
+    if (doctorRoom) {
+      const avail = Array.isArray(doctorRoom.availability) ? doctorRoom.availability : [];
+      isAvailable = avail.includes(weekdayName);
+    } else {
+      // fallback: closed on Sundays
+      isAvailable = dow !== 0;
+    }
+
+    // compute total slots (DailySlot override or default), cap by doctor queueLimit if present
+    const daily = await DailySlot.findOne({ doctorId, slotDate: dayStart }).lean();
+    let total = daily?.totalSlots ?? totalSlotsForDate(dayStart);
+    if (doctorRoom && typeof doctorRoom.queueLimit === 'number') {
+      total = Math.min(total, doctorRoom.queueLimit);
+    }
+
+    // count existing appointments (exclude cancelled)
+    const existing = await Appointment.countDocuments({ doctorId, appointmentDate: dayStart, status: { $ne: 'cancelled' } });
+    const isQueueFull = existing >= total;
+
+    res.json({ success: true, isAvailable, isQueueFull });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ success: false, message: e.message || 'Failed to check availability' });
   }
 }
