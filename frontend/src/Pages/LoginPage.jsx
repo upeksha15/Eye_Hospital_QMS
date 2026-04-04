@@ -13,8 +13,93 @@ const LoginPage = () => {
   const [role, setRole] = useState('patient');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [focusedField, setFocusedField] = useState(null);
+
+  // ============ VALIDATION FUNCTIONS ============
+
+  // Email Validation
+  const validateEmail = (value) => {
+    const trimmed = value.trim();
+    
+    if (!trimmed) {
+      return "Email is required";
+    }
+    if (trimmed.length > 254) {
+      return "Email must not exceed 254 characters";
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmed)) {
+      return "Email must be in the format: user@domain.com";
+    }
+    return "";
+  };
+
+  // Password Validation
+  const validatePassword = (value) => {
+    if (!value) {
+      return "Password is required";
+    }
+    if (value.length < 6) {
+      return "Password must be at least 6 characters";
+    }
+    return "";
+  };
+
+  // ============ EVENT HANDLERS ============
+
+  const handleEmailChange = (e) => {
+    const value = e.target.value.trim();
+    
+    // Block typing after valid TLD
+    const hasValidTLD = (emailStr) => {
+      if (!emailStr.includes('@') || !emailStr.includes('.')) return false;
+      const afterAt = emailStr.substring(emailStr.indexOf('@') + 1);
+      const lastDotIndex = afterAt.lastIndexOf('.');
+      if (lastDotIndex === -1) return false;
+      const tld = afterAt.substring(lastDotIndex + 1);
+      return tld.length >= 2; // Valid TLD must be at least 2 chars
+    };
+
+    if (hasValidTLD(email) && value.length > email.trim().length) {
+      // User is trying to add more characters after a complete TLD, block it
+      return;
+    }
+
+    setEmail(value);
+    
+    // Real-time validation
+    const error = validateEmail(value);
+    if (error) {
+      setFieldErrors(prev => ({ ...prev, email: error }));
+    } else {
+      setFieldErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.email;
+        return newErrors;
+      });
+    }
+    setError('');
+  };
+
+  const handlePasswordChange = (e) => {
+    const value = e.target.value;
+    setPassword(value);
+    
+    // Real-time validation
+    const error = validatePassword(value);
+    if (error) {
+      setFieldErrors(prev => ({ ...prev, password: error }));
+    } else {
+      setFieldErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.password;
+        return newErrors;
+      });
+    }
+    setError('');
+  };
 
   const roles = [
     {
@@ -40,20 +125,21 @@ const LoginPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setFieldErrors({});
 
-    if (!email.trim() || !password.trim()) {
-      setError('Please fill in all fields');
-      return;
-    }
-
-    if (!email.includes('@')) {
-      setError('Please enter a valid email address');
+    // Validate fields
+    const emailError = validateEmail(email);
+    const passwordError = validatePassword(password);
+    
+    if (emailError || passwordError) {
+      if (emailError) setFieldErrors(prev => ({ ...prev, email: emailError }));
+      if (passwordError) setFieldErrors(prev => ({ ...prev, password: passwordError }));
       return;
     }
 
     setLoading(true);
     try {
-      const data = await login({ email: email.trim(), password, role });
+      const data = await login({ email: email.trim().toLowerCase(), password, role });
       const u = data?.user || data?.patient;
       if (u?.userType === 'staff') {
         if (u.role === 'admin') {
@@ -151,13 +237,16 @@ const LoginPage = () => {
                   id="email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={handleEmailChange}
                   onFocus={() => setFocusedField('email')}
                   onBlur={() => setFocusedField(null)}
                   placeholder="you@example.com"
-                  className="w-full pl-12 pr-4 py-3 bg-white/20 border border-white/30 rounded-xl focus:outline-none focus:bg-white/30 transition-colors duration-300 text-white placeholder-white/50 backdrop-blur-sm"
+                  className={`w-full pl-12 pr-4 py-3 bg-white/20 border rounded-xl focus:outline-none focus:bg-white/30 transition-colors duration-300 text-white placeholder-white/50 backdrop-blur-sm ${
+                    fieldErrors.email ? 'border-red-400' : 'border-white/30'
+                  }`}
                 />
               </div>
+              {fieldErrors.email && <p className="text-red-300 text-xs mt-1 ml-1">{fieldErrors.email}</p>}
             </div>
 
             {/* Password Input */}
@@ -175,11 +264,13 @@ const LoginPage = () => {
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={handlePasswordChange}
                   onFocus={() => setFocusedField('password')}
                   onBlur={() => setFocusedField(null)}
                   placeholder="••••••••"
-                  className="w-full pl-12 pr-12 py-3 bg-white/20 border border-white/30 rounded-xl focus:outline-none focus:bg-white/30 transition-colors duration-300 text-white placeholder-white/50 backdrop-blur-sm"
+                  className={`w-full pl-12 pr-12 py-3 bg-white/20 border rounded-xl focus:outline-none focus:bg-white/30 transition-colors duration-300 text-white placeholder-white/50 backdrop-blur-sm ${
+                    fieldErrors.password ? 'border-red-400' : 'border-white/30'
+                  }`}
                 />
                 <button
                   type="button"
@@ -189,6 +280,7 @@ const LoginPage = () => {
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
+              {fieldErrors.password && <p className="text-red-300 text-xs mt-1 ml-1">{fieldErrors.password}</p>}
               <div className="mt-2 text-right">
                 <button
                   type="button"

@@ -39,6 +39,69 @@ const UserProfile = () => {
   const [editedUser, setEditedUser] = useState({ ...user });
   const [errors, setErrors] = useState({});
 
+  // ============ VALIDATION FUNCTIONS ============
+
+  // Full Name Validation
+  const validateFullName = (value) => {
+    const trimmed = value.trim();
+    
+    if (!trimmed) {
+      return "Full name is required";
+    }
+    if (trimmed.length < 2) {
+      return "Full name must be at least 2 characters";
+    }
+    if (trimmed.length > 100) {
+      return "Full name must not exceed 100 characters";
+    }
+    if (!/^[a-zA-Z\s\-']+$/.test(trimmed)) {
+      return "Full name can only contain letters, spaces, hyphens, and apostrophes";
+    }
+    if (value !== value.trim()) {
+      return "Full name cannot have leading or trailing spaces";
+    }
+    return "";
+  };
+
+  // Email Validation
+  const validateEmail = (value) => {
+    const trimmed = value.trim();
+    
+    if (!trimmed) {
+      return "Email is required";
+    }
+    if (trimmed.length > 254) {
+      return "Email must not exceed 254 characters";
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmed)) {
+      return "Email must be in the format: user@domain.com";
+    }
+    return "";
+  };
+
+  // Phone Number Validation
+  const validatePhoneNumber = (value) => {
+    if (!value) {
+      return "Phone number is required";
+    }
+    if (!/^0[0-9]{9}$/.test(value)) {
+      return "Phone number must be exactly 10 digits starting with 0";
+    }
+    return "";
+  };
+
+  // Emergency Contact Validation (Optional but if provided, must be valid)
+  const validateEmergencyContact = (value) => {
+    if (!value) {
+      return ""; // Optional field
+    }
+    if (!/^0[0-9]{9}$/.test(value)) {
+      return "Emergency contact must be exactly 10 digits starting with 0";
+    }
+    return "";
+  };
+
   // Load user data on component mount
   useEffect(() => {
     // Clear old stale userId to force fresh lookup by email
@@ -131,17 +194,90 @@ const UserProfile = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    let filteredValue = value;
+
+    // ===== INPUT FILTERING (Block Invalid Characters) =====
+
+    // Full Name: Only letters, spaces, hyphens, apostrophes
+    if (name === "fullName") {
+      filteredValue = value.replace(/[^a-zA-Z\s\-']/g, '');
+    }
+
+    // Phone Number: Only digits
+    if (name === "phoneNumber") {
+      filteredValue = value.replace(/[^0-9]/g, '');
+      // Ensure max 10 digits
+      if (filteredValue.length > 10) {
+        filteredValue = filteredValue.slice(0, 10);
+      }
+    }
+
+    // Emergency Contact: Only digits (if provided)
+    if (name === "emergencyContact") {
+      filteredValue = value.replace(/[^0-9]/g, '');
+      // Ensure max 10 digits
+      if (filteredValue.length > 10) {
+        filteredValue = filteredValue.slice(0, 10);
+      }
+    }
+
+    // Email: Block typing after valid TLD
+    if (name === "email") {
+      // Check if email already has a complete TLD
+      const hasValidTLD = (emailStr) => {
+        if (!emailStr.includes('@') || !emailStr.includes('.')) return false;
+        const afterAt = emailStr.substring(emailStr.indexOf('@') + 1);
+        const lastDotIndex = afterAt.lastIndexOf('.');
+        if (lastDotIndex === -1) return false;
+        const tld = afterAt.substring(lastDotIndex + 1);
+        return tld.length >= 2; // Valid TLD must be at least 2 chars
+      };
+
+      if (hasValidTLD(editedUser.email) && value.length > editedUser.email.length) {
+        // User is trying to add more characters after a complete TLD, block it
+        return;
+      }
+      filteredValue = value;
+    }
+
     setEditedUser(prev => ({
       ...prev,
-      [name]: value
+      [name]: filteredValue
     }));
-    // Clear error for this field
-    if (errors[name]) {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[name];
-        return newErrors;
-      });
+    
+    // Real-time validation
+    let error = "";
+    switch (name) {
+      case "fullName":
+        error = validateFullName(filteredValue);
+        break;
+      case "email":
+        error = validateEmail(filteredValue);
+        break;
+      case "phoneNumber":
+        error = validatePhoneNumber(filteredValue);
+        break;
+      case "emergencyContact":
+        error = validateEmergencyContact(filteredValue);
+        break;
+      default:
+        break;
+    }
+
+    // Update errors
+    if (error) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: error
+      }));
+    } else {
+      if (errors[name]) {
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors[name];
+          return newErrors;
+        });
+      }
     }
   };
 
@@ -167,17 +303,25 @@ const UserProfile = () => {
   const validateForm = () => {
     const newErrors = {};
     
-    if (!editedUser.fullName || !editedUser.fullName.trim()) {
-      newErrors.fullName = 'Full name is required';
-    }
-    if (!editedUser.email || !/\S+@\S+\.\S+/.test(editedUser.email)) {
-      newErrors.email = 'Valid email is required';
-    }
-    if (!editedUser.phoneNumber || editedUser.phoneNumber.toString().length < 10) {
-      newErrors.phoneNumber = 'Valid phone number is required';
-    }
+    // Validate Full Name
+    const fullNameError = validateFullName(editedUser.fullName);
+    if (fullNameError) newErrors.fullName = fullNameError;
+    
+    // Validate Email
+    const emailError = validateEmail(editedUser.email);
+    if (emailError) newErrors.email = emailError;
+    
+    // Validate Phone Number
+    const phoneError = validatePhoneNumber(editedUser.phoneNumber);
+    if (phoneError) newErrors.phoneNumber = phoneError;
+    
+    // Validate Emergency Contact (optional)
+    const emergencyError = validateEmergencyContact(editedUser.emergencyContact);
+    if (emergencyError) newErrors.emergencyContact = emergencyError;
+    
+    // Validate Address
     if (!editedUser.address || !editedUser.address.trim()) {
-      newErrors.address = 'Address is required';
+      newErrors.address = "Address is required";
     }
     
     setErrors(newErrors);
@@ -594,14 +738,21 @@ const UserProfile = () => {
                         Emergency Contact
                       </label>
                       {isEditMode ? (
-                        <input
-                          type="tel"
-                          name="emergencyContact"
-                          value={editedUser.emergencyContact || ''}
-                          onChange={handleInputChange}
-                          placeholder="Emergency contact number"
-                          className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2A9DF4]"
-                        />
+                        <>
+                          <input
+                            type="tel"
+                            name="emergencyContact"
+                            value={editedUser.emergencyContact || ''}
+                            onChange={handleInputChange}
+                            placeholder="Emergency contact number"
+                            className={`w-full border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#2A9DF4] ${
+                              errors.emergencyContact ? 'border-red-500' : 'border-gray-300'
+                            }`}
+                          />
+                          {errors.emergencyContact && (
+                            <p className="text-red-500 text-xs mt-1">{errors.emergencyContact}</p>
+                          )}
+                        </>
                       ) : (
                         <div className="flex items-center gap-3 border border-gray-300 rounded-lg px-4 py-2.5 bg-gray-50">
                           <Phone size={18} className="text-gray-400" />
