@@ -22,11 +22,7 @@ const doctorRoomSchema = new mongoose.Schema(
       default: [],
       // expected values: ['Monday','Tuesday',...]
     },
-    slotLimit: {
-      type: Number,
-      required: true,
-      min: 1,
-    },
+    // slotLimit removed — system derives total slots from schedule or defaults
     queueLimit: {
       type: Number,
       required: true,

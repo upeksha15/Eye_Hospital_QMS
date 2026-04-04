@@ -190,7 +190,8 @@ export async function getDoctorsSummary(req, res) {
         room: d.room,
         roomBadge: room?.room || d.room,
         schedule: `${d.scheduleStart || '08:00'} – ${d.scheduleEnd || '14:00'}`,
-        dailyLimit: d.dailyLimit ?? room?.slotLimit ?? 20,
+        // use doctor's dailyLimit or fallback to 20 (no room.slotLimit anymore)
+        dailyLimit: d.dailyLimit ?? 20,
         status: d.isActive ? 'Active' : 'Inactive',
         initials: d.initials,
       };
@@ -494,15 +495,17 @@ export async function listDoctorRoomsAdmin(req, res) {
 
 export async function createDoctorRoomAdmin(req, res) {
   try {
-    const { doctorName, room, slotLimit, queueLimit } = req.body;
-    if (!doctorName || !room || slotLimit == null || queueLimit == null) {
-      return res.status(400).json({ success: false, message: 'All fields are required' });
+    const { doctorName, room, queueLimit, specialization, availability } = req.body;
+    if (!doctorName || !room || queueLimit == null) {
+      return res.status(400).json({ success: false, message: 'doctorName, room and queueLimit are required' });
     }
+
     const row = await DoctorRoom.create({
       doctorName: doctorName.trim(),
       room: room.trim(),
-      slotLimit: Number(slotLimit),
       queueLimit: Number(queueLimit),
+      specialization: specialization || '',
+      availability: Array.isArray(availability) ? availability : [],
     });
 
     await createAuditLog({
@@ -522,17 +525,15 @@ export async function createDoctorRoomAdmin(req, res) {
 
 export async function updateDoctorRoomAdmin(req, res) {
   try {
-    const { doctorName, room, slotLimit, queueLimit } = req.body;
-    const row = await DoctorRoom.findByIdAndUpdate(
-      req.params.id,
-      {
-        doctorName,
-        room,
-        slotLimit,
-        queueLimit,
-      },
-      { new: true }
-    );
+    const { doctorName, room, queueLimit, specialization, availability } = req.body;
+    const patch = {};
+    if (doctorName !== undefined) patch.doctorName = doctorName;
+    if (room !== undefined) patch.room = room;
+    if (queueLimit !== undefined) patch.queueLimit = queueLimit;
+    if (specialization !== undefined) patch.specialization = specialization;
+    if (availability !== undefined) patch.availability = Array.isArray(availability) ? availability : [];
+
+    const row = await DoctorRoom.findByIdAndUpdate(req.params.id, patch, { new: true });
     if (!row) {
       return res.status(404).json({ success: false, message: 'Not found' });
     }

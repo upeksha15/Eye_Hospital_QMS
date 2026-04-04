@@ -17,6 +17,7 @@ import queueRoutes from './routes/queue.js';
 import checkinRoutes from './routes/checkin.js';
 import announcementsRoutes from './routes/announcements.js';
 import staffRoutes from './routes/staff.js';
+import followUpsRoutes from './routes/followUps.js';
 
 
 // ✅ NEW IMPORT
@@ -60,6 +61,7 @@ app.use('/api/queue', queueRoutes);
 app.use('/api/checkin', checkinRoutes);
 app.use('/api/announcements', announcementsRoutes);
 app.use('/api/staff', staffRoutes);
+app.use('/api/follow-ups', followUpsRoutes);
 
 // ✅ NEW ROUTE
 app.use('/api/doctor-rooms', doctorRoomRoutes);

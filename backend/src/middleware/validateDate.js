@@ -5,8 +5,9 @@ import {
   formatYMD,
   nowColombo,
 } from '../utils/dateUtils.js';
+import DoctorRoom from '../models/DoctorRoom.js';
 
-export function validateAppointmentDate(req, res, next) {
+export async function validateAppointmentDate(req, res, next) {
   try {
     const { appointmentDate } = req.body;
     if (!appointmentDate) {
@@ -52,7 +53,22 @@ export function validateAppointmentDate(req, res, next) {
       }
     }
 
-    const totalSlots = totalSlotsForDate(dayStart);
+    let totalSlots = totalSlotsForDate(dayStart);
+
+    // If a doctorId was provided, cap total slots by the doctor's queueLimit
+    const doctorId = req.body?.doctorId || req.query?.doctorId;
+    if (doctorId) {
+      try {
+        const dr = await DoctorRoom.findById(doctorId).lean();
+        if (dr && typeof dr.queueLimit === 'number') {
+          totalSlots = Math.min(totalSlots, dr.queueLimit);
+        }
+      } catch (err) {
+        // ignore DB errors here and fall back to default totalSlots
+        console.warn('validateDate: failed to read doctor room for queueLimit', err?.message || err);
+      }
+    }
+
     req.appointmentDayStart = dayStart;
     req.totalSlotsForDay = totalSlots;
     next();

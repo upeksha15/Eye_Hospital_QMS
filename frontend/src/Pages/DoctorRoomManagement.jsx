@@ -7,7 +7,6 @@ export default function DoctorRoomManagement() {
   const [form, setForm] = useState({
     doctorName: "",
     room: "",
-    slotLimit: "",
     queueLimit: "",
     specialization: "General Ophthalmology",
     otherSpecialization: "",
@@ -63,7 +62,7 @@ export default function DoctorRoomManagement() {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
   const handleWeekdayToggle = (day) => {
     setForm((prev) => {
@@ -77,7 +76,7 @@ export default function DoctorRoomManagement() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.doctorName || !form.room || !form.slotLimit || !form.queueLimit) {
+    if (!form.doctorName || !form.room || !form.queueLimit) {
       alert('Please fill all fields');
       return;
     }
@@ -87,7 +86,6 @@ export default function DoctorRoomManagement() {
       if (editId) {
         const payload = { ...form };
         if (payload.specialization === 'Other') payload.specialization = payload.otherSpecialization || '';
-        payload.slotLimit = Number(payload.slotLimit);
         payload.availability = Array.isArray(payload.availability) ? payload.availability : [];
         payload.queueLimit = Number(payload.queueLimit);
         payload.specialization = (payload.specialization || '').trim();
@@ -97,7 +95,6 @@ export default function DoctorRoomManagement() {
       } else {
         const payload = { ...form };
         if (payload.specialization === 'Other') payload.specialization = payload.otherSpecialization || '';
-        payload.slotLimit = Number(payload.slotLimit);
         payload.availability = Array.isArray(payload.availability) ? payload.availability : [];
         payload.queueLimit = Number(payload.queueLimit);
         payload.specialization = (payload.specialization || '').trim();
@@ -108,7 +105,6 @@ export default function DoctorRoomManagement() {
       setForm({
         doctorName: '',
         room: '',
-        slotLimit: '',
         queueLimit: '',
         specialization: 'General Ophthalmology',
         otherSpecialization: '',
@@ -140,7 +136,6 @@ export default function DoctorRoomManagement() {
     setForm({
       doctorName: item.doctorName,
       room: item.room,
-      slotLimit: item.slotLimit,
       queueLimit: item.queueLimit,
       specialization: PRESET_SPECIALIZATIONS.includes(item.specialization) ? item.specialization : (item.specialization ? 'Other' : 'General Ophthalmology'),
       otherSpecialization: item.specialization && !PRESET_SPECIALIZATIONS.includes(item.specialization) ? item.specialization : '',
@@ -193,6 +188,8 @@ export default function DoctorRoomManagement() {
                 />
               </div>
 
+              {/* slotLimit removed per UI request - server will use default */}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Specialization</label>
                 <select
@@ -241,19 +238,7 @@ export default function DoctorRoomManagement() {
                 )}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Slot Limit (max patients per day)
-                </label>
-                <input
-                  type="number"
-                  name="slotLimit"
-                  placeholder="e.g., 20"
-                  value={form.slotLimit}
-                  onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
+            
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -301,7 +286,7 @@ export default function DoctorRoomManagement() {
                   <tr className="bg-gradient-to-r from-blue-800 to-blue-900 text-white">
                     <th className="p-3">Doctor</th>
                     <th className="p-3">Room</th>
-                    <th className="p-3">Slot Limit</th>
+                    
                     <th className="p-3">Queue Limit</th>
                     <th className="p-3">Availability</th>
                     <th className="p-3 text-center">Actions</th>
@@ -319,7 +304,7 @@ export default function DoctorRoomManagement() {
                       <tr key={item._id} className="border-b border-gray-200 hover:bg-gray-50">
                         <td className="p-3 font-medium text-gray-800">{item.doctorName}</td>
                         <td className="p-3 text-gray-600">{item.room}</td>
-                        <td className="p-3 text-gray-600">{item.slotLimit}</td>
+                        
                         <td className="p-3 text-gray-600">{item.queueLimit}</td>
                         <td className="p-3 text-gray-600">{(item.availability || []).join(', ')}</td>
                         <td className="p-3 text-center space-x-2">
