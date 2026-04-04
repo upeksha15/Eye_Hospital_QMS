@@ -42,6 +42,7 @@ const FollowUps = () => {
   const [doctorNameInput, setDoctorNameInput] = useState('');
   const [patientNICInput, setPatientNICInput] = useState('');
   const [patientPhoneInput, setPatientPhoneInput] = useState('');
+  const [overrideRecommendedDate, setOverrideRecommendedDate] = useState(null);
 
   const formatDate = (date) =>
     date.toLocaleDateString('en-GB', {
@@ -144,15 +145,24 @@ const FollowUps = () => {
 
   const openSchedule = (appointment) => {
     setActiveAppointment(appointment);
-    setIntervalValue(3);
+    setIntervalValue(1);
     setIntervalType('days');
     setPatientNameInput(appointment.patientName || '');
     setDoctorNameInput(appointment.doctorName || '');
     setPatientNICInput(appointment.patientNIC || '');
     setPatientPhoneInput(appointment.patientContact || '');
+    if (appointment?.appointmentDate) {
+      setOverrideRecommendedDate(new Date(appointment.appointmentDate));
+    } else {
+      setOverrideRecommendedDate(null);
+    }
   };
 
   const recommendedDate = useMemo(() => {
+    if (overrideRecommendedDate && Number(intervalValue) === 1 && intervalType === 'days') {
+      return overrideRecommendedDate;
+    }
+
     const value = Number(intervalValue);
     if (!value || Number.isNaN(value) || !activeAppointment) return null;
 
@@ -165,7 +175,11 @@ const FollowUps = () => {
       date.setMonth(date.getMonth() + value);
     }
     return date;
-  }, [intervalValue, intervalType, activeAppointment]);
+  }, [intervalValue, intervalType, activeAppointment, overrideRecommendedDate]);
+
+  useEffect(() => {
+    if (!activeAppointment) setOverrideRecommendedDate(null);
+  }, [activeAppointment]);
 
   const [recommendedError, setRecommendedError] = useState('');
 

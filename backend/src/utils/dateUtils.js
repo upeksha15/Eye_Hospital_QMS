@@ -64,7 +64,8 @@ export function formatYMD(date) {
 
 export function totalSlotsForDate(date) {
   const dow = getDayOfWeekColombo(date);
-  if (dow === 0) return 0;
+  // Default slots: treat Sunday like other weekdays for booking purposes.
+  // Saturday has reduced capacity; other days have full capacity.
   if (dow === 6) return 15;
   return 30;
 }

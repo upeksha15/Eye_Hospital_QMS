@@ -5,6 +5,7 @@ import Navbar from '../components/StaffTopBar';
 import { bookingStrings } from '../i18n/bookingStrings';
 import SidebarNav from '../components/StaffSidebar';
 import api from '../api/client';
+import { fetchAvailableMedicalStaffPanel } from '../api/staffApi';
 import {
   Users,
   CalendarDays,
@@ -24,6 +25,7 @@ const Dashboard = () => {
 
   const [doctorRooms, setDoctorRooms] = useState([]);
   const [loadingRooms, setLoadingRooms] = useState(true);
+  const [staffList, setStaffList] = useState([]);
 
   const API_URL = "/api/doctor-rooms";
 
@@ -42,6 +44,22 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchDoctorRooms();
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const data = await fetchAvailableMedicalStaffPanel();
+        if (!mounted) return;
+        setStaffList(data.staff || []);
+      } catch (e) {
+        if (!mounted) return;
+        setStaffList([]);
+        console.error('Failed to load staff list', e);
+      }
+    })();
+    return () => { mounted = false; };
   }, []);
 
   const getStatusStyles = (status) => {
@@ -81,7 +99,13 @@ const Dashboard = () => {
                 <div className="flex items-center justify-between gap-6">
                   <div>
                     <p className="text-sm font-semibold text-white/90 uppercase tracking-wider">Staff Dashboard</p>
-                    <h1 className="mt-2 text-3xl sm:text-4xl font-extrabold text-white">Welcome back, {user?.name || 'Staff'}</h1>
+                    {
+                      (() => {
+                        const online = (staffList || []).filter(s => s?.isOnline).map(s => s.fullName).filter(Boolean);
+                        const fallback = online.length ? online.join(', ') : 'Staff';
+                        return <h1 className="mt-2 text-3xl sm:text-4xl font-extrabold text-white">Welcome back, {user?.name || fallback}</h1>;
+                      })()
+                    }
                     <p className="mt-1 text-sm text-white/90">Overview of today's clinic operations</p>
                   </div>
 

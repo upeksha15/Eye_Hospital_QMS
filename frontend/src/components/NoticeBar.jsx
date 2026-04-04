@@ -11,6 +11,14 @@ export default function NoticeBar() {
     let cancelled = false;
     (async () => {
       try {
+        // Prefer staff-created notices (/api/notices), fallback to announcements
+        const resNotices = await api.get('/api/notices');
+        const firstNotice = resNotices.data?.data?.[0];
+        if (!cancelled && firstNotice) {
+          setMessage(firstNotice.message || firstNotice.title || '');
+          return;
+        }
+
         const { data } = await api.get('/api/announcements');
         const first = data.announcements?.[0]?.message;
         if (!cancelled && first) setMessage(first);
