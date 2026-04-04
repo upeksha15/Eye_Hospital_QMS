@@ -117,7 +117,6 @@ useEffect(() => {
           <Link to="/services">Services</Link>
           <Link to="/about">About Us</Link>
           <Link to="/contact">Contact</Link>
-          
           <Bell className="w-6 h-6 text-slate-600 cursor-pointer" />
 
           {/* Right side: Login button (guest) or patient profile (logged-in) */}
