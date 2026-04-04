@@ -117,3 +117,18 @@ export async function getPerformanceMetrics() {
   const { data } = await api.get('/api/admin/performance');
   return data;
 }
+
+export async function getTodayAppointmentsDetail() {
+  const { data } = await api.get('/api/admin/dashboard/today-appointments');
+  return data;
+}
+
+export async function getActiveQueuesDetail() {
+  const { data } = await api.get('/api/admin/dashboard/active-queues');
+  return data;
+}
+
+export async function getWaitingTimeDetail() {
+  const { data } = await api.get('/api/admin/dashboard/waiting-times');
+  return data;
+}
