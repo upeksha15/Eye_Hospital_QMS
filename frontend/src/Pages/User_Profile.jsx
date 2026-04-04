@@ -14,6 +14,7 @@ import {
   FileText,
 } from 'lucide-react';
 import axios from 'axios';
+import * as authApi from '../api/authApi';
 import { useAuth } from '../context/AuthContext';
 
 const UserProfile = () => {
@@ -433,24 +434,21 @@ const UserProfile = () => {
 
     setIsLoading(true);
     try {
-      // Use User._id from loaded profile, not patient._id
-      const userId = user._id;
-      
-      if (!userId || userId === 'temp-id') {
-        alert('User ID not found.');
-        return;
-      }
-
-      const response = await axios.delete(`http://localhost:5000/api/users/${userId}`);
-      
-      if (response.data.success) {
+      const result = await authApi.deleteMyAccount();
+      if (result?.success) {
         alert('Account deleted successfully');
         logout();
         window.location.href = '/';
+        return;
       }
+      alert(result?.message || 'Failed to delete account.');
     } catch (error) {
       console.error('Delete error:', error);
-      alert('Failed to delete account. Please try again.');
+      const msg =
+        error.response?.data?.message ||
+        (typeof error.response?.data === 'string' ? error.response.data : null) ||
+        error.message;
+      alert(msg ? `Failed to delete account: ${msg}` : 'Failed to delete account. Please try again.');
     } finally {
       setIsLoading(false);
     }

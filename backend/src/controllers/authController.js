@@ -1,9 +1,12 @@
+import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import Patient from '../models/Patient.js';
+import User from '../models/User.js';
 import StaffAccount from '../models/StaffAccount.js';
 import StaffProfile from '../models/StaffProfile.js';
 import { ensureDbConnected } from '../../config/db.js';
+import { deletePatientCascade } from '../utils/patientDeletion.js';
 
 function signToken(id, typ) {
   if (!process.env.JWT_SECRET) {
@@ -191,6 +194,47 @@ export async function me(req, res) {
     return res.json({ success: true, patient: merged, user: merged, userType: 'staff' });
   }
   return res.json({ success: true, patient: stripPatient(req.user), user: stripPatient(req.user), userType: 'patient' });
+}
+
+export async function deletePatientAccount(req, res) {
+  if (req.userType !== 'patient') {
+    return res.status(403).json({
+      success: false,
+      message: 'Only patient accounts can be removed this way',
+    });
+  }
+
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const p = await Patient.findById(req.user._id).session(session);
+    if (!p) {
+      await session.abortTransaction();
+      return res.status(404).json({ success: false, message: 'Patient not found' });
+    }
+
+    const userOr = [];
+    if (p.nic) userOr.push({ nicNumber: String(p.nic).trim() });
+    if (p.email) userOr.push({ email: String(p.email).trim().toLowerCase() });
+
+    await deletePatientCascade(p._id, session);
+
+    if (userOr.length > 0) {
+      await User.deleteMany({ $or: userOr }, { session });
+    }
+
+    await session.commitTransaction();
+    return res.json({ success: true, message: 'Account deleted successfully' });
+  } catch (e) {
+    await session.abortTransaction();
+    console.error('deletePatientAccount:', e);
+    return res.status(500).json({
+      success: false,
+      message: e.message || 'Failed to delete account',
+    });
+  } finally {
+    session.endSession();
+  }
 }
 
 export async function syncPatient(req, res) {

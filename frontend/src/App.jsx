@@ -106,6 +106,14 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/reports"
+        element={
+          <PatientRoute>
+            <PatientDashboardLayout />
+          </PatientRoute>
+        }
+      />
+      <Route
         path="/notifications"
         element={
           <PatientRoute>

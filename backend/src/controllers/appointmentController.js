@@ -284,8 +284,16 @@ export async function checkAvailability(req, res) {
     // count existing appointments (exclude cancelled)
     const existing = await Appointment.countDocuments({ doctorId, appointmentDate: dayStart, status: { $ne: 'cancelled' } });
     const isQueueFull = existing >= total;
+    const remainingSlots = Math.max(0, total - existing);
 
-    res.json({ success: true, isAvailable, isQueueFull });
+    res.json({
+      success: true,
+      isAvailable,
+      isQueueFull,
+      totalSlots: total,
+      bookedCount: existing,
+      remainingSlots,
+    });
   } catch (e) {
     console.error(e);
     res.status(500).json({ success: false, message: e.message || 'Failed to check availability' });

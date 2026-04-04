@@ -1,7 +1,9 @@
+import mongoose from 'mongoose';
 import { validationResult } from 'express-validator';
 import User from '../models/User.js';
 import Patient from '../models/Patient.js';
 import { ensureDbConnected } from '../../config/db.js';
+import { deletePatientCascade } from '../utils/patientDeletion.js';
 
 function stripPassword(userDoc) {
   const obj = userDoc.toObject();
@@ -275,26 +277,48 @@ export async function updateUserById(req, res) {
 }
 
 export async function deleteUserById(req, res) {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
-    const user = await User.findByIdAndDelete(req.params.id);
+    const user = await User.findById(req.params.id).session(session);
 
     if (!user) {
+      await session.abortTransaction();
       return res.status(404).json({
         success: false,
         message: 'User not found',
       });
     }
 
+    const nic = user.nicNumber?.trim();
+    const email = user.email?.trim().toLowerCase();
+    const or = [];
+    if (nic) or.push({ nic });
+    if (email) or.push({ email });
+
+    if (or.length > 0) {
+      const patient = await Patient.findOne({ $or: or }).session(session);
+      if (patient) {
+        await deletePatientCascade(patient._id, session);
+      }
+    }
+
+    await User.findByIdAndDelete(user._id, { session });
+    await session.commitTransaction();
+
     res.json({
       success: true,
       message: 'Account deleted successfully',
     });
   } catch (error) {
+    await session.abortTransaction();
     res.status(500).json({
       success: false,
       message: 'Server error',
       error: error.message,
     });
+  } finally {
+    session.endSession();
   }
 }
 

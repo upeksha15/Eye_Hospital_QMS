@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense, lazy } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Calendar,
@@ -23,9 +23,10 @@ import QueueStatusPage from '../Pages/QueueStatusPage';
 import UserProfile from '../Pages/User_Profile';
 import PatientFollowUpsPage from '../Pages/PatientFollowUpsPage';
 import NotificationsPage from '../Pages/NotificationsPage';
-import ReportsPage from '../Pages/ReportsPage';
 import { fetchMyAppointments } from '../api/appointmentsApi';
 import { fetchMyQueueStatusToday } from '../api/queueApi';
+
+const ReportsPage = lazy(() => import('../Pages/ReportsPage'));
 
 function getStatusColor(status) {
   switch (status) {
@@ -233,7 +234,7 @@ export default function PatientDashboardLayout() {
     { id: 'queue', icon: Activity, label: 'Queue Status', path: '/queue' },
     { id: 'followups', icon: TrendingUp, label: 'Follow-Ups', path: '/appointments/followups' },
     { id: 'profile', icon: User, label: 'Profile', path: '/profile' },
-    { id: 'ReportsPage', icon: FileText, label: 'Reports', path: '/reports' },
+    { id: 'reports', icon: FileText, label: 'Reports', path: '/reports' },
   ];
 
   const pathname = location.pathname;
@@ -464,7 +465,23 @@ export default function PatientDashboardLayout() {
     }
 
     if (pathname === '/reports') {
-      return <ReportsPage />;
+      return (
+        <Suspense
+          fallback={
+            <div className="flex min-h-[50vh] items-center justify-center bg-gray-50 p-6">
+              <div className="flex flex-col items-center gap-3 text-slate-500">
+                <div
+                  className="h-10 w-10 animate-spin rounded-full border-2 border-[#2A9DF4] border-t-transparent"
+                  aria-hidden
+                />
+                <p className="text-sm font-medium">Loading reports…</p>
+              </div>
+            </div>
+          }
+        >
+          <ReportsPage />
+        </Suspense>
+      );
     }
 
     if (pathname === '/profile') {
