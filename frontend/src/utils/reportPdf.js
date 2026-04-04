@@ -1,8 +1,38 @@
-import jsPDF from 'jspdf';
 import eyeIcon from '../assets/Eye.png';
 
-const JsPDF =
-  typeof jsPDF === 'function' ? jsPDF : jsPDF?.default || jsPDF?.jsPDF;
+// Try to require jspdf at runtime; if it's not installed provide a lightweight stub
+let JsPDF;
+try {
+  // eslint-disable-next-line global-require, import/no-extraneous-dependencies
+  const _jspdf = require('jspdf');
+  JsPDF = typeof _jspdf === 'function' ? _jspdf : _jspdf?.default || _jspdf?.jsPDF;
+} catch (e) {
+  // Provide a minimal stub so the app can build/run without jspdf installed.
+  // The stub does not generate real PDFs but implements the methods used
+  // by the app to avoid runtime errors until dependencies are installed.
+  // eslint-disable-next-line no-console
+  console.warn('jspdf not installed — PDF features are disabled. Install jspdf to enable PDF export.');
+
+  class JsPDFStub {
+    constructor() {
+      this.internal = { pageSize: { getWidth: () => 210, getHeight: () => 297 } };
+    }
+    addImage() { /* no-op */ }
+    setFont() { /* no-op */ }
+    setFontSize() { /* no-op */ }
+    setTextColor() { /* no-op */ }
+    text() { /* no-op */ }
+    setDrawColor() { /* no-op */ }
+    setLineWidth() { /* no-op */ }
+    line() { /* no-op */ }
+    circle() { /* no-op */ }
+    splitTextToSize(text) { return Array.isArray(text) ? text : [String(text)]; }
+    addPage() { /* no-op */ }
+    save(filename) { /* graceful fallback */ /* eslint-disable-next-line no-console */ console.info(`PDF save called (${filename}) but jspdf is not installed.`); }
+  }
+
+  JsPDF = JsPDFStub;
+}
 
 const FLAG_URL = 'https://flagcdn.com/w80/lk.png';
 

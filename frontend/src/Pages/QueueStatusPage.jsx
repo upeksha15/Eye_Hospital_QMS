@@ -7,7 +7,7 @@ import { useSocket } from '../hooks/useSocket';
 import { formatYMD, nowColombo } from '../utils/dateHelpers';
 
 export default function QueueStatusPage() {
-  const strings = bookingStrings.en;
+  // bookingStrings available if needed in future
 
   const [appointments, setAppointments] = useState([]);
   const [loadingAppts, setLoadingAppts] = useState(true);
