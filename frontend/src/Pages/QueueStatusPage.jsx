@@ -1,13 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-// booking strings removed — keep module available if needed later
+import { bookingStrings } from '../i18n/bookingStrings';
 import { fetchMyAppointments, checkIn as checkInApi } from '../api/appointmentsApi';
 import { fetchQueueBoardToday, fetchMyQueueStatusToday } from '../api/queueApi';
 import { useSocket } from '../hooks/useSocket';
 import { formatYMD, nowColombo } from '../utils/dateHelpers';
 
 export default function QueueStatusPage() {
-  // bookingStrings available if needed in future
+  const strings = bookingStrings.en;
 
   const [appointments, setAppointments] = useState([]);
   const [loadingAppts, setLoadingAppts] = useState(true);
@@ -75,7 +75,7 @@ export default function QueueStatusPage() {
   const canCheckIn =
     Boolean(selectedAppt) &&
     formatYMD(selectedAppt.appointmentDate) === todayYmd &&
-    String(selectedAppt.status || '').toLowerCase() === 'booked' &&
+    ['booked', 'approved'].includes(String(selectedAppt.status || '').toLowerCase()) &&
     Boolean(myStatus?.checkinOpen);
 
   return (

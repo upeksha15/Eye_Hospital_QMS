@@ -122,9 +122,7 @@ export default function MyAppointmentsPage() {
     [filtered, selectedId]
   );
 
-  const selectedDate = useMemo(() => {
-    return selected?.appointmentDate ? new Date(selected.appointmentDate) : null;
-  }, [selected?.appointmentDate]);
+  const selectedDate = selected?.appointmentDate ? new Date(selected.appointmentDate) : null;
   const canCancel = useMemo(() => {
     if (!selectedDate) return false;
     const now = new Date();
