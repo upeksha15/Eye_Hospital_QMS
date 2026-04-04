@@ -14,6 +14,7 @@ export const QueueProvider = ({ children }) => {
   const [doctorStatuses, setDoctorStatuses] = useState({});
   const [waitingQueue, setWaitingQueue] = useState([]);
   const [recallQueue, setRecallQueue] = useState([]);
+  const RECALL_EXPIRE_MS = 10 * 60 * 1000; // 10 minutes
   const [currentToken, setCurrentToken] = useState(null);
   const [timer, setTimer] = useState('00:00');
   const [toasts, setToasts] = useState([]);
@@ -129,6 +130,20 @@ export const QueueProvider = ({ children }) => {
     try {
       const res = await api.post(`/api/queue/${doctorId}/skip`);
       if (res.data && res.data.success) {
+        // If backend returned the skipped token, add it to the recallQueue so UI shows it
+        const skipped = res.data.skipped;
+        if (skipped) {
+          try {
+            const entry = {
+              id: String(skipped._id || skipped.id),
+              token: skipped.tokenNumber || skipped.token || '',
+              skippedAt: Date.now(),
+            };
+            setRecallQueue((prev) => [entry, ...prev]);
+          } catch (e) {
+            // ignore mapping errors
+          }
+        }
         await reloadBoard();
         addToast('Skipped current patient.', 'info');
       } else {
@@ -139,6 +154,18 @@ export const QueueProvider = ({ children }) => {
       addToast('Skip failed (server).', 'error');
     }
   };
+
+  // Auto-remove recalled tokens after expiry (10 minutes)
+  useEffect(() => {
+    // initial cleanup in case some entries are stale
+    setRecallQueue((prev) => prev.filter((p) => (Date.now() - (p.skippedAt || 0)) < RECALL_EXPIRE_MS));
+
+    const timer = setInterval(() => {
+      setRecallQueue((prev) => prev.filter((p) => (Date.now() - (p.skippedAt || 0)) < RECALL_EXPIRE_MS));
+    }, 5000);
+
+    return () => clearInterval(timer);
+  }, [RECALL_EXPIRE_MS]);
 
   const removePatientFromQueue = async (doctorId, tokenId) => {
     try {
