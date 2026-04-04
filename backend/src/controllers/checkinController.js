@@ -40,14 +40,8 @@ export async function checkIn(req, res) {
       });
     }
 
-    const hours = isOperatingHoursForCheckin();
-    if (!hours.ok) {
-      await session.abortTransaction();
-      return res.status(400).json({
-        success: false,
-        message: hours.reason || 'Outside operating hours',
-      });
-    }
+    // No longer enforcing global operating-hour restriction here;
+    // staff-controlled queue availability and explicit queue window still apply below.
 
     // Queue availability is controlled by staff (DoctorRoom.status).
     // If there's no matching DoctorRoom record, default to allowing check-in (backward compatible).

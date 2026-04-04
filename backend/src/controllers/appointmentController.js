@@ -22,6 +22,22 @@ export async function createAppointment(req, res) {
     const patientId = req.user._id;
     const dayStart = req.appointmentDayStart;
 
+    // Prevent duplicate bookings for the same patient + doctor on the same day
+    try {
+      const existing = await Appointment.findOne({
+        patientId,
+        doctorId,
+        appointmentDate: dayStart,
+        status: { $ne: 'cancelled' },
+      }).lean();
+      if (existing) {
+        return res.status(400).json({ success: false, message: 'This patient already has an appointment with this doctor.' });
+      }
+    } catch (dupErr) {
+      // ignore duplicate-check DB errors and proceed (will fail later if necessary)
+      console.warn('createAppointment: duplicate check failed', dupErr?.message || dupErr);
+    }
+
     // If frontend supplied updated patient info, persist it (do not update NIC here)
     try {
       const updates = {};
