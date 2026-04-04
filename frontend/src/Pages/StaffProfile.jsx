@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/StaffTopBar';
 import SidebarNav from '../components/StaffSidebar';
 import { Mail, Phone, BadgeCheck, CheckCircle, User, UploadCloud, CalendarDays, Eye, EyeOff } from 'lucide-react';
+import { nowColombo } from '../utils/dateHelpers';
 import { useQueue } from '../context/QueueContext';
 import { useAuth } from '../hooks/useAuth';
 import { updateStaffData, fetchMe } from '../api/authApi';
@@ -29,6 +30,7 @@ const Profile = () => {
 
   const [showPassword, setShowPassword] = useState(false);
   const [pwErrors, setPwErrors] = useState({ current: '', new: '', confirm: '', general: '' });
+  const [profileErrors, setProfileErrors] = useState({ phone: '' });
 
   useEffect(() => {
     if (!user) return;
@@ -63,14 +65,23 @@ const Profile = () => {
     };
   }, [setUser]);
 
+  const maxDob = nowColombo().toISOString().slice(0, 10);
+
 
   const handleChange = (field) => (e) => {
-    setFormData((prev) => ({ ...prev, [field]: e.target.value }));
+    const val = e.target.value;
+    setFormData((prev) => ({ ...prev, [field]: val }));
     if (saved) setSaved(false);
     // clear inline errors for password fields
     if (field === 'currentPassword' || field === 'newPassword' || field === 'confirmPassword') {
       const key = field === 'confirmPassword' ? 'confirm' : field === 'newPassword' ? 'new' : 'current';
       setPwErrors((prev) => ({ ...prev, [key]: '', general: '' }));
+    }
+    // inline phone validation
+    if (field === 'phone') {
+      // Accept formats: local 0XXXXXXXXX (10 digits) or international +94XXXXXXXXX (9 digits after +94)
+      const ok = val === '' || /^(?:\+94|0)?\d{9}$/.test(val);
+      setProfileErrors((prev) => ({ ...prev, phone: ok ? '' : 'Enter a valid phone number (e.g. 0771234567 or +94771234567)' }));
     }
   };
 
@@ -158,6 +169,18 @@ const Profile = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    // final profile validation
+    if (profileErrors.phone) {
+      alert('Please fix validation errors before saving');
+      return;
+    }
+    // validate phone one more time
+    if (formData.phone && !/^(?:\+94|0)?\d{9}$/.test(formData.phone)) {
+      setProfileErrors((prev) => ({ ...prev, phone: 'Enter a valid phone number (e.g. 0771234567 or +94771234567)' }));
+      alert('Please fix validation errors before saving');
+      return;
+    }
+
     try {
       const body = {
         fullName: formData.fullName,
@@ -284,7 +307,8 @@ const Profile = () => {
                         <div className="relative">
                           <label className="block text-xs font-semibold text-slate-700 mb-2">Phone</label>
                           <Phone className="absolute left-3 top-11 w-4 h-4 text-slate-400" />
-                          <input type="tel" className="w-full pl-11 px-4 py-3 border rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200 transition" value={formData.phone} onChange={handleChange('phone')} />
+                            <input type="tel" className="w-full pl-11 px-4 py-3 border rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200 transition" value={formData.phone} onChange={handleChange('phone')} />
+                            {profileErrors.phone && <div className="text-xs text-red-600 mt-1">{profileErrors.phone}</div>}
                         </div>
                       </div>
 
@@ -292,7 +316,7 @@ const Profile = () => {
                         <div className="relative">
                           <label className="block text-xs font-semibold text-slate-700 mb-2">Date of Birth</label>
                           <CalendarDays className="absolute left-3 top-11 w-4 h-4 text-slate-400" />
-                          <input type="date" className="w-full pl-11 px-4 py-3 border rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200 transition" value={formData.dob} onChange={handleChange('dob')} />
+                          <input type="date" max={maxDob} className="w-full pl-11 px-4 py-3 border rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200 transition" value={formData.dob} onChange={handleChange('dob')} />
                         </div>
                         <div>
                           <label className="block text-xs font-semibold text-slate-700 mb-2">Profile Photo</label>
