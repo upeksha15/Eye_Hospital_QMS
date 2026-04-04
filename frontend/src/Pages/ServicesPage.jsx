@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Eye, Bell, ShieldPlus, HeartPulse, Clock, Users } from 'lucide-react';
+import { Eye, Bell, ShieldPlus, HeartPulse, Clock, Users, ClipboardList, ChevronDown, User } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 import image3 from '../assets/image3.png';
 
 const services = [
@@ -38,6 +39,10 @@ const services = [
 
 const ServicesPage = () => {
   const navigate = useNavigate();
+  const { patient, isAuthenticated, userType, logout } = useAuth();
+  const isPatientLoggedIn = Boolean(isAuthenticated && userType === 'patient' && patient);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
 
   return (
     <div className="relative min-h-screen font-sans text-slate-800 w-full overflow-hidden">
@@ -70,6 +75,71 @@ const ServicesPage = () => {
           <Link to="/about" className="hover:text-blue-700">About Us</Link>
           <Link to="/contact" className="hover:text-blue-700">Contact</Link>
           <Bell className="w-6 h-6 text-slate-600" />
+          {!isPatientLoggedIn ? (
+            <Link to="/login">
+              <button className="bg-[#2d9d78] text-white px-6 py-2 rounded-lg font-bold hover:bg-[#248263] transition">
+                Login
+              </button>
+            </Link>
+          ) : (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setProfileMenuOpen((o) => !o)}
+                className="flex items-center gap-3 px-3 py-2 rounded-lg border border-blue-100 bg-blue-50/70 hover:bg-blue-100 transition"
+              >
+                <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-[#2d9d78] bg-[#e0f7f0] flex items-center justify-center">
+                  {patient?.profileImage && !avatarError ? (
+                    <img
+                      src={patient.profileImage}
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                      onError={() => setAvatarError(true)}
+                    />
+                  ) : (
+                    <User className="w-5 h-5 text-[#2d9d78]" />
+                  )}
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-semibold text-[#004a99] leading-tight">
+                    {patient?.fullName || 'Patient'}
+                  </p>
+                  <p className="text-xs text-slate-500 leading-tight">
+                    {patient?.email || patient?.nic || ''}
+                  </p>
+                </div>
+                <ChevronDown className="w-4 h-4 text-slate-500" />
+              </button>
+
+              {profileMenuOpen && (
+                <div className="absolute right-0 mt-2 w-44 rounded-lg bg-white shadow-lg border border-slate-100 py-1 text-sm text-slate-700">
+                  <button
+                    type="button"
+                    className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center gap-2"
+                    onClick={() => {
+                      setProfileMenuOpen(false);
+                      navigate('/dashboard');
+                    }}
+                  >
+                    <ClipboardList className="w-4 h-4 text-slate-500" />
+                    Dashboard
+                  </button>
+                  <button
+                    type="button"
+                    className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center gap-2 border-t border-slate-100"
+                    onClick={() => {
+                      setProfileMenuOpen(false);
+                      logout();
+                      navigate('/');
+                    }}
+                  >
+                    <User className="w-4 h-4 text-slate-500" />
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </nav>
 

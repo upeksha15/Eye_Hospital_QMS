@@ -4,8 +4,10 @@ import Home from "./Pages/Home";
 import AboutPage from "./Pages/AboutPage";
 import ServicesPage from "./Pages/ServicesPage";
 import ContactPage from "./Pages/ContactPage";
+import FeedbackPage from "./Pages/FeedbackPage";
 import UserReg from "./Pages/UserReg";
 import LoginPage from "./Pages/LoginPage";
+import ForgotPassword from "./Pages/ForgotPassword";
 import PatientDashboardLayout from "./components/PatientDashboardLayout";
 import QueueManagementPage from "./Pages/DoctorRoomManagement";
 import StaffManagement from "./Pages/StaffManagement";
@@ -53,10 +55,12 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/register" element={<UserReg />} />
       <Route path="/about" element={<AboutPage />} />
       <Route path="/services" element={<ServicesPage />} />
       <Route path="/contact" element={<ContactPage />} />
+      <Route path="/feedback" element={<FeedbackPage />} />
       <Route
         path="/dashboard"
         element={
