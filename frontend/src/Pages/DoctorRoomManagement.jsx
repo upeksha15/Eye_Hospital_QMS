@@ -62,7 +62,7 @@ export default function DoctorRoomManagement() {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
   const handleWeekdayToggle = (day) => {
     setForm((prev) => {
