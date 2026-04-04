@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import StaffAccount from '../models/StaffAccount.js';
+import StaffProfile from '../models/StaffProfile.js';
 import { ensureDbConnected } from '../../config/db.js';
 import { createAuditLog } from '../utils/auditLogHelper.js';
 
@@ -42,4 +43,55 @@ export async function changePassword(req, res) {
   }
 }
 
-export default { changePassword };
+/** Staff panel: active medical staff with profile + online presence (not admin-only). */
+export async function listAvailableMedicalStaff(req, res) {
+  try {
+    if (req.userType !== 'staff') {
+      return res.status(403).json({ success: false, message: 'Only staff can access staff panel' });
+    }
+    if (!['admin', 'medical_staff'].includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'Not allowed' });
+    }
+
+    await ensureDbConnected();
+
+    const now = Date.now();
+    const ONLINE_WINDOW_MS = 5 * 60 * 1000;
+
+    const staff = await StaffAccount.find({ role: 'medical_staff', isActive: true })
+      .select('_id fullName email role isActive lastSeenAt profileImage contactNumber')
+      .sort({ fullName: 1 })
+      .lean();
+
+    const staffIds = staff.map((s) => s._id);
+    const profiles = await StaffProfile.find({ staff: { $in: staffIds } })
+      .select('staff profileImage contactNumber')
+      .lean();
+
+    const profileByStaffId = new Map(
+      profiles.map((p) => [
+        String(p.staff),
+        { profileImage: p.profileImage || '', contactNumber: p.contactNumber || '' },
+      ])
+    );
+
+    const staffWithPresence = staff.map((s) => {
+      const seenAt = s.lastSeenAt ? new Date(s.lastSeenAt).getTime() : 0;
+      const isOnline = seenAt > 0 && now - seenAt <= ONLINE_WINDOW_MS;
+      const profile = profileByStaffId.get(String(s._id)) || {};
+      return {
+        ...s,
+        profileImage: profile.profileImage || s.profileImage || '',
+        contactNumber: profile.contactNumber || s.contactNumber || '',
+        isOnline,
+      };
+    });
+
+    res.json({ success: true, staff: staffWithPresence });
+  } catch (err) {
+    console.error('listAvailableMedicalStaff error', err);
+    res.status(500).json({ success: false, message: err.message || 'Failed to load staff' });
+  }
+}
+
+export default { changePassword, listAvailableMedicalStaff };

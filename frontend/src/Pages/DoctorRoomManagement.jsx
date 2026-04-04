@@ -41,6 +41,7 @@ export default function DoctorRoomManagement() {
   const [data, setData] = useState([]);
   const [editId, setEditId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
 
   const API_URL = "/api/doctor-rooms";
   const fetchDoctorRooms = async () => {
@@ -60,9 +61,29 @@ export default function DoctorRoomManagement() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+    // validate field on change
+    setErrors((prev) => ({ ...prev, [name]: '' }));
+
+    // Inline per-field validation
+    if (name === 'doctorName') {
+      // allow letters and spaces only
+      const ok = value === '' || /^[A-Za-z\s]+$/.test(value);
+      if (!ok) setErrors((prev) => ({ ...prev, doctorName: 'Doctor name may only contain letters and spaces' }));
+    }
+    if (name === 'room') {
+      // numeric only
+      const ok = value === '' || /^\d+$/.test(value);
+      if (!ok) setErrors((prev) => ({ ...prev, room: 'Room must contain only numbers' }));
+    }
+    if (name === 'queueLimit') {
+      // positive integer, no zero or negative
+      const n = Number(value);
+      const ok = value === '' || (Number.isFinite(n) && Number.isInteger(n) && n > 0);
+      if (!ok) setErrors((prev) => ({ ...prev, queueLimit: 'Queue limit must be a positive integer' }));
+    }
   };
 
-  const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
   const handleWeekdayToggle = (day) => {
     setForm((prev) => {
@@ -72,14 +93,27 @@ export default function DoctorRoomManagement() {
         availability: has ? prev.availability.filter((d) => d !== day) : [...prev.availability, day],
       };
     });
+    setErrors((prev) => ({ ...prev, availability: '' }));
+  };
+
+  const validateForm = (f) => {
+    const e = {};
+    if (!f.doctorName || !f.doctorName.trim()) e.doctorName = 'Doctor name is required';
+    else if (!/^[A-Za-z\s]+$/.test(f.doctorName)) e.doctorName = 'Doctor name may only contain letters and spaces';
+    if (!f.room || !String(f.room).trim()) e.room = 'Room is required';
+    else if (!/^\d+$/.test(String(f.room))) e.room = 'Room must contain only numbers';
+    const q = Number(f.queueLimit);
+    if (!Number.isFinite(q) || !Number.isInteger(q) || q <= 0) e.queueLimit = 'Queue limit must be a positive integer';
+    if (f.specialization === 'Other' && (!f.otherSpecialization || !f.otherSpecialization.trim())) e.otherSpecialization = 'Please provide specialization';
+    if (!Array.isArray(f.availability) || f.availability.length === 0) e.availability = 'Select at least one weekday';
+    return e;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.doctorName || !form.room || !form.queueLimit) {
-      alert('Please fill all fields');
-      return;
-    }
+    const v = validateForm(form);
+    setErrors(v);
+    if (Object.keys(v).length > 0) return;
 
     setSubmitting(true);
     try {
@@ -110,6 +144,7 @@ export default function DoctorRoomManagement() {
         otherSpecialization: '',
         availability: [],
       });
+      setErrors({});
 
       fetchDoctorRooms();
     } catch (error) {
@@ -142,6 +177,7 @@ export default function DoctorRoomManagement() {
       availability: Array.isArray(item.availability) ? item.availability : [],
     });
     setEditId(item._id);
+    setErrors({});
   };
 
   return (
@@ -170,8 +206,9 @@ export default function DoctorRoomManagement() {
                   placeholder="Enter doctor name"
                   value={form.doctorName}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={`w-full rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.doctorName ? 'border-red-500' : 'border border-gray-300'}`}
                 />
+                {errors.doctorName && <div className="text-xs text-red-600 mt-1">{errors.doctorName}</div>}
               </div>
 
               <div>
@@ -184,8 +221,9 @@ export default function DoctorRoomManagement() {
                   placeholder="e.g., 101"
                   value={form.room}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={`w-full rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.room ? 'border-red-500' : 'border border-gray-300'}`}
                 />
+                {errors.room && <div className="text-xs text-red-600 mt-1">{errors.room}</div>}
               </div>
 
               {/* slotLimit removed per UI request - server will use default */}
@@ -196,7 +234,7 @@ export default function DoctorRoomManagement() {
                   name="specialization"
                   value={form.specialization}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg p-2 bg-white"
+                  className={`w-full rounded-lg p-2 bg-white ${errors.specialization ? 'border-red-500' : 'border border-gray-300'}`}
                 >
                   <optgroup label="General Categories">
                     <option>General Ophthalmology</option>
@@ -227,14 +265,17 @@ export default function DoctorRoomManagement() {
                   <option>Other</option>
                 </select>
                 {form.specialization === 'Other' && (
-                  <input
-                    type="text"
-                    name="otherSpecialization"
-                    placeholder="Enter specialization"
-                    value={form.otherSpecialization}
-                    onChange={handleChange}
-                    className="mt-2 w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
+                  <>
+                    <input
+                      type="text"
+                      name="otherSpecialization"
+                      placeholder="Enter specialization"
+                      value={form.otherSpecialization}
+                      onChange={handleChange}
+                      className={`mt-2 w-full rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.otherSpecialization ? 'border-red-500' : 'border border-gray-300'}`}
+                    />
+                    {errors.otherSpecialization && <div className="text-xs text-red-600 mt-1">{errors.otherSpecialization}</div>}
+                  </>
                 )}
               </div>
 
@@ -250,8 +291,9 @@ export default function DoctorRoomManagement() {
                   placeholder="e.g., 10"
                   value={form.queueLimit}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={`w-full rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.queueLimit ? 'border-red-500' : 'border border-gray-300'}`}
                 />
+                {errors.queueLimit && <div className="text-xs text-red-600 mt-1">{errors.queueLimit}</div>}
               </div>
 
               <div className="md:col-span-2">
@@ -264,6 +306,7 @@ export default function DoctorRoomManagement() {
                     </label>
                   ))}
                 </div>
+                {errors.availability && <div className="text-xs text-red-600 mt-2">{errors.availability}</div>}
               </div>
             </div>
 

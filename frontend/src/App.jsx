@@ -24,10 +24,12 @@ import NoticesPage from "./admin/pages/NoticesPage";
 import AuditLogsPage from "./admin/pages/AuditLogsPage";
 import AdminSettingsPage from "./admin/pages/AdminSettingsPage";
 import ReportsPage from "./admin/pages/ReportsPage";
+import PatientDetailsSummaryReport from "./admin/pages/PatientDetailsSummaryReport";
 import StaffDoctors from "./Pages/StaffDoctors";
 import StaffNotices from "./Pages/StaffNotices";
 import StaffProfile from "./Pages/StaffProfile";
 import FollowUps from "./Pages/Staff_FollowUps";
+import StaffPatientDetailsPage from "./Pages/StaffPatientDetailsPage";
 
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -108,6 +110,14 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/reports"
+        element={
+          <PatientRoute>
+            <PatientDashboardLayout />
+          </PatientRoute>
+        }
+      />
+      <Route
         path="/notifications"
         element={
           <PatientRoute>
@@ -172,6 +182,14 @@ function AppRoutes() {
           </StaffRoute>
         }
       />
+      <Route
+        path="/appointmentdetails"
+        element={
+          <StaffRoute>
+            <StaffPatientDetailsPage />
+          </StaffRoute>
+        }
+      />
       {/* support legacy/hyphenated path */}
       <Route path="/staff-dashboard" element={<Navigate to="/staffdashboard" replace />} />
       <Route
@@ -198,6 +216,7 @@ function AppRoutes() {
         <Route path="notices" element={<NoticesPage />} />
         <Route path="audit-logs" element={<AuditLogsPage />} />
         <Route path="reports" element={<ReportsPage />} />
+        <Route path="patient-details-summary" element={<PatientDetailsSummaryReport />} />
         <Route path="settings" element={<AdminSettingsPage />} />
       </Route>
     </Routes>

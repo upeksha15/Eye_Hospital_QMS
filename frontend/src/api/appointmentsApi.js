@@ -19,3 +19,10 @@ export async function checkIn(appointmentId) {
   const { data } = await api.post(`/api/checkin/${appointmentId}`);
   return data;
 }
+
+export async function checkSlotAvailability(doctorId, date) {
+  const { data } = await api.get('/api/appointments/check-availability', {
+    params: { doctorId, date },
+  });
+  return data;
+}

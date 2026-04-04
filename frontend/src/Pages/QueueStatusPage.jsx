@@ -1,13 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { bookingStrings } from '../i18n/bookingStrings';
+// booking strings removed — keep module available if needed later
 import { fetchMyAppointments, checkIn as checkInApi } from '../api/appointmentsApi';
 import { fetchQueueBoardToday, fetchMyQueueStatusToday } from '../api/queueApi';
 import { useSocket } from '../hooks/useSocket';
 import { formatYMD, nowColombo } from '../utils/dateHelpers';
 
 export default function QueueStatusPage() {
-  const strings = bookingStrings.en;
+  // bookingStrings available if needed in future
 
   const [appointments, setAppointments] = useState([]);
   const [loadingAppts, setLoadingAppts] = useState(true);

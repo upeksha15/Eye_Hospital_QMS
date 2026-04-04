@@ -42,6 +42,7 @@ const FollowUps = () => {
   const [doctorNameInput, setDoctorNameInput] = useState('');
   const [patientNICInput, setPatientNICInput] = useState('');
   const [patientPhoneInput, setPatientPhoneInput] = useState('');
+  const [overrideRecommendedDate, setOverrideRecommendedDate] = useState(null);
 
   const formatDate = (date) =>
     date.toLocaleDateString('en-GB', {
@@ -128,7 +129,10 @@ const FollowUps = () => {
         const res = await api.get(`/api/appointments/by-date?date=${selectedDate}`);
         if (!mounted) return;
         const data = res.data?.appointments || res.data || [];
-        setAppointments(Array.isArray(data) ? data : []);
+        const arr = Array.isArray(data) ? data : [];
+        // Only show patients who have checked in on the selected date
+        const checkedIn = arr.filter((a) => String(a.status || '').toLowerCase() === 'checked_in');
+        setAppointments(checkedIn);
       } catch (e) {
         // on error, present an empty list (no local fallback)
         setAppointments([]);
@@ -141,15 +145,24 @@ const FollowUps = () => {
 
   const openSchedule = (appointment) => {
     setActiveAppointment(appointment);
-    setIntervalValue(3);
+    setIntervalValue(1);
     setIntervalType('days');
     setPatientNameInput(appointment.patientName || '');
     setDoctorNameInput(appointment.doctorName || '');
     setPatientNICInput(appointment.patientNIC || '');
     setPatientPhoneInput(appointment.patientContact || '');
+    if (appointment?.appointmentDate) {
+      setOverrideRecommendedDate(new Date(appointment.appointmentDate));
+    } else {
+      setOverrideRecommendedDate(null);
+    }
   };
 
   const recommendedDate = useMemo(() => {
+    if (overrideRecommendedDate && Number(intervalValue) === 1 && intervalType === 'days') {
+      return overrideRecommendedDate;
+    }
+
     const value = Number(intervalValue);
     if (!value || Number.isNaN(value) || !activeAppointment) return null;
 
@@ -162,7 +175,11 @@ const FollowUps = () => {
       date.setMonth(date.getMonth() + value);
     }
     return date;
-  }, [intervalValue, intervalType, activeAppointment]);
+  }, [intervalValue, intervalType, activeAppointment, overrideRecommendedDate]);
+
+  useEffect(() => {
+    if (!activeAppointment) setOverrideRecommendedDate(null);
+  }, [activeAppointment]);
 
   const [recommendedError, setRecommendedError] = useState('');
 
@@ -455,7 +472,7 @@ const FollowUps = () => {
                               type="text"
                               value={searchQuery}
                               onChange={(e) => setSearchQuery(e.target.value)}
-                              placeholder="Search by patient name or NIC"
+                              placeholder="Search checked-in patient name or NIC"
                               className="flex-1 px-3 py-2 rounded-lg border text-sm"
                             />
                             <div className="text-sm text-slate-500">{filteredAppointments.length} found</div>
@@ -464,7 +481,7 @@ const FollowUps = () => {
                           <div className="border rounded-lg overflow-hidden">
                             {filteredAppointments.length === 0 ? (
                               <div className="p-8 text-center text-sm text-slate-500">
-                                {appointments.length === 0 ? 'No appointments for this date.' : 'No matching appointments.'}
+                                {appointments.length === 0 ? 'No checked-in patients for this date.' : 'No matching appointments.'}
                               </div>
                             ) : (
                               <ul className="divide-y max-h-80 overflow-y-auto">

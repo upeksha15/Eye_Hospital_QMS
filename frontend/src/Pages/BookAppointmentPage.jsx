@@ -36,7 +36,7 @@ function toInputDate(isoOrDate) {
 export default function BookAppointmentPage() {
   const navigate = useNavigate();
   const { patient, isAuthenticated } = useAuth();
-  const [lang, setLang] = useState('en');
+  const [lang] = useState('en');
   const strings = bookingStrings[lang] || bookingStrings.en;
 
   const [doctors, setDoctors] = useState([]);

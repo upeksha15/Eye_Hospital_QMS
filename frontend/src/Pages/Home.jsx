@@ -13,6 +13,7 @@ import backg2 from '../assets/backg2.png';
 import backg3 from '../assets/back3g.png';
 import backg4 from '../assets/back4g.png';
 import { useAuth } from '../hooks/useAuth';
+import api from '../api/client';
 
 
 const Home = () => {
@@ -32,33 +33,42 @@ useEffect(() => {
   }, 5000); // change every 5 seconds
 
   return () => clearInterval(interval);
-}, []);
+}, [backgrounds.length]);
 
 
-  // Special Notices
-  const notices = [
-    { title: "Clinic Closure", text: "Eye clinic will be closed on Poya Day due to public holiday.", icon: <AlertTriangle className="text-red-500" />, border: "border-red-500" },
-    { title: "Doctor Availability", text: "Retina specialist available from 9.00 AM – 1.00 PM today.", icon: <Eye className="text-blue-500" />, border: "border-blue-500" },
-    { title: "Emergency Services", text: "Emergency eye care services are available 24/7.", icon: <ShieldPlus className="text-green-500" />, border: "border-green-500" },
-  ];
-
-  const extendedNotices = [...notices, ...notices]; // duplicate for infinite scroll
+  // Special Notices fetched from backend
+  const [notices, setNotices] = useState([]);
   const sliderRef = useRef(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api.get('/api/notices');
+        const items = Array.isArray(res.data?.data) ? res.data.data : [];
+        if (!cancelled) setNotices(items);
+      } catch (e) {
+        console.error('Failed to load notices', e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // Continuous scroll effect
   useEffect(() => {
     const slider = sliderRef.current;
+    if (!slider) return;
     let start = 0;
 
     function animate() {
-      start -= 0.5; // move left 1px per frame
+      start -= 0.5;
       if (Math.abs(start) >= slider.scrollWidth / 2) start = 0;
       slider.style.transform = `translateX(${start}px)`;
       requestAnimationFrame(animate);
     }
 
     animate();
-  }, []);
+  }, [notices]);
 
   return (
     <div className="min-h-screen bg-[#f0f7ff] font-sans text-slate-800 w-full">
@@ -306,18 +316,22 @@ useEffect(() => {
           {/* Continuous Left Scrolling */}
           <div className="overflow-hidden w-full">
             <div ref={sliderRef} className="flex whitespace-nowrap">
-              {extendedNotices.map((notice, index) => (
-                <div key={index} className="flex-shrink-0 px-6">
-                  <div className={`bg-white p-6 rounded-2xl shadow-xl border-l-4 ${notice.border} flex items-center gap-3`}>
-                    {notice.icon}
-                    <div>
-                      <h3 className="font-bold">{notice.title}</h3>
-                      <p className="text-slate-600">{notice.text}</p>
+                {(notices.length === 0 ? [] : [...notices, ...notices]).map((notice, index) => {
+                  const border = notice.priority === 'high' ? 'border-red-500' : notice.priority === 'medium' ? 'border-amber-500' : 'border-blue-500';
+                  const icon = notice.priority === 'high' ? <AlertTriangle className="text-red-500" /> : <Megaphone className="text-blue-500" />;
+                  return (
+                    <div key={index} className="flex-shrink-0 px-6">
+                      <div className={`bg-white p-6 rounded-2xl shadow-xl border-l-4 ${border} flex items-center gap-3`}>
+                        {icon}
+                        <div>
+                          <h3 className="font-bold">{notice.title || 'Notice'}</h3>
+                          <p className="text-slate-600">{notice.message || notice.text || ''}</p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                  );
+                })}
+              </div>
           </div>
 
         </div>

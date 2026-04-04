@@ -26,6 +26,8 @@ router.delete('/staff-accounts/:id', admin.deleteStaffAccount);
 
 router.get('/reports/appointments', reports.getReportSummary);
 router.get('/reports/appointments.pdf', reports.getReportPdf);
+router.get('/reports/patient-details-summary', reports.getPatientDetailsSummary);
+router.get('/reports/patient-details-summary.pdf', reports.getPatientDetailsSummaryPdf);
 
 router.post('/doctors', admin.createDoctor);
 router.put('/doctors/:id', admin.updateDoctor);

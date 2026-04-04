@@ -52,7 +52,7 @@ export function monthKeyFromDate(date) {
 
 export function totalSlotsForDate(date) {
   const dow = getDayOfWeekColombo(date);
-  if (dow === 0) return 0;
+  // Treat Sunday as a normal booking day for staff-facing calendars.
   if (dow === 6) return 15;
   return 30;
 }

@@ -29,6 +29,8 @@ const staffAccountSchema = new mongoose.Schema(
     passwordResetOtp: { type: String },
     passwordResetOtpExpires: { type: Date },
     passwordResetOtpAttempts: { type: Number, default: 0 },
+    lastLoginAt: { type: Date },
+    lastSeenAt: { type: Date },
   },
   { timestamps: true }
 );

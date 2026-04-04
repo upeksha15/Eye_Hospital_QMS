@@ -64,7 +64,8 @@ export function formatYMD(date) {
 
 export function totalSlotsForDate(date) {
   const dow = getDayOfWeekColombo(date);
-  if (dow === 0) return 0;
+  // Default slots: treat Sunday like other weekdays for booking purposes.
+  // Saturday has reduced capacity; other days have full capacity.
   if (dow === 6) return 15;
   return 30;
 }
@@ -82,20 +83,11 @@ export function isOperatingHoursForCheckin(now = new Date()) {
   const hh = parseInt(parts.find((p) => p.type === 'hour')?.value ?? '0', 10);
   const mm = parseInt(parts.find((p) => p.type === 'minute')?.value ?? '0', 10);
   const minutes = hh * 60 + mm;
-
-  if (dow === 6) {
-    const open = 7 * 60;
-    const close = 10 * 60;
-    return {
-      ok: minutes >= open && minutes < close,
-      reason: minutes >= close ? 'Saturday check-in ends at 10:00 AM' : null,
-    };
-  }
-
+  // Standard operating hours for check-in: 07:00 - 16:00 for all open days
   const open = 7 * 60;
   const close = 16 * 60;
   return {
     ok: minutes >= open && minutes < close,
-    reason: minutes >= close ? 'Weekday check-in ends at 4:00 PM' : null,
+    reason: minutes >= close ? 'Check-in ends at 4:00 PM' : null,
   };
 }
