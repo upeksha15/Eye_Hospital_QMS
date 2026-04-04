@@ -155,8 +155,9 @@ const FollowUps = () => {
   const recommendedDate = useMemo(() => {
     const value = Number(intervalValue);
     if (!value || Number.isNaN(value) || !activeAppointment) return null;
-
-    const date = new Date();
+    // base recommended date on the original appointment date when available
+    const base = activeAppointment.appointmentDate ? new Date(activeAppointment.appointmentDate) : new Date();
+    const date = new Date(base);
     if (intervalType === 'days') {
       date.setDate(date.getDate() + value);
     } else if (intervalType === 'weeks') {
