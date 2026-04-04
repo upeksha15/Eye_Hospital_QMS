@@ -26,6 +26,8 @@ export async function authMiddleware(req, res, next) {
       req.user = staff;
       req.staffProfile = profile || null;
       req.userType = 'staff';
+      // Best-effort presence heartbeat for "currently logged-in" indicator.
+      StaffAccount.updateOne({ _id: staff._id }, { $set: { lastSeenAt: new Date() } }).catch(() => {});
       return next();
     }
 

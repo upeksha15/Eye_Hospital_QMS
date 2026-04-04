@@ -159,6 +159,12 @@ export async function login(req, res) {
         return res.status(401).json({ success: false, message: 'Invalid credentials' });
       }
 
+      // Mark staff session as active at login time.
+      const now = new Date();
+      staff.lastLoginAt = now;
+      staff.lastSeenAt = now;
+      await staff.save();
+
       const token = signToken(staff._id, 'staff');
       // include merged profile data if available so frontend receives up-to-date profile
       const profile = await StaffProfile.findOne({ staff: staff._id });

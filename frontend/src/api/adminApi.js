@@ -70,6 +70,19 @@ export async function downloadAppointmentsReportPdf(params) {
   return new Blob([data], { type: 'application/pdf' });
 }
 
+export async function getPatientDetailsSummaryReport(params) {
+  const { data } = await api.get('/api/admin/reports/patient-details-summary', { params });
+  return data;
+}
+
+export async function downloadPatientDetailsSummaryPdf(params) {
+  const { data } = await api.get('/api/admin/reports/patient-details-summary.pdf', {
+    params,
+    responseType: 'arraybuffer',
+  });
+  return new Blob([data], { type: 'application/pdf' });
+}
+
 export async function getAnnouncementsAdmin() {
   const { data } = await api.get('/api/admin/announcements');
   return data;

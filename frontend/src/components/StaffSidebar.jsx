@@ -50,6 +50,11 @@ export default function StaffSidebar() {
       path: "/staffprofile",
       icon: <UserCircle2 className="w-5 h-5" />,
     },
+      {
+      name: "Appointment Details",
+      path: "/appointmentdetails",
+      icon: <UserCircle2 className="w-5 h-5" />,
+    },
   ];
 
   const isActive = (path) => {

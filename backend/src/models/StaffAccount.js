@@ -25,6 +25,8 @@ const staffAccountSchema = new mongoose.Schema(
     },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'StaffAccount' },
     isActive: { type: Boolean, default: true },
+    lastLoginAt: { type: Date },
+    lastSeenAt: { type: Date },
   },
   { timestamps: true }
 );

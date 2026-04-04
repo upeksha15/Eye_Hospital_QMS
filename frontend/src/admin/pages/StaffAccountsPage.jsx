@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import AdminHeader from '../AdminHeader';
 import * as adminApi from '../../api/adminApi';
-import { Trash2, UserPlus } from 'lucide-react';
+import { CheckCircle2, Trash2, UserPlus } from 'lucide-react';
 
 const emptyForm = {
   fullName: '',
@@ -73,6 +73,18 @@ export default function StaffAccountsPage() {
         setEditingId(null);
         setForm(emptyForm);
       }
+    } catch (err) {
+      setMsg(err.response?.data?.message || err.message);
+    }
+  };
+
+  const makeAvailable = async (id) => {
+    if (!window.confirm('Make this account available? They will be able to sign in.')) return;
+    setMsg('');
+    try {
+      await adminApi.updateStaffAccount(id, { isActive: true });
+      await load();
+      setMsg('Account is now available.');
     } catch (err) {
       setMsg(err.response?.data?.message || err.message);
     }
@@ -204,14 +216,25 @@ export default function StaffAccountsPage() {
                         >
                           Edit
                         </button>
-                        <button
-                          type="button"
-                          className="p-2 rounded-lg hover:bg-red-50"
-                          onClick={() => deactivate(s._id)}
-                          title="Deactivate"
-                        >
-                          <Trash2 className="w-4 h-4 text-red-600" />
-                        </button>
+                        {s.isActive ? (
+                          <button
+                            type="button"
+                            className="p-2 rounded-lg hover:bg-red-50"
+                            onClick={() => deactivate(s._id)}
+                            title="Deactivate"
+                          >
+                            <Trash2 className="w-4 h-4 text-red-600" />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="p-2 rounded-lg hover:bg-emerald-50"
+                            onClick={() => makeAvailable(s._id)}
+                            title="Available"
+                          >
+                            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

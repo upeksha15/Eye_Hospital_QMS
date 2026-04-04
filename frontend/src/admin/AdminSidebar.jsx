@@ -9,6 +9,7 @@ import {
   Megaphone,
   ScrollText,
   FileBarChart,
+  FileText,
   Settings,
   LogOut,
 } from 'lucide-react';
@@ -18,6 +19,7 @@ const nav = [
   { to: '/admin', end: true, label: 'Dashboard', icon: LayoutDashboard },
   { to: '/admin/staff-accounts', label: 'Staff accounts', icon: UserCog },
   { to: '/admin/users', label: 'Patients', icon: Users },
+  { to: '/admin/patient-details-summary', label: 'Patient details summary', icon: FileText },
   { to: '/admin/reports', label: 'Reports', icon: FileBarChart },
   { to: '/admin/performance', label: 'System Performance', icon: Activity },
   { to: '/admin/notices', label: 'Notices & Announcements', icon: Megaphone },
@@ -83,7 +85,7 @@ export default function AdminSidebar() {
 
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto mt-2">
         {nav.map((item) => (
-          <NavLink key={item.to} to={item.to} end={item.end} className={linkClass}>
+          <NavLink key={`${item.to}-${item.label}`} to={item.to} end={item.end} className={linkClass}>
             <item.icon className="w-5 h-5 shrink-0 opacity-90" />
             {item.label}
           </NavLink>
