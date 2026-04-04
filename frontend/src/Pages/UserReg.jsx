@@ -187,6 +187,17 @@ const EyeCareRegistration = () => {
     }
   };
 
+  // Helper: Check if email ends with a valid TLD
+  const hasValidTLD = (email) => {
+    const validTLDs = ['com', 'org', 'net', 'edu', 'gov', 'co', 'uk', 'us', 'ca', 'au', 'de', 'fr', 'it', 'es', 'jp', 'cn', 'in', 'br', 'mx', 'info', 'biz', 'io', 'ai', 'dev', 'app', 'lk'];
+    const parts = email.toLowerCase().split('.');
+    if (parts.length >= 2) {
+      const tld = parts[parts.length - 1];
+      return validTLDs.includes(tld) && tld.length >= 2;
+    }
+    return false;
+  };
+
   // Helper: Convert day-of-year to month and day
   const dayOfYearToDate = (dayOfYear, year) => {
     const isLeapYear = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
@@ -300,7 +311,7 @@ const EyeCareRegistration = () => {
     return "";
   };
 
-  // Cross-validation: NIC and Date of Birth
+  // Cross-validation: NIC and Date of Birth (Relaxed - allows 1-day tolerance)
   const validateNICAndDOBMatch = (nic, dob) => {
     if (!nic || !dob) {
       return { isValid: true, nicError: "", dobError: "" };
@@ -336,10 +347,12 @@ const EyeCareRegistration = () => {
       return { isValid: true, nicError: "", dobError: "" };
     }
 
-    // Compare dates
-    if (nicBirthDate.year === dobDate.year && 
-        nicBirthDate.month === dobDate.month && 
-        nicBirthDate.day === dobDate.day) {
+    // Compare dates - allow 1-day tolerance for day-of-year rounding differences
+    const yearMatch = nicBirthDate.year === dobDate.year;
+    const monthMatch = nicBirthDate.month === dobDate.month;
+    const dayDiff = Math.abs(nicBirthDate.day - dobDate.day);
+    
+    if (yearMatch && monthMatch && dayDiff <= 1) {
       return { isValid: true, nicError: "", dobError: "" };
     } else {
       return { 
@@ -391,21 +404,17 @@ const EyeCareRegistration = () => {
       }
     }
 
-    // Email: Block typing after valid TLD
+    // Email: Prevent typing after complete TLD (3+ characters only)
     if (name === "email") {
-      // Check if email already has a complete TLD
-      const hasValidTLD = (email) => {
-        if (!email.includes('@') || !email.includes('.')) return false;
-        const afterAt = email.substring(email.indexOf('@') + 1);
-        const lastDotIndex = afterAt.lastIndexOf('.');
-        if (lastDotIndex === -1) return false;
-        const tld = afterAt.substring(lastDotIndex + 1);
-        return tld.length >= 2; // Valid TLD must be at least 2 chars
-      };
-
-      if (hasValidTLD(formData.email) && value.length > formData.email.length) {
-        // User is trying to add more characters after a complete TLD, block it
-        return;
+      if (formData.email && value.length > formData.email.length) {
+        const parts = formData.email.toLowerCase().split('.');
+        if (parts.length >= 2) {
+          const tld = parts[parts.length - 1];
+          // Only block if TLD is 3+ characters (com, org, edu, etc.)
+          if (tld.length >= 3 && hasValidTLD(formData.email)) {
+            return;
+          }
+        }
       }
       filteredValue = value;
     }
@@ -714,7 +723,7 @@ const EyeCareRegistration = () => {
                         name="email" 
                         placeholder="your@email.com" 
                         label="Email Address *" 
-                        type="email" 
+                        type="text" 
                         value={formData.email}
                         onChange={handleChange}
                         onBlur={handleBlur}

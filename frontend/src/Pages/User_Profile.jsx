@@ -63,6 +63,17 @@ const UserProfile = () => {
     return "";
   };
 
+  // Helper: Check if email ends with a valid TLD
+  const hasValidTLD = (email) => {
+    const validTLDs = ['com', 'org', 'net', 'edu', 'gov', 'co', 'uk', 'us', 'ca', 'au', 'de', 'fr', 'it', 'es', 'jp', 'cn', 'in', 'br', 'mx', 'info', 'biz', 'io', 'ai', 'dev', 'app', 'lk'];
+    const parts = email.toLowerCase().split('.');
+    if (parts.length >= 2) {
+      const tld = parts[parts.length - 1];
+      return validTLDs.includes(tld) && tld.length >= 2;
+    }
+    return false;
+  };
+
   // Email Validation
   const validateEmail = (value) => {
     const trimmed = value.trim();
@@ -221,21 +232,17 @@ const UserProfile = () => {
       }
     }
 
-    // Email: Block typing after valid TLD
+    // Email: Prevent typing after complete TLD (3+ characters only)
     if (name === "email") {
-      // Check if email already has a complete TLD
-      const hasValidTLD = (emailStr) => {
-        if (!emailStr.includes('@') || !emailStr.includes('.')) return false;
-        const afterAt = emailStr.substring(emailStr.indexOf('@') + 1);
-        const lastDotIndex = afterAt.lastIndexOf('.');
-        if (lastDotIndex === -1) return false;
-        const tld = afterAt.substring(lastDotIndex + 1);
-        return tld.length >= 2; // Valid TLD must be at least 2 chars
-      };
-
-      if (hasValidTLD(editedUser.email) && value.length > editedUser.email.length) {
-        // User is trying to add more characters after a complete TLD, block it
-        return;
+      if (editedUser.email && value.length > editedUser.email.length) {
+        const parts = editedUser.email.toLowerCase().split('.');
+        if (parts.length >= 2) {
+          const tld = parts[parts.length - 1];
+          // Only block if TLD is 3+ characters (com, org, edu, etc.)
+          if (tld.length >= 3 && hasValidTLD(editedUser.email)) {
+            return;
+          }
+        }
       }
       filteredValue = value;
     }
