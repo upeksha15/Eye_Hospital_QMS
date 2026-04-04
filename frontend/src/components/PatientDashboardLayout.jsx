@@ -14,6 +14,7 @@ import {
   History,
   Timer,
   TrendingUp,
+  FileText,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import BookAppointmentPage from '../Pages/BookAppointmentPage';
@@ -22,6 +23,7 @@ import QueueStatusPage from '../Pages/QueueStatusPage';
 import UserProfile from '../Pages/User_Profile';
 import PatientFollowUpsPage from '../Pages/PatientFollowUpsPage';
 import NotificationsPage from '../Pages/NotificationsPage';
+import ReportsPage from '../Pages/ReportsPage';
 import { fetchMyAppointments } from '../api/appointmentsApi';
 import { fetchMyQueueStatusToday } from '../api/queueApi';
 
@@ -231,6 +233,7 @@ export default function PatientDashboardLayout() {
     { id: 'queue', icon: Activity, label: 'Queue Status', path: '/queue' },
     { id: 'followups', icon: TrendingUp, label: 'Follow-Ups', path: '/appointments/followups' },
     { id: 'profile', icon: User, label: 'Profile', path: '/profile' },
+    { id: 'ReportsPage', icon: FileText, label: 'Reports', path: '/reports' },
   ];
 
   const pathname = location.pathname;
@@ -458,6 +461,10 @@ export default function PatientDashboardLayout() {
 
     if (pathname === '/appointments/followups') {
       return <PatientFollowUpsPage />;
+    }
+
+    if (pathname === '/reports') {
+      return <ReportsPage />;
     }
 
     if (pathname === '/profile') {

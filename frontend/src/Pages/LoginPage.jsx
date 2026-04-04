@@ -19,6 +19,17 @@ const LoginPage = () => {
 
   // ============ VALIDATION FUNCTIONS ============
 
+  // Helper: Check if email ends with a valid TLD
+  const hasValidTLD = (email) => {
+    const validTLDs = ['com', 'org', 'net', 'edu', 'gov', 'co', 'uk', 'us', 'ca', 'au', 'de', 'fr', 'it', 'es', 'jp', 'cn', 'in', 'br', 'mx', 'info', 'biz', 'io', 'ai', 'dev', 'app', 'lk'];
+    const parts = email.toLowerCase().split('.');
+    if (parts.length >= 2) {
+      const tld = parts[parts.length - 1];
+      return validTLDs.includes(tld) && tld.length >= 2;
+    }
+    return false;
+  };
+
   // Email Validation
   const validateEmail = (value) => {
     const trimmed = value.trim();
@@ -52,21 +63,18 @@ const LoginPage = () => {
   const handleEmailChange = (e) => {
     const value = e.target.value.trim();
     
-    // Block typing after valid TLD
-    const hasValidTLD = (emailStr) => {
-      if (!emailStr.includes('@') || !emailStr.includes('.')) return false;
-      const afterAt = emailStr.substring(emailStr.indexOf('@') + 1);
-      const lastDotIndex = afterAt.lastIndexOf('.');
-      if (lastDotIndex === -1) return false;
-      const tld = afterAt.substring(lastDotIndex + 1);
-      return tld.length >= 2; // Valid TLD must be at least 2 chars
-    };
-
-    if (hasValidTLD(email) && value.length > email.trim().length) {
-      // User is trying to add more characters after a complete TLD, block it
-      return;
+    // Prevent typing after complete TLD (3+ characters only)
+    if (email && value.length > email.length) {
+      const parts = email.toLowerCase().split('.');
+      if (parts.length >= 2) {
+        const tld = parts[parts.length - 1];
+        // Only block if TLD is 3+ characters (com, org, edu, etc.)
+        if (tld.length >= 3 && hasValidTLD(email)) {
+          return;
+        }
+      }
     }
-
+    
     setEmail(value);
     
     // Real-time validation
@@ -235,12 +243,13 @@ const LoginPage = () => {
                 <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/60 w-5 h-5" />
                 <input
                   id="email"
-                  type="email"
+                  type="text"
                   value={email}
                   onChange={handleEmailChange}
                   onFocus={() => setFocusedField('email')}
                   onBlur={() => setFocusedField(null)}
                   placeholder="you@example.com"
+                  autoComplete="email"
                   className={`w-full pl-12 pr-4 py-3 bg-white/20 border rounded-xl focus:outline-none focus:bg-white/30 transition-colors duration-300 text-white placeholder-white/50 backdrop-blur-sm ${
                     fieldErrors.email ? 'border-red-400' : 'border-white/30'
                   }`}
