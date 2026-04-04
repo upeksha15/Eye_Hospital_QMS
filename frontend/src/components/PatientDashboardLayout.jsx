@@ -1,3 +1,4 @@
+import React, { useEffect, useState, Suspense, lazy } from 'react';
 import React, { useEffect, useState, Suspense } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -27,8 +28,7 @@ import ReportsPage from '../Pages/ReportsPage';
 import { fetchMyAppointments } from '../api/appointmentsApi';
 import { fetchMyQueueStatusToday } from '../api/queueApi';
 
-// ReportsPage imported directly to avoid lazy resolution issues in some bundlers
-
+const ReportsPage = lazy(() => import('../Pages/ReportsPage'));
 function getStatusColor(status) {
   switch (status) {
     case 'approved':
