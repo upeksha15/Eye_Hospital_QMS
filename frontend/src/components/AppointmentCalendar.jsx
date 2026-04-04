@@ -19,7 +19,7 @@ export default function AppointmentCalendar({
   onSelectDate,
   loading,
   strings,
-  allowedWeekdays, // array of weekday names e.g. ['Monday','Wednesday']
+  allowedWeekdays, // array of weekday names e.g. ['Sunday','Monday','Wednesday']
   hideAvailableCount = false,
   compact = false,
 }) {
@@ -36,7 +36,10 @@ export default function AppointmentCalendar({
 
   const todayStr = formatYMD(nowColombo());
 
-  const weekdayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  // ✅ FIX 1: Clean 7-item array — removed duplicate 'sunday' at index 7
+  const weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+  // ✅ FIX 2: If allowedWeekdays is empty/not provided, ALL days are allowed (including Sunday)
   const allowedSet = new Set((allowedWeekdays || []).map((s) => String(s || '').toLowerCase()));
 
   const cells = [];
@@ -67,6 +70,7 @@ export default function AppointmentCalendar({
     const { key, dow, slot } = c;
     if (!slot) return;
     const weekdayName = weekdayNames[dow];
+    // ✅ FIX 3: If allowedSet is empty, allow ALL days including Sunday
     const allowed = allowedSet.size === 0 ? true : allowedSet.has(String(weekdayName).toLowerCase());
     if (!allowed) return;
     if (key < todayStr) return;
@@ -133,13 +137,13 @@ export default function AppointmentCalendar({
             const sat = slot?.isSaturday;
 
             const weekdayName = weekdayNames[dow];
+            // ✅ FIX 4: Consistent allowed check — empty allowedSet means all days open
             const allowed = allowedSet.size === 0 ? true : allowedSet.has(String(weekdayName).toLowerCase());
 
+            // ✅ FIX 5: Removed hardcoded `dow === 0 → Closed` that forced Sunday closed always
             let badge = null;
             if (!allowed) {
               badge = { text: 'Unavailable', className: 'bg-slate-200 text-slate-600' };
-            } else if (dow === 0) {
-              badge = { text: 'Closed', className: 'bg-slate-200 text-slate-600' };
             } else if (full) {
               badge = { text: 'Full', className: 'bg-red-100 text-red-700' };
             } else if (sat) {
