@@ -75,7 +75,7 @@ export default function QueueStatusPage() {
   const canCheckIn =
     Boolean(selectedAppt) &&
     formatYMD(selectedAppt.appointmentDate) === todayYmd &&
-    String(selectedAppt.status || '').toLowerCase() === 'booked' &&
+    ['booked', 'approved'].includes(String(selectedAppt.status || '').toLowerCase()) &&
     Boolean(myStatus?.checkinOpen);
 
   return (
