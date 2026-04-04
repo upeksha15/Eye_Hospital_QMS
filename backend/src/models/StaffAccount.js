@@ -25,6 +25,10 @@ const staffAccountSchema = new mongoose.Schema(
     },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'StaffAccount' },
     isActive: { type: Boolean, default: true },
+    // Optional fields for password reset via OTP
+    passwordResetOtp: { type: String },
+    passwordResetOtpExpires: { type: Date },
+    passwordResetOtpAttempts: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
