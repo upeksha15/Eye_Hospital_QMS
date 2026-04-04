@@ -31,27 +31,7 @@ export async function validateAppointmentDate(req, res, next) {
       return res.status(400).json({ success: false, message: 'Cannot book a past date' });
     }
 
-    if (dow === 6) {
-      const now = nowColombo();
-      const sameDay = formatYMD(now) === formatYMD(dayStart);
-      if (sameDay) {
-        const parts = new Intl.DateTimeFormat('en-GB', {
-          timeZone: 'Asia/Colombo',
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: false,
-        }).formatToParts(now);
-        const hh = parseInt(parts.find((p) => p.type === 'hour')?.value ?? '0', 10);
-        const mm = parseInt(parts.find((p) => p.type === 'minute')?.value ?? '0', 10);
-        const minutes = hh * 60 + mm;
-        if (minutes >= 10 * 60) {
-          return res.status(400).json({
-            success: false,
-            message: 'Saturday bookings for today are only accepted before 10:00 AM',
-          });
-        }
-      }
-    }
+    // No special same-day Saturday booking restriction
 
     let totalSlots = totalSlotsForDate(dayStart);
 
