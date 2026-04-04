@@ -21,9 +21,24 @@ export async function validateAppointmentDate(req, res, next) {
 
     const dayStart = startOfDayColombo(appt);
     const dow = getDayOfWeekColombo(dayStart);
+    const doctorId = req.body?.doctorId || req.query?.doctorId;
 
+    // If this is a Sunday, allow only when the selected doctor explicitly lists Sunday
     if (dow === 0) {
-      return res.status(400).json({ success: false, message: 'Appointments are not available on Sunday' });
+      if (doctorId) {
+        try {
+          const dr = await DoctorRoom.findById(doctorId).lean();
+          const avail = Array.isArray(dr?.availability) ? dr.availability : [];
+          if (!avail.includes('Sunday')) {
+            return res.status(400).json({ success: false, message: 'Appointments are not available on Sunday for this doctor' });
+          }
+        } catch (e) {
+          console.warn('validateDate: failed to read doctor room for Sunday availability', e?.message || e);
+          return res.status(400).json({ success: false, message: 'Appointments are not available on Sunday' });
+        }
+      } else {
+        return res.status(400).json({ success: false, message: 'Appointments are not available on Sunday' });
+      }
     }
 
     const todayStart = startOfDayColombo(nowColombo());
@@ -36,12 +51,11 @@ export async function validateAppointmentDate(req, res, next) {
     let totalSlots = totalSlotsForDate(dayStart);
 
     // If a doctorId was provided, cap total slots by the doctor's queueLimit
-    const doctorId = req.body?.doctorId || req.query?.doctorId;
     if (doctorId) {
       try {
-        const dr = await DoctorRoom.findById(doctorId).lean();
-        if (dr && typeof dr.queueLimit === 'number') {
-          totalSlots = Math.min(totalSlots, dr.queueLimit);
+        const dr2 = await DoctorRoom.findById(doctorId).lean();
+        if (dr2 && typeof dr2.queueLimit === 'number') {
+          totalSlots = Math.min(totalSlots, dr2.queueLimit);
         }
       } catch (err) {
         // ignore DB errors here and fall back to default totalSlots
