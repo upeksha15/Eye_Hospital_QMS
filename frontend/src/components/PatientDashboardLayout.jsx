@@ -1,4 +1,4 @@
-import React, { useEffect, useState, Suspense, lazy } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Calendar,
@@ -23,10 +23,11 @@ import QueueStatusPage from '../Pages/QueueStatusPage';
 import UserProfile from '../Pages/User_Profile';
 import PatientFollowUpsPage from '../Pages/PatientFollowUpsPage';
 import NotificationsPage from '../Pages/NotificationsPage';
+import ReportsPage from '../Pages/ReportsPage';
 import { fetchMyAppointments } from '../api/appointmentsApi';
 import { fetchMyQueueStatusToday } from '../api/queueApi';
 
-const ReportsPage = lazy(() => import('../Pages/ReportsPage'));
+// ReportsPage imported directly to avoid lazy resolution issues in some bundlers
 
 function getStatusColor(status) {
   switch (status) {
