@@ -7,9 +7,9 @@ import { Link, useNavigate } from "react-router-dom";
 // Move InputField component outside to prevent recreation on each render
 const InputField = ({ icon: Icon, placeholder, name, type = "text", showToggle = false, label, value, onChange, errors, showPassword, setShowPassword, showConfirmPassword, setShowConfirmPassword, onBlur, maxDate }) => (
   <div className="mb-4 relative z-10">
-    {label && <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>}
-    <div className={`flex items-center border rounded-lg px-3 py-2.5 bg-white ${errors[name] ? 'border-red-500' : 'border-gray-200'} transition-all relative`}>
-      <Icon size={18} className="text-gray-400 mr-3 flex-shrink-0" />
+    {label && <label className="mb-2 block text-sm text-cyan-50/90">{label}</label>}
+    <div className="relative">
+      <Icon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-100/70" />
       <input
         type={
           type === 'password' 
@@ -21,55 +21,62 @@ const InputField = ({ icon: Icon, placeholder, name, type = "text", showToggle =
         name={name}
         value={value}
         placeholder={placeholder}
-        className="w-full outline-none text-gray-700 text-sm bg-transparent flex-1"
+        className={`h-11 w-full rounded-lg border bg-slate-900/20 pl-10 ${showToggle ? 'pr-10' : 'pr-3'} text-sm text-white placeholder:text-cyan-100/40 focus:border-cyan-300/50 focus:outline-none transition-colors ${
+          errors[name] ? 'border-red-400/80' : 'border-cyan-100/25'
+        }`}
         onChange={onChange}
         onBlur={onBlur}
         autoComplete="off"
         max={type === 'date' ? maxDate : undefined}
       />
       {showToggle && type === 'password' && (
-  <button 
-    type="button" 
-    onClick={() => setShowPassword(!showPassword)} 
-    className="flex-shrink-0 p-0 m-0 bg-transparent border-none outline-none focus:outline-none cursor-pointer"
-    style={{ background: 'none', boxShadow: 'none' }}
-  >
-    {showPassword ? <Eye size={18} className="text-black" /> : <EyeOff size={18} className="text-black" />}
-  </button>
-)}
-     {showToggle && type === 'confirmPassword' && (
-  <button 
-    type="button" 
-    onClick={() => setShowConfirmPassword(!showConfirmPassword)} 
-    className="flex-shrink-0 p-0 m-0 bg-transparent border-none outline-none focus:outline-none cursor-pointer"
-    style={{ background: 'none', boxShadow: 'none' }}
-  >
-    {showConfirmPassword ? <Eye size={18} className="text-black" /> : <EyeOff size={18} className="text-black" />}
-  </button>
-)}
+        <button 
+          type="button" 
+          onClick={() => setShowPassword(!showPassword)} 
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-cyan-100/70 hover:text-cyan-50"
+          aria-label="Toggle password visibility"
+        >
+          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+      )}
+      {showToggle && type === 'confirmPassword' && (
+        <button 
+          type="button" 
+          onClick={() => setShowConfirmPassword(!showConfirmPassword)} 
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-cyan-100/70 hover:text-cyan-50"
+          aria-label="Toggle password visibility"
+        >
+          {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+        </button>
+      )}
     </div>
-    {errors[name] && <p className="text-red-500 text-xs mt-1 ml-1">{errors[name]}</p>}
+    {errors[name] && <p className="mt-1 text-xs text-red-300 ml-1">{errors[name]}</p>}
   </div>
 );
 
 // Move SelectField component outside to prevent recreation on each render
 const SelectField = ({ name, label, options, value, onChange, errors }) => (
   <div className="mb-4 relative z-10">
-    {label && <label className="block text-sm font-semibold text-gray-700 mb-2">{label}</label>}
-    <div className={`border rounded-lg px-3 py-2.5 bg-white ${errors[name] ? 'border-red-500' : 'border-gray-200'} transition-all`}>
+    {label && <label className="mb-2 block text-sm text-cyan-50/90">{label}</label>}
+    <div className="relative">
       <select
         name={name}
         value={value}
-        className="w-full outline-none text-gray-700 text-sm bg-transparent"
+        className={`h-11 w-full rounded-lg border bg-slate-900/20 px-3 text-sm focus:border-cyan-300/50 focus:outline-none appearance-none transition-colors ${
+          errors[name] ? 'border-red-400/80' : 'border-cyan-100/25'
+        } ${!value ? 'text-cyan-100/40' : 'text-white'}`}
         onChange={onChange}
       >
-        <option value="">Select {label}</option>
+        <option value="" className="bg-[#07214c] text-cyan-100/40">Select {label.replace(' *', '')}</option>
         {options.map((opt) => (
-          <option key={opt} value={opt}>{opt}</option>
+          <option key={opt} value={opt} className="bg-[#07214c] text-white">{opt}</option>
         ))}
       </select>
+      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-cyan-100/70">
+        <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+      </div>
     </div>
-    {errors[name] && <p className="text-red-500 text-xs mt-1 ml-1">{errors[name]}</p>}
+    {errors[name] && <p className="mt-1 text-xs text-red-300 ml-1">{errors[name]}</p>}
   </div>
 );
 
@@ -100,7 +107,7 @@ const EyeCareRegistration = () => {
   // Full Name Validation
   const validateFullName = (value) => {
     const trimmed = value.trim();
-    
+
     if (!trimmed) {
       return "Full name is required";
     }
@@ -122,7 +129,7 @@ const EyeCareRegistration = () => {
   // Email Validation
   const validateEmail = (value) => {
     const trimmed = value.trim();
-    
+
     if (!trimmed) {
       return "Email is required";
     }
@@ -165,7 +172,7 @@ const EyeCareRegistration = () => {
     }
 
     const trimmed = value.trim();
-    
+
     // Check for spaces or special characters
     if (/[\s\-()]/g.test(value)) {
       return "No special characters allowed";
@@ -202,41 +209,41 @@ const EyeCareRegistration = () => {
   const dayOfYearToDate = (dayOfYear, year) => {
     const isLeapYear = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
     const daysInMonths = [31, isLeapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-    
+
     let day = dayOfYear;
     let month = 0;
-    
+
     while (month < 12 && day > daysInMonths[month]) {
       day -= daysInMonths[month];
       month++;
     }
-    
+
     return { month: month + 1, day };
   };
 
   // Helper: Extract birth date from NIC
   const extractBirthDateFromNIC = (nic) => {
     const trimmed = nic.trim().toUpperCase();
-    
+
     if (/^[0-9]{9}V$/.test(trimmed)) {
       // Old format: 9 digits + V
       const yearLastTwoDigits = parseInt(trimmed.substring(0, 2));
       const dayOfYear = parseInt(trimmed.substring(2, 5));
       const genderCode = dayOfYear;
-      
+
       // Determine gender and actual day of year
       let actualDayOfYear = genderCode;
       if (genderCode > 500) {
         actualDayOfYear = genderCode - 500;
       }
-      
+
       // Determine century (assume 1900 or 2000)
       const year = yearLastTwoDigits > 30 ? 1900 + yearLastTwoDigits : 2000 + yearLastTwoDigits;
-      
+
       if (actualDayOfYear < 1 || actualDayOfYear > 366) {
         return null;
       }
-      
+
       const dateInfo = dayOfYearToDate(actualDayOfYear, year);
       return {
         year,
@@ -247,17 +254,17 @@ const EyeCareRegistration = () => {
       // New format: 12 digits
       const year = parseInt(trimmed.substring(0, 4));
       const dayOfYear = parseInt(trimmed.substring(4, 7));
-      
+
       // Determine gender and actual day of year
       let actualDayOfYear = dayOfYear;
       if (dayOfYear > 500) {
         actualDayOfYear = dayOfYear - 500;
       }
-      
+
       if (actualDayOfYear < 1 || actualDayOfYear > 366) {
         return null;
       }
-      
+
       const dateInfo = dayOfYearToDate(actualDayOfYear, year);
       return {
         year,
@@ -265,7 +272,7 @@ const EyeCareRegistration = () => {
         day: dateInfo.day
       };
     }
-    
+
     return null;
   };
 
@@ -277,7 +284,7 @@ const EyeCareRegistration = () => {
 
     // Parse the date input (can be from date picker or manual entry)
     let selectedDate;
-    
+
     if (typeof value === 'string') {
       // Date picker returns YYYY-MM-DD format
       if (value.includes('-')) {
@@ -327,10 +334,10 @@ const EyeCareRegistration = () => {
     // Extract birth date from NIC
     const nicBirthDate = extractBirthDateFromNIC(nic);
     if (!nicBirthDate) {
-      return { 
-        isValid: false, 
-        nicError: "Cannot extract valid date from NIC", 
-        dobError: "NIC does not match the Date of Birth" 
+      return {
+        isValid: false,
+        nicError: "Cannot extract valid date from NIC",
+        dobError: "NIC does not match the Date of Birth"
       };
     }
 
@@ -351,14 +358,14 @@ const EyeCareRegistration = () => {
     const yearMatch = nicBirthDate.year === dobDate.year;
     const monthMatch = nicBirthDate.month === dobDate.month;
     const dayDiff = Math.abs(nicBirthDate.day - dobDate.day);
-    
+
     if (yearMatch && monthMatch && dayDiff <= 1) {
       return { isValid: true, nicError: "", dobError: "" };
     } else {
-      return { 
-        isValid: false, 
-        nicError: "NIC does not match the Date of Birth", 
-        dobError: "Date of birth does not match the NIC number" 
+      return {
+        isValid: false,
+        nicError: "NIC does not match the Date of Birth",
+        dobError: "Date of birth does not match the NIC number"
       };
     }
   };
@@ -470,9 +477,9 @@ const EyeCareRegistration = () => {
     if ((name === "nicNumber" || name === "dob") && formData.nicNumber && formData.dob) {
       const nicToCross = name === "nicNumber" ? value : formData.nicNumber;
       const dobToCross = name === "dob" ? value : formData.dob;
-      
+
       const crossValidationResult = validateNICAndDOBMatch(nicToCross, dobToCross);
-      
+
       if (!crossValidationResult.isValid) {
         setErrors(prev => ({
           ...prev,
@@ -571,7 +578,7 @@ const EyeCareRegistration = () => {
     try {
       // Normalize NIC: uppercase V
       const normalizedNIC = formData.nicNumber.trim().toUpperCase();
-      
+
       const response = await axios.post('http://localhost:5000/api/users/register', {
         fullName: formData.fullName.trim(),
         email: formData.email.trim().toLowerCase(),
@@ -612,14 +619,14 @@ const EyeCareRegistration = () => {
       }
     } catch (error) {
       console.error('Registration error:', error);
-      
+
       if (error.response) {
         const serverErrors = error.response.data.errors || [];
         const errorMessage =
           error.response.data.error ||
           error.response.data.message ||
           'Registration failed';
-        
+
         if (serverErrors.length > 0) {
           const newErrors = {};
           serverErrors.forEach((err) => {
@@ -648,63 +655,40 @@ const EyeCareRegistration = () => {
   };
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-gradient-to-b from-blue-50 to-slate-50 flex flex-col">
-      <div className="flex-1 overflow-y-auto">
-        {/* Header Section */}
-        <div className="bg-gradient-to-r from-[#4a7c73] to-[#61a396] text-white py-6 px-4">
-          <div className="max-w-6xl mx-auto">
-            <h1 className="text-3xl md:text-4xl font-bold mb-2">System Registration</h1>
-            <p className="text-base text-blue-100 max-w-2xl">
-              Create your account to access our advanced queue management system. Enjoy seamless appointment scheduling and priority eye care services.
-            </p>
-          </div>
-        </div>
+    <div className="h-screen overflow-hidden bg-[#041a3f] text-white">
+      <div className="grid h-screen grid-cols-1 lg:grid-cols-2">
+        {/* Left Side: Fixed Container with Scrollable Form */}
+        <div className="relative flex h-screen flex-col px-4 py-6 sm:px-8">
+          {/* Background patterns */}
+          <div className="fixed inset-0 login-blue-grid w-full lg:w-1/2 pointer-events-none" />
+          <div className="fixed inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(80,170,255,0.2),transparent_45%),radial-gradient(circle_at_80%_65%,rgba(20,90,180,0.35),transparent_50%)] w-full lg:w-1/2 pointer-events-none" />
 
-        {/* Benefits Section */}
-        <div className="bg-white py-6 px-4 border-b border-gray-200">
-          <div className="max-w-6xl mx-auto">
-            <h2 className="text-xl font-bold text-gray-800 mb-4 text-center">Why Register With Us?</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {[
-                { icon: '📅', title: 'Easy Scheduling', desc: 'Book appointments with ease' },
-                { icon: '⏱️', title: 'No Waiting', desc: 'Smart queue management system' },
-                { icon: '🔒', title: 'Secure Data', desc: 'Your information is protected' }
-              ].map((benefit, i) => (
-                <div key={i} className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
-                  <span className="text-2xl">{benefit.icon}</span>
-                  <div>
-                    <h3 className="font-bold text-gray-800 text-sm">{benefit.title}</h3>
-                    <p className="text-xs text-gray-600">{benefit.desc}</p>
-                  </div>
-                </div>
-              ))}
+          <div className="relative z-10 w-full max-w-xl mx-auto flex flex-col h-full overflow-hidden">
+            {/* Header */}
+            <div className="mb-4 text-center flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => navigate('/')}
+                className="mx-auto mb-3 inline-flex h-14 w-14 items-center justify-center rounded-full border border-cyan-200/40 bg-cyan-400/10 shadow-[0_0_20px_rgba(46,174,255,0.45)]"
+                aria-label="Go to home page"
+              >
+                <Eye className="h-7 w-7 text-cyan-200" />
+              </button>
+              <p className="text-2xl font-medium tracking-wide text-cyan-50">Create Your Account</p>
+              <p className="mt-1 text-sm text-cyan-100/70 max-w-sm mx-auto">
+                Join us for seamless appointment scheduling and priority eye care services.
+              </p>
             </div>
-          </div>
-        </div>
 
-        {/* Main Registration Section */}
-        <div className="py-6 px-4 flex-1 min-h-0 flex flex-col">
-          <div className="max-w-6xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden flex-1 flex min-h-0">
-            <div className="flex flex-col lg:flex-row w-full min-h-0">
-              
-              
-              {/* Left Side: Form */}
-<div className="w-full lg:w-1/2 p-6 md:p-8 overflow-y-auto flex-shrink-0 min-h-0">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="bg-[#61a396] p-2 rounded-full">
-                    <User className="text-white" size={20} />
-                  </div>
-                  <h2 className="text-2xl font-bold text-[#4a7c73]">Create Your Account</h2>
-                </div>
-                <p className="text-gray-500 text-xs mb-6 leading-relaxed">
-                  Fill in all the required information below to create your account and start using our queue management system for seamless eye care services.
-                </p>
-
+            {/* The Form Card Container */}
+            <div className="rounded-2xl border border-cyan-100/20 bg-white/10 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur-xl flex-1 flex flex-col min-h-0 overflow-hidden mb-4">
+              {/* Scrollable Area */}
+              <div className="flex-1 overflow-y-auto p-5 sm:p-8 custom-scrollbar">
                 <form onSubmit={handleSubmit}>
                   {/* Section 1: Personal Information */}
                   <div className="mb-6">
-                    <h3 className="text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
-                      <CheckCircle size={18} className="text-[#61a396]" />
+                    <h3 className="text-sm font-bold text-cyan-200 mb-4 uppercase tracking-wider flex items-center gap-2 border-b border-cyan-200/20 pb-2">
+                      <CheckCircle size={16} className="text-cyan-400" />
                       Personal Information
                     </h3>
                     <InputField 
@@ -717,7 +701,7 @@ const EyeCareRegistration = () => {
                       onBlur={handleBlur}
                       errors={errors}
                     />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <InputField 
                         icon={Mail} 
                         name="email" 
@@ -740,7 +724,7 @@ const EyeCareRegistration = () => {
                         errors={errors}
                       />
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                       <InputField 
                         icon={CreditCard} 
                         name="nicNumber" 
@@ -776,8 +760,8 @@ const EyeCareRegistration = () => {
 
                   {/* Section 2: Address Information */}
                   <div className="mb-6">
-                    <h3 className="text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
-                      <CheckCircle size={18} className="text-[#61a396]" />
+                    <h3 className="text-sm font-bold text-cyan-200 mb-4 uppercase tracking-wider flex items-center gap-2 border-b border-cyan-200/20 pb-2">
+                      <CheckCircle size={16} className="text-cyan-400" />
                       Address Information
                     </h3>
                     <InputField 
@@ -794,17 +778,19 @@ const EyeCareRegistration = () => {
 
                   {/* Section 3: Medical Information */}
                   <div className="mb-6">
-                    <h3 className="text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
-                      <CheckCircle size={18} className="text-[#61a396]" />
+                    <h3 className="text-sm font-bold text-cyan-200 mb-4 uppercase tracking-wider flex items-center gap-2 border-b border-cyan-200/20 pb-2">
+                      <CheckCircle size={16} className="text-cyan-400" />
                       Medical Information
                     </h3>
                     <div className="mb-4 relative z-10">
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Medical History (Optional)</label>
+                      <label className="mb-2 block text-sm text-cyan-50/90">Medical History (Optional)</label>
                       <textarea
                         name="medicalHistory"
                         value={formData.medicalHistory}
                         placeholder="Any existing conditions or allergies..."
-                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 outline-none text-gray-700 text-sm resize-none bg-white"
+                        className={`w-full rounded-lg border bg-slate-900/20 px-3 py-2.5 text-sm text-white placeholder:text-cyan-100/40 focus:border-cyan-300/50 focus:outline-none transition-colors resize-none ${
+                          errors.medicalHistory ? 'border-red-400/80' : 'border-cyan-100/25'
+                        }`}
                         rows="3"
                         onChange={handleChange}
                       ></textarea>
@@ -823,124 +809,147 @@ const EyeCareRegistration = () => {
 
                   {/* Section 4: Security */}
                   <div className="mb-6">
-                    <h3 className="text-base font-bold text-gray-800 mb-3 flex items-center gap-2">
-                      <CheckCircle size={18} className="text-[#61a396]" />
+                    <h3 className="text-sm font-bold text-cyan-200 mb-4 uppercase tracking-wider flex items-center gap-2 border-b border-cyan-200/20 pb-2">
+                      <CheckCircle size={16} className="text-cyan-400" />
                       Security
                     </h3>
-                    <InputField 
-                      icon={Lock} 
-                      name="password" 
-                      placeholder="Enter strong password" 
-                      label="Password *" 
-                      type="password" 
-                      showToggle={true} 
-                      value={formData.password}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      errors={errors}
-                      showPassword={showPassword}
-                      setShowPassword={setShowPassword}
-                    />
-                    <InputField 
-                      icon={Lock} 
-                      name="confirmPassword" 
-                      placeholder="Re-enter your password" 
-                      label="Confirm Password *" 
-                      type="confirmPassword" 
-                      showToggle={true} 
-                      value={formData.confirmPassword}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      errors={errors}
-                      showConfirmPassword={showConfirmPassword}
-                      setShowConfirmPassword={setShowConfirmPassword}
-                    />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <InputField 
+                        icon={Lock} 
+                        name="password" 
+                        placeholder="Enter strong password" 
+                        label="Password *" 
+                        type="password" 
+                        showToggle={true} 
+                        value={formData.password}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        errors={errors}
+                        showPassword={showPassword}
+                        setShowPassword={setShowPassword}
+                      />
+                      <InputField 
+                        icon={Lock} 
+                        name="confirmPassword" 
+                        placeholder="Re-enter your password" 
+                        label="Confirm Password *" 
+                        type="confirmPassword" 
+                        showToggle={true} 
+                        value={formData.confirmPassword}
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        errors={errors}
+                        showConfirmPassword={showConfirmPassword}
+                        setShowConfirmPassword={setShowConfirmPassword}
+                      />
+                    </div>
                   </div>
 
                   {/* Terms and Conditions */}
-                  <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <label className="flex items-start gap-2 cursor-pointer">
-                    <input
-  type="checkbox"
-  checked={agreedToTerms}
-  onChange={(e) => setAgreedToTerms(e.target.checked)}
-  className="
-    mt-1 w-5 h-5 border border-black bg-white rounded-sm 
-    appearance-none relative cursor-pointer
-    checked:after:content-['✔'] 
-    checked:after:absolute checked:after:top-0 checked:after:left-0 
-    checked:after:w-full checked:after:h-full
-    checked:after:flex checked:after:items-center checked:after:justify-center
-    checked:after:text-black checked:after:text-base
-  "
-/>
-<span className="text-xs text-gray-700 mt-1">
-    I agree to the <span className="font-bold text-[#61a396]">Terms and Conditions</span> and <span className="font-bold text-[#61a396]">Privacy Policy</span> of Eye Hospital Queue System
-  </span>
+                  <div className="mb-6 p-3 rounded-lg border border-cyan-100/20 bg-slate-900/20">
+                    <label className="flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={agreedToTerms}
+                        onChange={(e) => setAgreedToTerms(e.target.checked)}
+                        className="
+                          mt-1 w-5 h-5 border border-cyan-100/40 bg-slate-900/40 rounded-sm 
+                          appearance-none relative cursor-pointer
+                          checked:after:content-['✔'] 
+                          checked:after:absolute checked:after:top-0 checked:after:left-0 
+                          checked:after:w-full checked:after:h-full
+                          checked:after:flex checked:after:items-center checked:after:justify-center
+                          checked:after:text-cyan-300 checked:after:text-sm
+                        "
+                      />
+                      <span className="text-xs text-cyan-100/80 leading-relaxed">
+                        I agree to the <span className="font-semibold text-cyan-300">Terms and Conditions</span> and <span className="font-semibold text-cyan-300">Privacy Policy</span> of Eye Hospital Queue System
+                      </span>
                     </label>
-                    {errors.terms && <p className="text-red-500 text-xs mt-2">{errors.terms}</p>}
+                    {errors.terms && <p className="text-red-300 text-xs mt-2 ml-8">{errors.terms}</p>}
                   </div>
 
                   {/* Submit Button */}
                   <button 
                     type="submit"
                     disabled={isSubmitting}
-                    className={`w-full ${isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#61a396] hover:bg-[#528c81]'} text-white font-semibold py-2.5 rounded-xl transition-all shadow-md flex items-center justify-center gap-2 mb-4`}
+                    className="group relative flex h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-full border border-cyan-200/80 bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-500 text-sm font-semibold text-white shadow-[0_0_20px_rgba(56,189,248,0.55)] transition disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    {isSubmitting ? 'Creating Account...' : 'Create Account'}
-                    {!isSubmitting && <ArrowRight size={16} />}
+                    <span className="absolute inset-0 bg-white/20 opacity-0 transition-opacity group-hover:opacity-100" />
+                    <span className="relative z-10 flex items-center gap-2">
+                      {isSubmitting ? 'Creating Account...' : 'Create Account'}
+                      {!isSubmitting && <ArrowRight size={16} />}
+                    </span>
                   </button>
                 </form>
 
-                <p className="text-center text-xs text-gray-600 mt-3">
+                <p className="text-center text-xs text-cyan-100/80 mt-5">
                   Already have an account?{" "}
-                  <Link to="/login" className="text-[#61a396] font-bold hover:underline">
+                  <Link to="/login" className="font-semibold text-cyan-100 underline decoration-cyan-200/70 hover:text-white">
                     Login Here
                   </Link>
                 </p>
-              </div>
-              
-             
-{/* Right Side: Image */}
-<div className="hidden lg:flex w-1/2 h-full relative bg-gradient-to-b from-blue-100 to-blue-50 flex-shrink-0 min-h-0">
-<img 
-  src={eyeRegistrationImg} 
-  alt="Eye Care Professional" 
-  className="w-full h-full object-cover"
-/>
-                <div className="absolute inset-0 bg-gradient-to-t from-[#4a7c73]/20 to-transparent pointer-events-none"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer Information */}
-        <div className="bg-gray-50 py-6 px-4 border-t border-gray-200">
-          <div className="max-w-6xl mx-auto">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <h3 className="font-bold text-gray-800 mb-2 text-base">📞 Contact Us</h3>
-                <p className="text-gray-600 text-xs">Email: info@eyehospital.com</p>
-                <p className="text-gray-600 text-xs">Phone: +94 11 234 5678</p>
-                <p className="text-gray-600 text-xs">Hours: 9 AM - 6 PM (Mon-Sat)</p>
-              </div>
-              <div>
-                <h3 className="font-bold text-gray-800 mb-2 text-base">🏥 About Us</h3>
-                <p className="text-gray-600 text-xs">We are dedicated to providing excellent eye care services with a modern queue management system to reduce waiting times.</p>
-              </div>
-              <div>
-                <h3 className="font-bold text-gray-800 mb-2 text-base">🔐 Security</h3>
-                <p className="text-gray-600 text-xs">Your personal and medical information is encrypted and securely stored. We comply with all healthcare privacy regulations.</p>
-              </div>
-            </div>
-            <div className="border-t border-gray-300 mt-6 pt-6 text-center">
-              <p className="text-gray-600 text-xs">
-                © 2026 Eye Hospital Queue Management System. All rights reserved. | <span className="text-[#61a396] cursor-pointer hover:underline">Privacy Policy</span> | <span className="text-[#61a396] cursor-pointer hover:underline">Terms of Service</span>
+              </div> {/* Close scrollable area */}
+            </div> {/* Close form card container */}
+            
+            {/* Footer Information */}
+            <div className="text-center pt-2 flex-shrink-0 pb-4">
+              <p className="text-xs text-cyan-100/60">
+                © 2026 Eye Hospital Queue Management System. All rights reserved.<br/>
+                <span className="text-cyan-300 cursor-pointer hover:underline">Privacy Policy</span> | <span className="text-cyan-300 cursor-pointer hover:underline">Terms of Service</span>
               </p>
             </div>
+
           </div>
         </div>
+        
+        {/* Right Side: Image */}
+        <div
+          className="hidden h-screen lg:block bg-cover bg-center bg-no-repeat relative border-l border-cyan-100/10"
+          style={{ backgroundImage: `url(${eyeRegistrationImg})` }}
+        >
+          {/* Subtle gradient overlay to make it blend slightly with the dark theme */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#041a3f]/80 via-transparent to-[#041a3f]/20 pointer-events-none"></div>
+        </div>
       </div>
+
+      <style>{`
+        .login-blue-grid {
+          background-color: #07214c;
+          background-image:
+            radial-gradient(circle at 12% 22%, rgba(94, 177, 255, 0.26), transparent 40%),
+            radial-gradient(circle at 82% 70%, rgba(43, 120, 210, 0.34), transparent 45%),
+            repeating-radial-gradient(circle at 65% 45%, rgba(132, 185, 255, 0.08), rgba(132, 185, 255, 0.08) 2px, transparent 2px, transparent 16px);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(34, 211, 238, 0.2);
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(34, 211, 238, 0.4);
+        }
+
+        input::placeholder, textarea::placeholder {
+          letter-spacing: 0.01em;
+        }
+        
+        /* Make date picker icon white for dark theme */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            opacity: 0.6;
+            cursor: pointer;
+        }
+        input[type="date"]::-webkit-calendar-picker-indicator:hover {
+            opacity: 0.9;
+        }
+      `}</style>
     </div>
   );
 };
