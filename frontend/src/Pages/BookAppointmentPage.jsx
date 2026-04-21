@@ -106,6 +106,10 @@ export default function BookAppointmentPage() {
     () => doctors.find((d) => d._id === doctorId) || null,
     [doctors, doctorId]
   );
+  const availableDoctorCount = useMemo(
+    () => doctors.filter((d) => d.status === 'available').length,
+    [doctors]
+  );
 
   const { slots, loading: slotsLoading, refetch: refetchSlots } = useSlotAvailability(doctorId, monthKey);
 
@@ -220,7 +224,7 @@ export default function BookAppointmentPage() {
 
   return (
     <div className="min-h-full bg-gray-50 font-['Nunito'] text-slate-800">
-      <HeroSection strings={strings} consultantCount={doctors.length} />
+      <HeroSection strings={strings} consultantCount={availableDoctorCount} />
       <StepBar strings={strings} />
 
       <main className="max-w-7xl mx-auto px-4 pb-16">
