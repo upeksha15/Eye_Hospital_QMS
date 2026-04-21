@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, KeyRound, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Mail, Lock, KeyRound, ArrowLeft, CheckCircle, Eye } from 'lucide-react';
 import api from '../api/client';
 import backg1 from '../assets/backg1.png';
 
@@ -97,26 +97,29 @@ const ForgotPassword = () => {
   const renderContent = () => {
     if (step === 1) {
       return (
-        <form onSubmit={handleSendEmail} className="space-y-6">
+        <form onSubmit={handleSendEmail} className="space-y-4 mt-2">
           <div>
-            <label className="block text-sm font-semibold text-white/90 mb-2">Registered Email</label>
+            <label className="mb-2 block text-sm text-cyan-50/90">Registered Email</label>
             <div className="relative">
-              <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/60 w-5 h-5" />
+              <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-100/70" />
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="w-full pl-12 pr-4 py-3 bg-white/20 border border-white/30 rounded-xl focus:outline-none focus:bg-white/30 text-white placeholder-white/50 backdrop-blur-sm"
+                className="h-11 w-full rounded-lg border bg-slate-900/20 pl-10 pr-3 text-sm text-white placeholder:text-cyan-100/40 focus:border-cyan-300/50 focus:outline-none border-cyan-100/25"
               />
             </div>
           </div>
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 px-4 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-300 flex items-center justify-center gap-2 shadow-lg border border-blue-500 backdrop-blur-sm"
+            className="group relative flex h-11 w-full items-center justify-center gap-2 overflow-hidden rounded-full border border-cyan-200/80 bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-500 text-sm font-semibold text-white shadow-[0_0_20px_rgba(56,189,248,0.55)] transition disabled:cursor-not-allowed disabled:opacity-60 mt-4"
           >
-            {loading ? 'Sending OTP...' : 'Send OTP'}
+            <span className="absolute inset-0 bg-white/20 opacity-0 transition-opacity group-hover:opacity-100" />
+            <span className="relative z-10 flex items-center gap-2">
+              {loading ? 'Sending OTP...' : 'Send OTP'}
+            </span>
           </button>
         </form>
       );
@@ -124,35 +127,38 @@ const ForgotPassword = () => {
 
     if (step === 2) {
       return (
-        <form onSubmit={handleVerifyOtp} className="space-y-6">
+        <form onSubmit={handleVerifyOtp} className="space-y-4 mt-2">
           <div>
-            <label className="block text-sm font-semibold text-white/90 mb-2">Enter OTP</label>
+            <label className="mb-2 block text-sm text-cyan-50/90">Enter OTP</label>
             <div className="relative">
-              <KeyRound className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/60 w-5 h-5" />
+              <KeyRound className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-100/70" />
               <input
                 type="text"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}
                 placeholder="6-digit code"
-                className="w-full pl-12 pr-4 py-3 bg-white/20 border border-white/30 rounded-xl focus:outline-none focus:bg-white/30 text-white placeholder-white/50 backdrop-blur-sm tracking-[0.3em] text-center"
+                className="h-11 w-full rounded-lg border bg-slate-900/20 pl-10 pr-3 text-sm text-center tracking-[0.3em] text-white placeholder:text-cyan-100/40 focus:border-cyan-300/50 focus:outline-none border-cyan-100/25"
               />
             </div>
-            <p className="text-xs text-white/70 mt-2">Enter the OTP sent to {email}.</p>
+            <p className="text-xs text-cyan-100/70 mt-2">Enter the OTP sent to {email}.</p>
           </div>
-          <div className="flex justify-between gap-3">
+          <div className="flex justify-between gap-3 mt-4">
             <button
               type="button"
               onClick={() => setStep(1)}
-              className="flex-1 py-3 px-4 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-xl border border-white/30 transition-all duration-300"
+              className="flex-1 py-2.5 px-4 bg-white/5 hover:bg-white/10 text-cyan-100 font-semibold rounded-full border border-cyan-100/20 transition-all duration-300 text-sm"
             >
               Back
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 py-3 px-4 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-300 shadow-lg border border-blue-500 backdrop-blur-sm"
+              className="group relative flex-1 flex h-11 items-center justify-center gap-2 overflow-hidden rounded-full border border-cyan-200/80 bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-500 text-sm font-semibold text-white shadow-[0_0_20px_rgba(56,189,248,0.55)] transition disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading ? 'Verifying...' : 'Verify OTP'}
+              <span className="absolute inset-0 bg-white/20 opacity-0 transition-opacity group-hover:opacity-100" />
+              <span className="relative z-10 flex items-center gap-2">
+                {loading ? 'Verifying...' : 'Verify OTP'}
+              </span>
             </button>
           </div>
         </form>
@@ -160,47 +166,50 @@ const ForgotPassword = () => {
     }
 
     return (
-      <form onSubmit={handleResetPassword} className="space-y-6">
+      <form onSubmit={handleResetPassword} className="space-y-4 mt-2">
         <div>
-          <label className="block text-sm font-semibold text-white/90 mb-2">New Password</label>
+          <label className="mb-2 block text-sm text-cyan-50/90">New Password</label>
           <div className="relative">
-            <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/60 w-5 h-5" />
+            <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-100/70" />
             <input
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               placeholder="Enter new password"
-              className="w-full pl-12 pr-4 py-3 bg-white/20 border border-white/30 rounded-xl focus:outline-none focus:bg-white/30 text-white placeholder-white/50 backdrop-blur-sm"
+              className="h-11 w-full rounded-lg border bg-slate-900/20 pl-10 pr-3 text-sm text-white placeholder:text-cyan-100/40 focus:border-cyan-300/50 focus:outline-none border-cyan-100/25"
             />
           </div>
         </div>
         <div>
-          <label className="block text-sm font-semibold text-white/90 mb-2">Confirm New Password</label>
+          <label className="mb-2 block text-sm text-cyan-50/90">Confirm New Password</label>
           <div className="relative">
-            <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/60 w-5 h-5" />
+            <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-100/70" />
             <input
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Re-enter new password"
-              className="w-full pl-12 pr-4 py-3 bg-white/20 border border-white/30 rounded-xl focus:outline-none focus:bg-white/30 text-white placeholder-white/50 backdrop-blur-sm"
+              className="h-11 w-full rounded-lg border bg-slate-900/20 pl-10 pr-3 text-sm text-white placeholder:text-cyan-100/40 focus:border-cyan-300/50 focus:outline-none border-cyan-100/25"
             />
           </div>
         </div>
-        <div className="flex justify-between gap-3">
+        <div className="flex justify-between gap-3 mt-4">
           <button
             type="button"
             onClick={() => setStep(2)}
-            className="flex-1 py-3 px-4 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-xl border border-white/30 transition-all duration-300"
+            className="flex-1 py-2.5 px-4 bg-white/5 hover:bg-white/10 text-cyan-100 font-semibold rounded-full border border-cyan-100/20 transition-all duration-300 text-sm"
           >
             Back
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="flex-1 py-3 px-4 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-300 shadow-lg border border-blue-500 backdrop-blur-sm"
+            className="group relative flex-1 flex h-11 items-center justify-center gap-2 overflow-hidden rounded-full border border-cyan-200/80 bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-500 text-sm font-semibold text-white shadow-[0_0_20px_rgba(56,189,248,0.55)] transition disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loading ? 'Updating...' : 'Update Password'}
+            <span className="absolute inset-0 bg-white/20 opacity-0 transition-opacity group-hover:opacity-100" />
+            <span className="relative z-10 flex items-center gap-2">
+              {loading ? 'Updating...' : 'Update Password'}
+            </span>
           </button>
         </div>
       </form>
@@ -208,75 +217,92 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div
-      className="min-h-screen bg-cover bg-center bg-no-repeat flex items-center justify-center p-4 relative"
-      style={{
-        backgroundImage: `url(${backg1})`,
-        backgroundAttachment: 'fixed',
-      }}
-    >
-      <div className="w-full max-w-md relative z-10">
-        <div className="flex items-center mb-6 text-white/90">
-          <button
-            type="button"
-            onClick={() => navigate('/login')}
-            className="inline-flex items-center justify-center p-2 bg-white/10 backdrop-blur-md rounded-full shadow-md border border-white/30 hover:bg-white/20 transition-transform hover:scale-110 mr-3"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold">Forgot Password</h1>
-            <p className="text-xs text-white/80 mt-1">
-              {step === 1 && 'Enter your registered email to receive an OTP.'}
-              {step === 2 && 'Enter the OTP we sent to your email.'}
-              {step === 3 && 'Set a new password for your account.'}
-            </p>
+    <div className="h-screen overflow-hidden bg-[#041a3f] text-white">
+      <div className="grid h-screen grid-cols-1 lg:grid-cols-2">
+        <div className="relative flex h-screen items-center justify-center overflow-hidden px-4 py-4 sm:px-8">
+          <div className="absolute inset-0 login-blue-grid" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(80,170,255,0.2),transparent_45%),radial-gradient(circle_at_80%_65%,rgba(20,90,180,0.35),transparent_50%)]" />
+
+          <div className="relative z-10 w-full max-w-sm">
+            <div className="mb-6 text-center">
+              <button
+                type="button"
+                onClick={() => navigate('/login')}
+                className="mx-auto mb-3 inline-flex h-14 w-14 translate-y-1 items-center justify-center rounded-full border border-cyan-200/40 bg-cyan-400/10 shadow-[0_0_20px_rgba(46,174,255,0.45)] hover:bg-cyan-400/20 transition-colors"
+                aria-label="Back to login"
+              >
+                <ArrowLeft className="h-6 w-6 text-cyan-200" />
+              </button>
+              <h1 className="text-2xl font-medium tracking-wide text-cyan-50">Forgot Password</h1>
+              <p className="mt-2 text-sm text-cyan-100/70">
+                {step === 1 && 'Enter your registered email to receive an OTP.'}
+                {step === 2 && 'Enter the OTP we sent to your email.'}
+                {step === 3 && 'Set a new password for your account.'}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-cyan-100/20 bg-white/10 p-5 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-6">
+              {/* Step indicator */}
+              <div className="flex items-center justify-between mb-6 text-[11px] font-semibold tracking-wider text-cyan-100/80">
+                <div className={`flex-1 flex items-center justify-center flex-col gap-1 ${step >= 1 ? 'text-cyan-200' : 'text-cyan-100/40'}`}>
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center border ${step >= 1 ? 'border-cyan-400 bg-cyan-500/20 shadow-[0_0_10px_rgba(34,211,238,0.4)]' : 'border-cyan-100/20 bg-slate-800/40'}`}>
+                    1
+                  </div>
+                  Email
+                </div>
+                <div className={`w-8 h-px ${step >= 2 ? 'bg-cyan-400/50' : 'bg-cyan-100/20'}`} />
+                <div className={`flex-1 flex items-center justify-center flex-col gap-1 ${step >= 2 ? 'text-cyan-200' : 'text-cyan-100/40'}`}>
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center border ${step >= 2 ? 'border-cyan-400 bg-cyan-500/20 shadow-[0_0_10px_rgba(34,211,238,0.4)]' : 'border-cyan-100/20 bg-slate-800/40'}`}>
+                    2
+                  </div>
+                  OTP
+                </div>
+                <div className={`w-8 h-px ${step >= 3 ? 'bg-cyan-400/50' : 'bg-cyan-100/20'}`} />
+                <div className={`flex-1 flex items-center justify-center flex-col gap-1 ${step >= 3 ? 'text-cyan-200' : 'text-cyan-100/40'}`}>
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center border ${step >= 3 ? 'border-cyan-400 bg-cyan-500/20 shadow-[0_0_10px_rgba(34,211,238,0.4)]' : 'border-cyan-100/20 bg-slate-800/40'}`}>
+                    3
+                  </div>
+                  Password
+                </div>
+              </div>
+
+              {/* Messages */}
+              {error && (
+                <div className="mb-4 rounded-lg border border-red-400/60 bg-red-500/20 p-2 text-xs text-red-200 text-center">
+                  {error}
+                </div>
+              )}
+
+              {successMessage && (
+                <div className="mb-4 rounded-lg border border-emerald-400/60 bg-emerald-500/20 p-2 text-xs text-emerald-200 text-center flex items-center justify-center gap-2">
+                  <CheckCircle className="w-4 h-4" />
+                  {successMessage}
+                </div>
+              )}
+
+              {renderContent()}
+            </div>
           </div>
         </div>
-
-        <div className="bg-white/10 backdrop-blur-2xl rounded-2xl shadow-2xl overflow-hidden border border-white/20 p-6">
-          {/* Step indicator */}
-          <div className="flex items-center justify-between mb-6 text-xs text-white/80">
-            <div className={`flex-1 flex items-center ${step >= 1 ? 'text-white' : 'text-white/50'}`}>
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-2 text-xs font-bold ${step >= 1 ? 'bg-blue-500' : 'bg-white/20'}`}>
-                1
-              </div>
-              Email
-            </div>
-            <div className="w-6 h-[2px] bg-white/30 mx-1" />
-            <div className={`flex-1 flex items-center ${step >= 2 ? 'text-white' : 'text-white/50'}`}>
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-2 text-xs font-bold ${step >= 2 ? 'bg-blue-500' : 'bg-white/20'}`}>
-                2
-              </div>
-              OTP
-            </div>
-            <div className="w-6 h-[2px] bg-white/30 mx-1" />
-            <div className={`flex-1 flex items-center ${step >= 3 ? 'text-white' : 'text-white/50'}`}>
-              <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-2 text-xs font-bold ${step >= 3 ? 'bg-blue-500' : 'bg-white/20'}`}>
-                3
-              </div>
-              New Password
-            </div>
-          </div>
-
-          {/* Messages */}
-          {error && (
-            <div className="mb-4 p-3 bg-red-500/30 border-l-4 border-red-400 rounded-lg text-xs text-white flex items-start gap-2">
-              <span>⚠️</span>
-              <span>{error}</span>
-            </div>
-          )}
-
-          {successMessage && (
-            <div className="mb-4 p-3 bg-emerald-500/30 border-l-4 border-emerald-400 rounded-lg text-xs text-white flex items-start gap-2">
-              <CheckCircle className="w-4 h-4 mt-0.5" />
-              <span>{successMessage}</span>
-            </div>
-          )}
-
-          {renderContent()}
-        </div>
+        <div
+          className="hidden h-screen lg:block bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: "url('/login-right-hospital.png')" }}
+        />
       </div>
+
+      <style>{`
+        .login-blue-grid {
+          background-color: #07214c;
+          background-image:
+            radial-gradient(circle at 12% 22%, rgba(94, 177, 255, 0.26), transparent 40%),
+            radial-gradient(circle at 82% 70%, rgba(43, 120, 210, 0.34), transparent 45%),
+            repeating-radial-gradient(circle at 65% 45%, rgba(132, 185, 255, 0.08), rgba(132, 185, 255, 0.08) 2px, transparent 2px, transparent 16px);
+        }
+
+        input::placeholder {
+          letter-spacing: 0.01em;
+        }
+      `}</style>
     </div>
   );
 };
