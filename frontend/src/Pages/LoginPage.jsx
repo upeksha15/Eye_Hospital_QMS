@@ -1,8 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
+import {
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  LogIn,
+  HeartPulse,
+  Shield,
+  Stethoscope,
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import backg1 from '../assets/backg1.png';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -15,7 +23,6 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
-  const [focusedField, setFocusedField] = useState(null);
 
   // ============ VALIDATION FUNCTIONS ============
 
@@ -113,22 +120,27 @@ const LoginPage = () => {
     {
       value: 'patient',
       label: 'Patient',
-      icon: '👤',
+      icon: HeartPulse,
       description: 'Sign in with the email and password you used when registering.',
     },
     {
       value: 'admin',
       label: 'Admin',
-      icon: '⚙️',
+      icon: Shield,
       description: 'Administrator login issued by your hospital (Staff accounts). Pick Admin only if your account is admin.',
     },
     {
       value: 'medical_staff',
       label: 'Medical Staff',
-      icon: '👨‍⚕️',
+      icon: Stethoscope,
       description: 'Staff login issued by your administrator. Must match the role on your account.',
     },
   ];
+  const roleActiveClasses = {
+    patient: 'border-violet-200/80 bg-violet-500/25 shadow-[0_0_16px_rgba(139,92,246,0.5)]',
+    admin: 'border-amber-200/80 bg-amber-500/25 shadow-[0_0_16px_rgba(245,158,11,0.5)]',
+    medical_staff: 'border-sky-200/80 bg-sky-500/25 shadow-[0_0_16px_rgba(14,165,233,0.5)]',
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -169,232 +181,148 @@ const LoginPage = () => {
   };
 
   return (
-    <div 
-      className="min-h-screen bg-cover bg-center bg-no-repeat flex items-center justify-center p-4 relative"
-      style={{
-        backgroundImage: `url(${backg1})`,
-        backgroundAttachment: 'fixed'
-      }}
-    >
-      {/* Background image now displayed clearly without overlay */}
+    <div className="h-screen overflow-hidden bg-[#041a3f] text-white">
+      <div className="grid h-screen grid-cols-1 lg:grid-cols-2">
+        <div className="relative flex h-screen items-center justify-center overflow-hidden px-4 py-4 sm:px-8">
+          <div className="absolute inset-0 login-blue-grid" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(80,170,255,0.2),transparent_45%),radial-gradient(circle_at_80%_65%,rgba(20,90,180,0.35),transparent_50%)]" />
 
-      <div className="w-full max-w-md relative z-10">
-        {/* Header Section with Home-style Eye Logo */}
-        <div className="text-center mb-8 animate-fade-in">
-          <button
-            type="button"
-            onClick={() => navigate('/')}
-            className="inline-flex items-center justify-center p-3 bg-white/10 backdrop-blur-md rounded-full shadow-lg mb-3 border border-white/30 hover:bg-white/20 transition-transform hover:scale-110"
-            aria-label="Go to home page"
-          >
-            <div className="p-1.5 bg-blue-600 rounded-full">
-              <Eye className="text-white w-7 h-7" />
-            </div>
-          </button>
-          <p className="text-white/90 text-lg drop-shadow-md">Welcome Back</p>
-        </div>
-
-        {/* Main Card with Glass Morphism */}
-        <div className="bg-white/10 backdrop-blur-2xl rounded-2xl shadow-2xl overflow-hidden border border-white/20">
-          {/* Role Selection */}
-          <div className="p-8 border-b border-white/10">
-            <label className="block text-lg font-semibold text-white/90 mb-4">Select Your Role</label>
-            <div className="grid grid-cols-3 gap-3">
-              {roles.map((r) => (
-                <button
-                  key={r.value}
-                  onClick={() => setRole(r.value)}
-                  className={`relative p-3 rounded-xl transition-all duration-300 ${
-                    role === r.value
-                      ? `${
-                          r.value === 'patient'
-                            ? 'bg-purple-500'
-                            : r.value === 'admin'
-                            ? 'bg-orange-500'
-                            : 'bg-sky-500'
-                        } backdrop-blur-md text-white shadow-lg scale-105 border-white/50`
-                      : 'bg-white/10 text-white/80 hover:bg-white/20 border border-white/20'
-                  } border`}
-                >
-                  <div className="text-lg mb-1">{r.icon}</div>
-                  <div className="text-xs font-semibold whitespace-nowrap">{r.label}</div>
-                </button>
-              ))}
-            </div>
-            {role && (
-              <p className="text-xs text-white/70 mt-3 text-center">
-                {roles.find(r => r.value === role)?.description}
-              </p>
-            )}
-          </div>
-
-          {/* Form Section */}
-          <form onSubmit={handleSubmit} className="p-8 space-y-6">
-            {/* Email Input */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-semibold text-white/90 mb-2">
-                Email Address
-              </label>
-              <div
-                className={`relative transition-all duration-300 ${
-                  focusedField === 'email' ? 'ring-2 ring-white/50 rounded-xl' : ''
-                }`}
+          <div className="relative z-10 w-full max-w-sm">
+            <div className="mb-4 text-center">
+              <button
+                type="button"
+                onClick={() => navigate('/')}
+                className="mx-auto mb-3 inline-flex h-14 w-14 translate-y-1 items-center justify-center rounded-full border border-cyan-200/40 bg-cyan-400/10 shadow-[0_0_20px_rgba(46,174,255,0.45)]"
+                aria-label="Go to home page"
               >
-                <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/60 w-5 h-5" />
-                <input
-                  id="email"
-                  type="text"
-                  value={email}
-                  onChange={handleEmailChange}
-                  onFocus={() => setFocusedField('email')}
-                  onBlur={() => setFocusedField(null)}
-                  placeholder="you@example.com"
-                  autoComplete="email"
-                  className={`w-full pl-12 pr-4 py-3 bg-white/20 border rounded-xl focus:outline-none focus:bg-white/30 transition-colors duration-300 text-white placeholder-white/50 backdrop-blur-sm ${
-                    fieldErrors.email ? 'border-red-400' : 'border-white/30'
-                  }`}
-                />
-              </div>
-              {fieldErrors.email && <p className="text-red-300 text-xs mt-1 ml-1">{fieldErrors.email}</p>}
+                <Eye className="h-7 w-7 text-cyan-200" />
+              </button>
+              <p className="text-2xl font-medium tracking-wide text-cyan-50">Welcome Back</p>
             </div>
 
-            {/* Password Input */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-semibold text-white/90 mb-2">
-                Password
-              </label>
-              <div
-                className={`relative transition-all duration-300 ${
-                  focusedField === 'password' ? 'ring-2 ring-white/50 rounded-xl' : ''
-                }`}
-              >
-                <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/60 w-5 h-5" />
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={handlePasswordChange}
-                  onFocus={() => setFocusedField('password')}
-                  onBlur={() => setFocusedField(null)}
-                  placeholder="••••••••"
-                  className={`w-full pl-12 pr-12 py-3 bg-white/20 border rounded-xl focus:outline-none focus:bg-white/30 transition-colors duration-300 text-white placeholder-white/50 backdrop-blur-sm ${
-                    fieldErrors.password ? 'border-red-400' : 'border-white/30'
-                  }`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white/60 hover:text-white transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
+            <div className="rounded-2xl border border-cyan-100/20 bg-white/10 p-5 shadow-[0_18px_60px_rgba(0,0,0,0.45)] backdrop-blur-xl sm:p-6">
+              <label className="mb-3 block text-sm font-semibold text-cyan-50/95">Select Your Role</label>
+              <div className="mb-4 grid grid-cols-3 gap-2">
+                {roles.map((r) => {
+                  const Icon = r.icon;
+                  const selected = role === r.value;
+                  return (
+                    <button
+                      key={r.value}
+                      type="button"
+                      onClick={() => setRole(r.value)}
+                      className={`rounded-xl border px-2 py-3 text-center transition-all duration-300 ${
+                        selected
+                          ? roleActiveClasses[r.value]
+                          : 'border-cyan-100/20 bg-white/5 hover:bg-white/10'
+                      }`}
+                    >
+                      <Icon className="mx-auto mb-1 h-4 w-4 text-cyan-100" />
+                      <span className="text-[11px] font-semibold text-cyan-50/95">{r.label}</span>
+                    </button>
+                  );
+                })}
               </div>
-              {fieldErrors.password && <p className="text-red-300 text-xs mt-1 ml-1">{fieldErrors.password}</p>}
-              <div className="mt-2 text-right">
+
+              <form onSubmit={handleSubmit} className="space-y-3.5">
+                <div>
+                  <label htmlFor="email" className="mb-2 block text-sm text-cyan-50/90">
+                    Email
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-100/70" />
+                    <input
+                      id="email"
+                      type="text"
+                      value={email}
+                      onChange={handleEmailChange}
+                      placeholder="you@example.com"
+                      autoComplete="email"
+                      className={`h-11 w-full rounded-lg border bg-slate-900/20 pl-10 pr-3 text-sm text-white placeholder:text-cyan-100/40 focus:border-cyan-300/50 focus:outline-none ${
+                        fieldErrors.email ? 'border-red-400/80' : 'border-cyan-100/25'
+                      }`}
+                    />
+                  </div>
+                  {fieldErrors.email && <p className="mt-1 text-xs text-red-300">{fieldErrors.email}</p>}
+                </div>
+
+                <div>
+                  <label htmlFor="password" className="mb-2 block text-sm text-cyan-50/90">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-100/70" />
+                    <input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      value={password}
+                      onChange={handlePasswordChange}
+                      placeholder="********"
+                      className={`h-11 w-full rounded-lg border bg-slate-900/20 pl-10 pr-10 text-sm text-white placeholder:text-cyan-100/40 focus:border-cyan-300/50 focus:outline-none ${
+                        fieldErrors.password ? 'border-red-400/80' : 'border-cyan-100/25'
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-cyan-100/70 hover:text-cyan-50"
+                      aria-label="Toggle password visibility"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {fieldErrors.password && <p className="mt-1 text-xs text-red-300">{fieldErrors.password}</p>}
+                </div>
+
+                {error && <p className="rounded-lg border border-red-400/60 bg-red-500/20 p-2 text-xs text-red-200">{error}</p>}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="group relative flex h-11 w-full items-center justify-center gap-2 overflow-hidden rounded-full border border-cyan-200/80 bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-500 text-sm font-semibold text-white shadow-[0_0_20px_rgba(56,189,248,0.55)] transition disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <span className="absolute inset-0 bg-white/20 opacity-0 transition-opacity group-hover:opacity-100" />
+                  <span className="relative z-10 flex items-center gap-2">
+                    {loading ? 'Logging in...' : <><LogIn className="h-4 w-4" /> Sign In</>}
+                  </span>
+                </button>
+              </form>
+
+              <div className="mt-3 flex items-center justify-between text-xs text-cyan-100/80">
+                <div className="flex items-center gap-1">
+                  <span>New patients?</span>
+                  <Link to="/register" className="font-semibold text-cyan-100 underline decoration-cyan-200/70">
+                    Register here
+                  </Link>
+                </div>
                 <button
                   type="button"
                   onClick={() => navigate('/forgot-password')}
-                  className="text-xs text-white/80 hover:text-white underline-offset-2 hover:underline transition-colors"
+                  className="text-xs text-cyan-100/75 hover:text-cyan-50"
                 >
                   Forgot password?
                 </button>
               </div>
             </div>
-
-            {/* Error Message */}
-            {error && (
-              <div className="p-4 bg-red-500/30 border-l-4 border-red-400 rounded-lg animate-shake backdrop-blur-sm">
-                <p className="text-white text-sm font-medium flex items-center">
-                  <span className="mr-2">⚠️</span>
-                  {error}
-                </p>
-              </div>
-            )}
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 px-4 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-300 flex items-center justify-center gap-2 shadow-lg border border-blue-500 backdrop-blur-sm"
-            >
-              {loading ? (
-                <>
-                  <div className="animate-spin">⏳</div>
-                  Logging in...
-                </>
-              ) : (
-                <>
-                  <LogIn className="w-5 h-5" />
-                  Sign In
-                </>
-              )}
-            </button>
-
-            {/* Help Text */}
-            <div className="text-center text-sm text-white/90 space-y-2">
-              <p>
-                New patients:{' '}
-                <Link to="/register" className="font-semibold text-white hover:text-white/80 transition-colors underline">
-                  Register here
-                </Link>
-              </p>
-              <p className="text-xs text-white/70 pt-2">
-                Staff and admin accounts are not self-service — they are created under Admin → Staff accounts.
-              </p>
-            </div>
-          </form>
-        </div>
-
-        {/* Footer */}
-        <div className="text-center mt-6 text-sm text-white/80">
-          <p>Protected by enterprise-grade security</p>
-          <div className="flex justify-center gap-4 mt-3">
-            <span className="text-xs">🔒 Encrypted</span>
-            <span className="text-xs">✓ Verified</span>
-            <span className="text-xs">🛡️ Secure</span>
           </div>
         </div>
+        <div
+          className="hidden h-screen lg:block bg-cover bg-center bg-no-repeat"
+          style={{ backgroundImage: "url('/login-right-hospital.png')" }}
+        />
       </div>
 
-      {/* Floating animation styles */}
       <style>{`
-        @keyframes fade-in {
-          from {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        @keyframes shake {
-          0%, 100% {
-            transform: translateX(0);
-          }
-          10%, 30%, 50%, 70%, 90% {
-            transform: translateX(-5px);
-          }
-          20%, 40%, 60%, 80% {
-            transform: translateX(5px);
-          }
-        }
-
-        .animate-fade-in {
-          animation: fade-in 0.6s ease-out;
-        }
-
-        .animate-shake {
-          animation: shake 0.5s ease-in-out;
+        .login-blue-grid {
+          background-color: #07214c;
+          background-image:
+            radial-gradient(circle at 12% 22%, rgba(94, 177, 255, 0.26), transparent 40%),
+            radial-gradient(circle at 82% 70%, rgba(43, 120, 210, 0.34), transparent 45%),
+            repeating-radial-gradient(circle at 65% 45%, rgba(132, 185, 255, 0.08), rgba(132, 185, 255, 0.08) 2px, transparent 2px, transparent 16px);
         }
 
         input::placeholder {
-          color: rgba(255, 255, 255, 0.4);
-        }
-
-        input:focus::placeholder {
-          color: rgba(255, 255, 255, 0.2);
+          letter-spacing: 0.01em;
         }
       `}</style>
     </div>

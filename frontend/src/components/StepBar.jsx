@@ -1,5 +1,4 @@
 import React from 'react';
-import { Check } from 'lucide-react';
 
 const steps = (s) => [
   { key: 'r', label: s.stepRegister, state: 'done' },
@@ -21,26 +20,19 @@ export default function StepBar({ strings }) {
                 <div
                   className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition ${
                     step.state === 'done'
-                      ? 'bg-blue-600 border-blue-600 text-white'
+                      ? 'border-blue-500 text-blue-600 bg-white'
                       : step.state === 'active'
                         ? 'border-blue-500 text-blue-600 bg-white'
                         : 'border-slate-200 text-slate-400 bg-slate-50'
                   }`}
                 >
-                  {step.state === 'done' ? <Check className="w-5 h-5" /> : idx + 1}
+                  {idx + 1}
                 </div>
                 <div className="min-w-0">
                   <p
-                    className={`text-sm font-semibold truncate ${
-                      step.state === 'pending' ? 'text-slate-400' : 'text-slate-800'
-                    }`}
+                    className="text-sm font-semibold truncate text-slate-800"
                   >
                     {step.label}
-                  </p>
-                  <p className="text-[11px] text-slate-500 hidden sm:block">
-                    {step.state === 'done' && 'Completed'}
-                    {step.state === 'active' && 'In progress'}
-                    {step.state === 'pending' && 'Upcoming'}
                   </p>
                 </div>
               </div>

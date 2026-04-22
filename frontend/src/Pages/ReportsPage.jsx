@@ -13,6 +13,7 @@ import { fetchMyAppointments, checkSlotAvailability } from '../api/appointmentsA
 import { formatYMD, monthKeyFromDate, nowColombo } from '../utils/dateHelpers';
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const ALL_DOCTORS_OPTION = '__all_doctors__';
 
 function mapDoctorRooms(raw) {
   return (raw || []).map((d) => ({
@@ -161,19 +162,20 @@ export default function ReportsPage() {
     () => doctors.find((d) => d._id === apptDoctorId) || null,
     [doctors, apptDoctorId]
   );
+  const isAllDoctorsSelected = apptDoctorId === ALL_DOCTORS_OPTION;
 
   const filteredAppointments = useMemo(() => {
     if (!apptDoctorId) return [];
     return appointments.filter((a) => {
       const docId = a.doctorId?._id || a.doctorId;
-      if (String(docId) !== String(apptDoctorId)) return false;
+      if (!isAllDoctorsSelected && String(docId) !== String(apptDoctorId)) return false;
       const key = formatYMD(a.appointmentDate).slice(0, 7);
       if (key !== apptMonth) return false;
       const st = String(a.status || '').toLowerCase();
       if (st === 'cancelled') return false;
       return getAppointmentRowStatus(a.status) != null;
     });
-  }, [appointments, apptDoctorId, apptMonth]);
+  }, [appointments, apptDoctorId, apptMonth, isAllDoctorsSelected]);
 
   const { completedTotal, bookedTotal } = useMemo(() => {
     let c = 0;
@@ -216,7 +218,7 @@ export default function ReportsPage() {
   };
 
   const handleAppointmentPdf = async () => {
-    if (!selectedDoctor) return;
+    if (!apptDoctorId || (!selectedDoctor && !isAllDoctorsSelected)) return;
     setPdfApptLoading(true);
     try {
       const { downloadAppointmentMonthPdf } = await import('../utils/reportPdf');
@@ -236,9 +238,9 @@ export default function ReportsPage() {
       });
       await downloadAppointmentMonthPdf({
         monthLabel,
-        doctorName: selectedDoctor.doctorName,
-        speciality: selectedDoctor.speciality,
-        room: selectedDoctor.room,
+        doctorName: isAllDoctorsSelected ? 'All Doctors' : selectedDoctor?.doctorName,
+        speciality: isAllDoctorsSelected ? 'Multiple' : selectedDoctor?.speciality,
+        room: isAllDoctorsSelected ? 'Multiple' : selectedDoctor?.room,
         rows,
         completedCount: completedTotal,
         bookedCount: bookedTotal,
@@ -465,7 +467,7 @@ export default function ReportsPage() {
           </div>
           <div>
             <h2 className="text-lg font-bold text-[#0F4C81]">Appointment report (month-wise)</h2>
-            <p className="text-xs text-slate-500">Your bookings for the selected doctor and month</p>
+            <p className="text-xs text-slate-500">Your bookings for the selected doctor (or all doctors) by month</p>
           </div>
         </div>
 
@@ -494,6 +496,7 @@ export default function ReportsPage() {
                 className={inputClass}
               >
                 <option value="">Select a doctor</option>
+                <option value={ALL_DOCTORS_OPTION}>All Doctors</option>
                 {doctors.map((d) => (
                   <option key={d._id} value={d._id}>
                     {d.doctorName} — {d.speciality}
@@ -509,19 +512,25 @@ export default function ReportsPage() {
             </div>
           )}
 
-          {selectedDoctor && (
+          {(selectedDoctor || isAllDoctorsSelected) && (
             <div className="flex flex-wrap gap-4 rounded-xl bg-[#F0F9FF] border border-[#BAE6FD] px-4 py-3 text-sm">
               <div>
                 <span className="text-slate-500">Doctor: </span>
-                <span className="font-semibold text-[#0F4C81]">{selectedDoctor.doctorName}</span>
+                <span className="font-semibold text-[#0F4C81]">
+                  {isAllDoctorsSelected ? 'All Doctors' : selectedDoctor?.doctorName}
+                </span>
               </div>
               <div>
                 <span className="text-slate-500">Speciality: </span>
-                <span className="font-medium text-slate-800">{selectedDoctor.speciality}</span>
+                <span className="font-medium text-slate-800">
+                  {isAllDoctorsSelected ? 'Multiple' : selectedDoctor?.speciality}
+                </span>
               </div>
               <div>
                 <span className="text-slate-500">Room: </span>
-                <span className="font-medium text-slate-800">{selectedDoctor.room}</span>
+                <span className="font-medium text-slate-800">
+                  {isAllDoctorsSelected ? 'Multiple' : selectedDoctor?.room}
+                </span>
               </div>
             </div>
           )}

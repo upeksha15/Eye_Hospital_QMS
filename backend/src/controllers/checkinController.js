@@ -22,11 +22,13 @@ export async function checkIn(req, res) {
       return res.status(404).json({ success: false, message: 'Appointment not found' });
     }
 
-    if (appointment.status !== 'booked') {
+    // allow check-in for appointments that are 'booked' or 'approved'
+    const st = String(appointment.status || '').toLowerCase();
+    if (st !== 'booked' && st !== 'approved') {
       await session.abortTransaction();
       return res.status(400).json({
         success: false,
-        message: 'Appointment is not in booked status',
+        message: 'Appointment is not in a check-in eligible status',
       });
     }
 

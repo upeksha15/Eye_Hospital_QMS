@@ -35,13 +35,14 @@ function todayRange() {
 export async function getDashboardStats(req, res) {
   try {
     const { start, end } = todayRange();
+    console.log('Dashboard stats range:', { start, end });
 
     const [
       activeDoctors,
       doctorsAddedToday,
       todayAppointments,
       yesterdayAppointments,
-      activeQueues,
+      activeDoctorsWithQueues,
       queueTokensToday,
     ] = await Promise.all([
       Doctor.countDocuments({ isActive: true }),
@@ -53,9 +54,25 @@ export async function getDashboardStats(req, res) {
           $lt: start,
         },
       }),
-      QueueToken.countDocuments({ status: 'waiting' }),
+      // Count unique doctors with waiting queues
+      QueueToken.aggregate([
+        { $match: { status: 'waiting' } },
+        { $group: { _id: '$doctorId' } },
+        { $count: 'totalDoctors' },
+      ]),
       QueueToken.find({ checkinTime: { $gte: start, $lt: end } }).lean(),
     ]);
+
+    const activeQueuesCount = activeDoctorsWithQueues[0]?.totalDoctors || 0;
+
+    console.log('Dashboard stats data:', {
+      activeDoctors,
+      doctorsAddedToday,
+      todayAppointments,
+      yesterdayAppointments,
+      activeQueuesCount,
+      queueTokensTodayCount: queueTokensToday.length,
+    });
 
     let avgWaitMinutes = 22;
     if (queueTokensToday.length > 0) {
@@ -78,13 +95,13 @@ export async function getDashboardStats(req, res) {
         doctorsAddedToday,
         todayPatients: todayAppointments,
         patientDeltaPercent: patientDelta,
-        activeQueues,
+        activeQueues: activeQueuesCount,
         avgWaitMinutes,
         waitDeltaMinutes: 5,
       },
     });
   } catch (e) {
-    console.error(e);
+    console.error('Error in getDashboardStats:', e);
     res.status(500).json({ success: false, message: e.message || 'Failed to load stats' });
   }
 }
@@ -875,5 +892,157 @@ export async function getPerformanceMetrics(req, res) {
   } catch (e) {
     console.error(e);
     res.status(500).json({ success: false, message: e.message || 'Failed' });
+  }
+}
+
+export async function getTodayAppointmentsDetail(req, res) {
+  try {
+    const { start, end } = todayRange();
+
+    const appointments = await Appointment.find({
+      appointmentDate: { $gte: start, $lt: end },
+    })
+      .populate('doctorId', 'fullName speciality')
+      .populate('patientId', 'fullName email contactNumber')
+      .sort({ appointmentDate: 1 })
+      .lean();
+
+    const byDoctor = {};
+    appointments.forEach((apt) => {
+      const doctorName = apt.doctorId?.fullName || 'Unknown Doctor';
+      if (!byDoctor[doctorName]) {
+        byDoctor[doctorName] = {
+          doctorId: apt.doctorId?._id,
+          doctorName,
+          speciality: apt.doctorId?.speciality || 'General',
+          appointments: [],
+        };
+      }
+      byDoctor[doctorName].appointments.push({
+        _id: apt._id,
+        patient: {
+          _id: apt.patientId?._id,
+          name: apt.patientId?.fullName || 'Unknown',
+          email: apt.patientId?.email || '',
+          contact: apt.patientId?.contactNumber || '',
+        },
+        appointmentDate: apt.appointmentDate,
+        visitReason: apt.visitReason || 'Consultation',
+        status: apt.status,
+      });
+    });
+
+    const doctors = Object.values(byDoctor);
+
+    res.json({
+      success: true,
+      total: appointments.length,
+      doctors,
+    });
+  } catch (e) {
+    console.error('Error in getTodayAppointmentsDetail:', e);
+    res.status(500).json({ success: false, message: e.message || 'Failed to load appointments' });
+  }
+}
+
+export async function getActiveQueuesDetail(req, res) {
+  try {
+    const activeQueues = await QueueToken.find({ status: 'waiting' })
+      .populate('appointmentId', 'appointmentDate visitReason')
+      .populate('doctorId', 'fullName speciality')
+      .lean();
+
+    const byDoctor = {};
+    activeQueues.forEach((queue) => {
+      const doctorName = queue.doctorId?.fullName || 'Unknown Doctor';
+      if (!byDoctor[doctorName]) {
+        byDoctor[doctorName] = {
+          doctorId: queue.doctorId?._id,
+          doctorName,
+          speciality: queue.doctorId?.speciality || 'General',
+          queues: [],
+        };
+      }
+      byDoctor[doctorName].queues.push({
+        _id: queue._id,
+        tokenNumber: queue.tokenNumber || 'N/A',
+        checkinTime: queue.checkinTime,
+        status: queue.status,
+        visitReason: queue.appointmentId?.visitReason || 'Consultation',
+      });
+    });
+
+    const doctors = Object.values(byDoctor);
+
+    res.json({
+      success: true,
+      total: activeQueues.length,
+      doctors,
+    });
+  } catch (e) {
+    console.error('Error in getActiveQueuesDetail:', e);
+    res.status(500).json({ success: false, message: e.message || 'Failed to load queues' });
+  }
+}
+
+export async function getWaitingTimeDetail(req, res) {
+  try {
+    const { start, end } = todayRange();
+
+    const queueTokensToday = await QueueToken.find({
+      checkinTime: { $gte: start, $lt: end },
+    })
+      .populate('doctorId', 'fullName speciality')
+      .lean();
+
+    const byDoctor = {};
+    queueTokensToday.forEach((queue) => {
+      const doctorName = queue.doctorId?.fullName || 'Unknown Doctor';
+      if (!byDoctor[doctorName]) {
+        byDoctor[doctorName] = {
+          doctorId: queue.doctorId?._id,
+          doctorName,
+          speciality: queue.doctorId?.speciality || 'General',
+          tokens: [],
+          totalWait: 0,
+        };
+      }
+
+      const diff = Date.now() - new Date(queue.checkinTime).getTime();
+      const waitMins = Math.min(120, Math.max(0, Math.round(diff / 60000)));
+      byDoctor[doctorName].tokens.push({
+        _id: queue._id,
+        tokenNumber: queue.tokenNumber || 'N/A',
+        checkinTime: queue.checkinTime,
+        waitMinutes: waitMins,
+        status: queue.status,
+      });
+      byDoctor[doctorName].totalWait += waitMins;
+    });
+
+    const doctors = Object.values(byDoctor).map((doc) => ({
+      ...doc,
+      averageWait: doc.tokens.length > 0 ? Math.round(doc.totalWait / doc.tokens.length) : 0,
+    }));
+
+    const overallAvg = queueTokensToday.length > 0
+      ? Math.round(
+          queueTokensToday.reduce((sum, q) => {
+            const diff = Date.now() - new Date(q.checkinTime).getTime();
+            const waitMins = Math.min(120, Math.max(0, Math.round(diff / 60000)));
+            return sum + waitMins;
+          }, 0) / queueTokensToday.length
+        )
+      : 0;
+
+    res.json({
+      success: true,
+      totalQueuesProcessed: queueTokensToday.length,
+      overallAverageWait: overallAvg,
+      doctors,
+    });
+  } catch (e) {
+    console.error('Error in getWaitingTimeDetail:', e);
+    res.status(500).json({ success: false, message: e.message || 'Failed to load waiting times' });
   }
 }
