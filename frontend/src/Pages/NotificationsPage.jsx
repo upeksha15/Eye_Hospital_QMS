@@ -1,32 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Bell, Calendar, Activity, AlertCircle } from 'lucide-react';
-
-const mockNotifications = [
-  {
-    id: 1,
-    type: 'appointment',
-    title: 'Appointment Confirmed',
-    message: 'Your appointment for 2024-01-15 at 10:00 AM has been confirmed.',
-    time: 'Today, 10:30 AM',
-    read: false,
-  },
-  {
-    id: 2,
-    type: 'queue',
-    title: 'Queue Update',
-    message: 'Your queue position has moved from 5 to 3.',
-    time: 'Today, 10:15 AM',
-    read: true,
-  },
-  {
-    id: 3,
-    type: 'notice',
-    title: 'Hospital Notice',
-    message: 'Clinic will be closed on Poya Day due to public holiday.',
-    time: 'Yesterday, 03:20 PM',
-    read: true,
-  },
-];
+import {
+  getPatientNotifications,
+  markAllPatientNotificationsRead,
+  PATIENT_NOTIFICATIONS_UPDATED_EVENT,
+} from '../utils/patientNotifications';
 
 function getIcon(type) {
   switch (type) {
@@ -40,12 +18,41 @@ function getIcon(type) {
 }
 
 export default function NotificationsPage() {
-  const [items, setItems] = useState(mockNotifications);
+  const [items, setItems] = useState([]);
+
+  useEffect(() => {
+    const refresh = () => {
+      setItems(getPatientNotifications());
+    };
+
+    refresh();
+    window.addEventListener(PATIENT_NOTIFICATIONS_UPDATED_EVENT, refresh);
+    return () => {
+      window.removeEventListener(PATIENT_NOTIFICATIONS_UPDATED_EVENT, refresh);
+    };
+  }, []);
 
   const unreadCount = items.filter((n) => !n.read).length;
 
+  const decorated = useMemo(
+    () =>
+      items.map((n) => ({
+        ...n,
+        time: n.createdAt
+          ? new Date(n.createdAt).toLocaleString([], {
+              year: 'numeric',
+              month: 'short',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+            })
+          : 'Just now',
+      })),
+    [items]
+  );
+
   const handleMarkAllRead = () => {
-    setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+    setItems(markAllPatientNotificationsRead());
   };
 
   return (
@@ -83,7 +90,7 @@ export default function NotificationsPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {items.map((notification) => (
+          {decorated.map((notification) => (
             <div
               key={notification.id}
               className={`flex items-start gap-3 rounded-xl border p-4 bg-white ${

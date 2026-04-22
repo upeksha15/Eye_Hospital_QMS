@@ -1,4 +1,5 @@
 import DoctorRoom from "../models/DoctorRoom.js";
+import QueueToken from '../models/QueueToken.js';
 
 const CHECKIN_WINDOW_MINUTES = 30;
 const CHECKIN_WINDOW_MS = CHECKIN_WINDOW_MINUTES * 60 * 1000;
@@ -156,7 +157,30 @@ export const getSpecializations = async (req, res) => {
       if (!updated) return res.status(404).json({ message: 'Doctor room not found' });
     try {
       const io = req.app.get('io');
-      io?.to(`queue:${String(updated._id)}`).emit('queue:status', { doctorId: String(updated._id), status: 'Paused' });
+      const waitingTokens = await QueueToken.find({
+        doctorId: updated._id,
+        status: 'waiting',
+      })
+        .select('appointmentId')
+        .populate('appointmentId', 'patientId')
+        .lean();
+
+      const waitingPatientIds = Array.from(
+        new Set(
+          waitingTokens
+            .map((token) => token?.appointmentId?.patientId)
+            .filter(Boolean)
+            .map((id) => String(id))
+        )
+      );
+
+      for (const patientId of waitingPatientIds) {
+        io?.to(`patient:${patientId}`).emit('queue:status', {
+          doctorId: String(updated._id),
+          status: 'Paused',
+          activity: 'paused',
+        });
+      }
     } catch (e) {
       // ignore socket emit errors
     }
