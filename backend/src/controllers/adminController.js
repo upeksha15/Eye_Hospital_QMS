@@ -8,12 +8,14 @@ import Appointment from '../models/Appointment.js';
 import QueueToken from '../models/QueueToken.js';
 import DailySlot from '../models/DailySlot.js';
 import AuditLog from '../models/AuditLog.js';
+import Notice from '../models/Notice.js';
 import Announcement from '../models/Announcement.js';
 import SystemSettings from '../models/SystemSettings.js';
 import { startOfDayColombo } from '../utils/dateUtils.js';
 import { createAuditLog } from '../utils/auditLogHelper.js';
 
 const TZ = 'Asia/Colombo';
+const VALID_WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 function hourColombo(d) {
   return parseInt(
@@ -244,11 +246,50 @@ export async function listAuditLogs(req, res) {
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
     const limit = Math.min(100, Math.max(10, parseInt(req.query.limit, 10) || 25));
     const skip = (page - 1) * limit;
+    const fetchCount = skip + limit;
+    const category = typeof req.query.category === 'string' ? req.query.category.trim().toLowerCase() : '';
+    const isNoticeOnly = category === 'notice';
+    const auditQuery = category ? { category } : {};
+    const shouldIncludeNoticeModel = !category || isNoticeOnly;
 
-    const [items, total] = await Promise.all([
-      AuditLog.find().sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
-      AuditLog.countDocuments(),
+    const [auditItems, noticeItems, auditTotal, noticeTotal] = await Promise.all([
+      AuditLog.find(auditQuery).sort({ createdAt: -1 }).limit(fetchCount).lean(),
+      shouldIncludeNoticeModel
+        ? Notice.find().sort({ createdAt: -1 }).limit(fetchCount).lean()
+        : Promise.resolve([]),
+      AuditLog.countDocuments(auditQuery),
+      shouldIncludeNoticeModel ? Notice.countDocuments() : Promise.resolve(0),
     ]);
+
+    const loggedNoticeIds = new Set(
+      auditItems
+        .map((item) => item?.meta?.noticeId)
+        .filter(Boolean)
+        .map((id) => String(id))
+    );
+
+    const normalizedNotices = noticeItems
+      .filter((notice) => !loggedNoticeIds.has(String(notice._id)))
+      .map((notice) => ({
+      _id: `notice-${notice._id}`,
+      category: 'notice',
+      action: notice.isActive ? 'Notice created' : 'Notice deactivated',
+      description: `${notice.title}: ${notice.message}`,
+      actorName: notice.createdBy || 'Admin',
+      createdAt: notice.createdAt,
+      source: 'notice',
+      sourceId: notice._id,
+      }));
+
+    const merged = [...auditItems, ...normalizedNotices].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
+    const items = merged.slice(skip, skip + limit);
+    const dedupedNoticeCount = shouldIncludeNoticeModel
+      ? Math.max(0, noticeTotal - loggedNoticeIds.size)
+      : 0;
+    const total = auditTotal + dedupedNoticeCount;
 
     res.json({ success: true, items, page, limit, total });
   } catch (e) {
@@ -398,21 +439,56 @@ export async function deleteStaffAccount(req, res) {
 
 export async function createDoctor(req, res) {
   try {
-    const { fullName, speciality, room, initials, scheduleStart, scheduleEnd, dailyLimit, isActive } =
-      req.body;
-    if (!fullName || !speciality || !room || !initials) {
-      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    const {
+      fullName,
+      speciality,
+      room,
+      initials,
+      scheduleStart,
+      scheduleEnd,
+      dailyLimit,
+      isActive,
+      availability,
+    } = req.body;
+    const normalizedName = String(fullName).trim();
+    const nameWithoutPrefix = normalizedName.replace(/^Dr\.\s*/i, '').trim();
+    const normalizedSpeciality = String(speciality || '').trim();
+    const normalizedAvailability = Array.isArray(availability)
+      ? Array.from(
+          new Set(
+            availability
+              .map((day) => String(day || '').trim())
+              .filter((day) => VALID_WEEKDAYS.includes(day))
+          )
+        )
+      : [];
+
+    if (!nameWithoutPrefix || !normalizedSpeciality || normalizedAvailability.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message:
+          'All fields should be completed. Doctor name, speciality, and at least one availability day are required.',
+      });
     }
 
+    const inferredInitials = normalizedName
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((part) => part[0])
+      .join('')
+      .slice(0, 3)
+      .toUpperCase();
+
     const doc = await Doctor.create({
-      fullName: fullName.trim(),
-      speciality: speciality.trim(),
-      room: room.trim(),
-      initials: initials.trim().slice(0, 3).toUpperCase(),
+      fullName: normalizedName,
+      speciality: normalizedSpeciality,
+      room: room?.trim() || 'General',
+      initials: initials ? String(initials).trim().slice(0, 3).toUpperCase() : inferredInitials || 'DOC',
       scheduleStart: scheduleStart || '08:00',
       scheduleEnd: scheduleEnd || '14:00',
       dailyLimit: dailyLimit ?? 20,
       isActive: isActive !== false,
+      availability: normalizedAvailability,
     });
 
     await createAuditLog({
@@ -431,18 +507,70 @@ export async function createDoctor(req, res) {
   }
 }
 
+export async function listDoctorsAdmin(req, res) {
+  try {
+    const doctors = await Doctor.find().sort({ createdAt: -1 }).lean();
+    res.json({ success: true, doctors });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ success: false, message: e.message || 'Failed to load doctors' });
+  }
+}
+
 export async function updateDoctor(req, res) {
   try {
     const updates = { ...req.body };
     delete updates._id;
+    const existingDoctor = await Doctor.findById(req.params.id).lean();
+    if (!existingDoctor) {
+      return res.status(404).json({ success: false, message: 'Doctor not found' });
+    }
+    if (updates.fullName !== undefined) {
+      const normalizedName = String(updates.fullName || '').trim();
+      const nameWithoutPrefix = normalizedName.replace(/^Dr\.\s*/i, '').trim();
+      if (!nameWithoutPrefix) {
+        return res.status(400).json({ success: false, message: 'Doctor name is required.' });
+      }
+      updates.fullName = normalizedName;
+    }
+    if (updates.speciality !== undefined) {
+      const normalizedSpeciality = String(updates.speciality || '').trim();
+      if (!normalizedSpeciality) {
+        return res.status(400).json({ success: false, message: 'Speciality is required.' });
+      }
+      updates.speciality = normalizedSpeciality;
+    }
     if (updates.initials) updates.initials = String(updates.initials).slice(0, 3).toUpperCase();
+    if (updates.availability !== undefined) {
+      const normalizedAvailability = Array.isArray(updates.availability)
+        ? Array.from(
+            new Set(
+              updates.availability
+                .map((day) => String(day || '').trim())
+                .filter((day) => VALID_WEEKDAYS.includes(day))
+            )
+          )
+        : [];
+      if (normalizedAvailability.length === 0) {
+        return res.status(400).json({ success: false, message: 'Select at least one valid availability day.' });
+      }
+      updates.availability = normalizedAvailability;
+    }
 
     const doc = await Doctor.findByIdAndUpdate(req.params.id, updates, {
       new: true,
       runValidators: true,
     });
-    if (!doc) {
-      return res.status(404).json({ success: false, message: 'Doctor not found' });
+
+    if (updates.availability !== undefined) {
+      await DoctorRoom.updateMany(
+        {
+          doctorName: { $in: [existingDoctor.fullName, doc.fullName] },
+        },
+        {
+          $set: { availability: doc.availability || [] },
+        }
+      );
     }
 
     await createAuditLog({

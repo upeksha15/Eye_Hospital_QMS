@@ -6,7 +6,7 @@ import QueueI from '../assets/queue.png'; // Queue image
 import { Link, useNavigate } from "react-router-dom";
 
 import { 
-  Eye, Bell, ChevronDown, AlertTriangle, ClipboardList, Clock, ShieldPlus, Megaphone, 
+  Eye, ChevronDown, AlertTriangle, ClipboardList, Clock, ShieldPlus, Megaphone, 
   PenIcon, User
 } from 'lucide-react';
 import backg2 from '../assets/backg2.png';
@@ -117,7 +117,6 @@ useEffect(() => {
           <Link to="/services">Services</Link>
           <Link to="/about">About Us</Link>
           <Link to="/contact">Contact</Link>
-          <Bell className="w-6 h-6 text-slate-600 cursor-pointer" />
 
           {/* Right side: Login button (guest) or patient profile (logged-in) */}
           {!isPatientLoggedIn ? (

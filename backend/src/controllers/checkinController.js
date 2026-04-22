@@ -52,10 +52,12 @@ export async function checkIn(req, res) {
 
     if (doctorRoom && String(doctorRoom.status).toLowerCase() !== 'enabled') {
       await session.abortTransaction();
+      const isPaused = String(doctorRoom.status).toLowerCase() === 'paused';
       return res.status(400).json({
         success: false,
-        message: 'Still queue is not available',
-        code: 'QUEUE_NOT_AVAILABLE',
+        message: isPaused ? 'Doctor is currently paused. Check-in not available.' : 'Queue is not available',
+        code: isPaused ? 'DOCTOR_PAUSED' : 'QUEUE_NOT_AVAILABLE',
+        doctorStatus: doctorRoom.status,
       });
     }
 

@@ -1,4 +1,12 @@
 import Notice from '../models/Notice.js';
+import { createAuditLog } from '../utils/auditLogHelper.js';
+
+function resolveActor(req, fallbackName = 'Admin') {
+  return {
+    actorId: req.user?._id,
+    actorName: req.user?.fullName || req.user?.name || fallbackName,
+  };
+}
 
 // Get all notices
 export const getAllNotices = async (req, res) => {
@@ -66,6 +74,20 @@ export const createNotice = async (req, res) => {
       createdBy
     });
 
+    const actor = resolveActor(req, createdBy || 'Admin');
+    await createAuditLog({
+      action: 'Notice created',
+      category: 'notice',
+      description: `${title}: ${message}`.slice(0, 300),
+      actorId: actor.actorId,
+      actorName: actor.actorName,
+      meta: {
+        noticeId: notice._id,
+        type: notice.type,
+        priority: notice.priority,
+      },
+    });
+
     res.status(201).json({
       success: true,
       message: 'Notice created successfully',
@@ -107,6 +129,21 @@ export const updateNotice = async (req, res) => {
       });
     }
 
+    const actor = resolveActor(req, notice.createdBy || 'Admin');
+    await createAuditLog({
+      action: 'Notice updated',
+      category: 'notice',
+      description: `${notice.title}: ${notice.message}`.slice(0, 300),
+      actorId: actor.actorId,
+      actorName: actor.actorName,
+      meta: {
+        noticeId: notice._id,
+        type: notice.type,
+        priority: notice.priority,
+        isActive: notice.isActive,
+      },
+    });
+
     res.status(200).json({
       success: true,
       message: 'Notice updated successfully',
@@ -142,6 +179,20 @@ export const deleteNotice = async (req, res) => {
       });
     }
 
+    const actor = resolveActor(req, notice.createdBy || 'Admin');
+    await createAuditLog({
+      action: 'Notice deleted',
+      category: 'notice',
+      description: `${notice.title}: ${notice.message}`.slice(0, 300),
+      actorId: actor.actorId,
+      actorName: actor.actorName,
+      meta: {
+        noticeId: notice._id,
+        type: notice.type,
+        priority: notice.priority,
+      },
+    });
+
     res.status(200).json({
       success: true,
       message: 'Notice deleted successfully',
@@ -171,6 +222,20 @@ export const deactivateNotice = async (req, res) => {
         error: 'Notice not found'
       });
     }
+
+    const actor = resolveActor(req, notice.createdBy || 'Admin');
+    await createAuditLog({
+      action: 'Notice deactivated',
+      category: 'notice',
+      description: `${notice.title}: ${notice.message}`.slice(0, 300),
+      actorId: actor.actorId,
+      actorName: actor.actorName,
+      meta: {
+        noticeId: notice._id,
+        type: notice.type,
+        priority: notice.priority,
+      },
+    });
 
     res.status(200).json({
       success: true,

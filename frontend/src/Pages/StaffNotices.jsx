@@ -5,6 +5,7 @@ import SidebarNav from '../components/StaffSidebar';
 import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:5000/api';
+const ADMIN_AUTHOR_REGEX = /^admin$/i;
 
 const Notices = () => {
   // Auth check handled by route; no local `user` usage required
@@ -25,8 +26,11 @@ const Notices = () => {
     message: notice.message,
     priority: notice.priority || 'medium',
     type: notice.type || 'info',
-    date: notice.date || notice.createdAt
+    date: notice.date || notice.createdAt,
+    createdBy: notice.createdBy || '',
   });
+
+  const isAdminNotice = (notice) => ADMIN_AUTHOR_REGEX.test((notice.createdBy || '').trim());
 
   useEffect(() => {
     const fetchNotices = async () => {
@@ -126,6 +130,9 @@ const Notices = () => {
   };
 
   const handleEdit = (notice) => {
+    if (isAdminNotice(notice)) {
+      return;
+    }
     setEditingNotice(notice);
     setFormData({
       title: notice.title,
@@ -136,6 +143,11 @@ const Notices = () => {
   };
 
   const handleDelete = async (noticeId) => {
+    const notice = notices.find((n) => n.id === noticeId);
+    if (notice && isAdminNotice(notice)) {
+      return;
+    }
+
     if (!window.confirm('Are you sure you want to delete this notice?')) {
       return;
     }
@@ -261,11 +273,21 @@ const Notices = () => {
                               <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getPriorityColor(notice.priority)}`}>
                                 {notice.priority.toUpperCase()}
                               </span>
+                              {isAdminNotice(notice) && (
+                                <span className="px-3 py-1 rounded-full text-xs font-semibold border bg-slate-100 border-slate-300 text-slate-700">
+                                  Admin notice
+                                </span>
+                              )}
                               <div className="flex items-center gap-1">
                                 <button
                                   onClick={() => handleEdit(notice)}
-                                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                  title="Edit notice"
+                                  disabled={isAdminNotice(notice)}
+                                  className={`p-2 rounded-lg transition-colors ${
+                                    isAdminNotice(notice)
+                                      ? 'text-slate-300 cursor-not-allowed'
+                                      : 'text-blue-600 hover:bg-blue-50'
+                                  }`}
+                                  title={isAdminNotice(notice) ? 'Admin notices cannot be edited by medical staff' : 'Edit notice'}
                                 >
                                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -273,8 +295,13 @@ const Notices = () => {
                                 </button>
                                 <button
                                   onClick={() => handleDelete(notice.id)}
-                                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                  title="Delete notice"
+                                  disabled={isAdminNotice(notice)}
+                                  className={`p-2 rounded-lg transition-colors ${
+                                    isAdminNotice(notice)
+                                      ? 'text-slate-300 cursor-not-allowed'
+                                      : 'text-red-600 hover:bg-red-50'
+                                  }`}
+                                  title={isAdminNotice(notice) ? 'Admin notices cannot be deleted by medical staff' : 'Delete notice'}
                                 >
                                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

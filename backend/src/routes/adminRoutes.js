@@ -29,6 +29,7 @@ router.get('/reports/appointments.pdf', reports.getReportPdf);
 router.get('/reports/patient-details-summary', reports.getPatientDetailsSummary);
 router.get('/reports/patient-details-summary.pdf', reports.getPatientDetailsSummaryPdf);
 
+router.get('/doctors', admin.listDoctorsAdmin);
 router.post('/doctors', admin.createDoctor);
 router.put('/doctors/:id', admin.updateDoctor);
 router.delete('/doctors/:id', admin.deleteDoctor);

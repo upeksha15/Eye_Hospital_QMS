@@ -196,38 +196,45 @@ export async function me(req, res) {
   return res.json({ success: true, patient: stripPatient(req.user), user: stripPatient(req.user), userType: 'patient' });
 }
 
-export async function deletePatientAccount(req, res) {
-  if (req.userType !== 'patient') {
-    return res.status(403).json({
-      success: false,
-      message: 'Only patient accounts can be removed this way',
-    });
-  }
-
+export async function deleteMyAccount(req, res) {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const p = await Patient.findById(req.user._id).session(session);
-    if (!p) {
+    if (req.userType === 'patient') {
+      const p = await Patient.findById(req.user._id).session(session);
+      if (!p) {
+        await session.abortTransaction();
+        return res.status(404).json({ success: false, message: 'Patient not found' });
+      }
+
+      const userOr = [];
+      if (p.nic) userOr.push({ nicNumber: String(p.nic).trim() });
+      if (p.email) userOr.push({ email: String(p.email).trim().toLowerCase() });
+
+      await deletePatientCascade(p._id, session);
+
+      if (userOr.length > 0) {
+        await User.deleteMany({ $or: userOr }, { session });
+      }
+    } else if (req.userType === 'staff') {
+      const staff = await StaffAccount.findById(req.user._id).session(session);
+      if (!staff) {
+        await session.abortTransaction();
+        return res.status(404).json({ success: false, message: 'Staff account not found' });
+      }
+
+      await StaffProfile.deleteOne({ staff: staff._id }, { session });
+      await StaffAccount.deleteOne({ _id: staff._id }, { session });
+    } else {
       await session.abortTransaction();
-      return res.status(404).json({ success: false, message: 'Patient not found' });
-    }
-
-    const userOr = [];
-    if (p.nic) userOr.push({ nicNumber: String(p.nic).trim() });
-    if (p.email) userOr.push({ email: String(p.email).trim().toLowerCase() });
-
-    await deletePatientCascade(p._id, session);
-
-    if (userOr.length > 0) {
-      await User.deleteMany({ $or: userOr }, { session });
+      return res.status(400).json({ success: false, message: 'Unsupported account type' });
     }
 
     await session.commitTransaction();
     return res.json({ success: true, message: 'Account deleted successfully' });
   } catch (e) {
     await session.abortTransaction();
-    console.error('deletePatientAccount:', e);
+    console.error('deleteMyAccount:', e);
     return res.status(500).json({
       success: false,
       message: e.message || 'Failed to delete account',

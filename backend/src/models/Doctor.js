@@ -15,6 +15,10 @@ const DoctorSchema = new mongoose.Schema(
     scheduleStart: { type: String, default: '08:00' },
     scheduleEnd: { type: String, default: '14:00' },
     dailyLimit: { type: Number, default: 20, min: 1 },
+    availability: {
+      type: [String],
+      default: [],
+    },
   },
   { timestamps: true }
 );

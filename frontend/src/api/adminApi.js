@@ -55,6 +55,26 @@ export async function deleteStaffAccount(id) {
   return data;
 }
 
+export async function getDoctorsAdmin() {
+  const { data } = await api.get('/api/admin/doctors');
+  return data;
+}
+
+export async function createDoctor(body) {
+  const { data } = await api.post('/api/admin/doctors', body);
+  return data;
+}
+
+export async function updateDoctor(id, body) {
+  const { data } = await api.put(`/api/admin/doctors/${id}`, body);
+  return data;
+}
+
+export async function deleteDoctor(id) {
+  const { data } = await api.delete(`/api/admin/doctors/${id}`);
+  return data;
+}
+
 export async function getAppointmentsReport(params) {
   const { data } = await api.get('/api/admin/reports/appointments', { params });
   return data;
@@ -85,6 +105,26 @@ export async function downloadPatientDetailsSummaryPdf(params) {
 
 export async function getAnnouncementsAdmin() {
   const { data } = await api.get('/api/admin/announcements');
+  return data;
+}
+
+export async function getSpecialNotices(params) {
+  const { data } = await api.get('/api/notices', { params });
+  return data;
+}
+
+export async function createSpecialNotice(body) {
+  const { data } = await api.post('/api/notices', body);
+  return data;
+}
+
+export async function updateSpecialNotice(id, body) {
+  const { data } = await api.put(`/api/notices/${id}`, body);
+  return data;
+}
+
+export async function deleteSpecialNotice(id) {
+  const { data } = await api.delete(`/api/notices/${id}`);
   return data;
 }
 

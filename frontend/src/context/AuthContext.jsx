@@ -84,6 +84,18 @@ export function AuthProvider({ children }) {
     [token]
   );
 
+  const updateStaff = useCallback(
+    (updatedStaffData) => {
+      setUser((prev) => {
+        if (!prev) return prev;
+        const merged = { ...prev, ...updatedStaffData };
+        authApi.persistAuth(token, merged);
+        return merged;
+      });
+    },
+    [token]
+  );
+
   const patient = userType === 'patient' ? user : null;
   const staff = userType === 'staff' ? user : null;
 
@@ -101,8 +113,9 @@ export function AuthProvider({ children }) {
       register,
       logout,
       updatePatient,
+      updateStaff,
     }),
-    [user, patient, staff, token, role, userType, loading, login, register, logout, updatePatient]
+    [user, patient, staff, token, role, userType, loading, login, register, logout, updatePatient, updateStaff]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

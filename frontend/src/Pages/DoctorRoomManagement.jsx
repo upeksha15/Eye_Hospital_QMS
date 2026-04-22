@@ -5,6 +5,7 @@ import StaffTopBar from "../components/StaffTopBar";
 
 export default function DoctorRoomManagement() {
   const [form, setForm] = useState({
+    doctorId: "",
     doctorName: "",
     room: "",
     queueLimit: "",
@@ -39,9 +40,11 @@ export default function DoctorRoomManagement() {
   ];
 
   const [data, setData] = useState([]);
+  const [doctors, setDoctors] = useState([]);
   const [editId, setEditId] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
+  const [submitError, setSubmitError] = useState('');
 
   const API_URL = "/api/doctor-rooms";
   const fetchDoctorRooms = async () => {
@@ -54,21 +57,70 @@ export default function DoctorRoomManagement() {
     }
   };
 
+  const fetchDoctors = async () => {
+    try {
+      const res = await api.get('/api/doctors');
+      setDoctors(res.data?.doctors || []);
+    } catch (error) {
+      console.error('Error fetching doctors:', error);
+      setDoctors([]);
+    }
+  };
+
   useEffect(() => {
     fetchDoctorRooms();
+    fetchDoctors();
   }, []);
+
+  const applyDoctorSelection = (doctorId) => {
+    const selected = doctors.find((d) => d._id === doctorId);
+    if (!selected) {
+      setEditId(null);
+      setForm((prev) => ({
+        ...prev,
+        doctorId: '',
+        doctorName: '',
+        room: '',
+        queueLimit: '',
+        specialization: 'General Ophthalmology',
+        otherSpecialization: '',
+        availability: [],
+      }));
+      return;
+    }
+
+    const rawSpeciality = (selected.speciality || '').trim();
+    const isPreset = PRESET_SPECIALIZATIONS.includes(rawSpeciality);
+    const existingRoomConfig = data.find((row) => row.doctorName === (selected.fullName || ''));
+    if (existingRoomConfig) {
+      setEditId(existingRoomConfig._id);
+    } else {
+      setEditId(null);
+    }
+    setForm((prev) => ({
+      ...prev,
+      doctorId: selected._id,
+      doctorName: selected.fullName || '',
+      room: existingRoomConfig?.room ?? '',
+      queueLimit: existingRoomConfig?.queueLimit ?? '',
+      specialization: isPreset ? rawSpeciality : 'Other',
+      otherSpecialization: isPreset ? '' : rawSpeciality,
+      availability: Array.isArray(selected.availability) ? selected.availability : [],
+    }));
+    setErrors((prev) => ({ ...prev, doctorName: '', specialization: '', availability: '' }));
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+    setSubmitError('');
     // validate field on change
     setErrors((prev) => ({ ...prev, [name]: '' }));
 
     // Inline per-field validation
-    if (name === 'doctorName') {
-      // allow letters and spaces only
-      const ok = value === '' || /^[A-Za-z\s]+$/.test(value);
-      if (!ok) setErrors((prev) => ({ ...prev, doctorName: 'Doctor name may only contain letters and spaces' }));
+    if (name === 'doctorId') {
+      applyDoctorSelection(value);
+      return;
     }
     if (name === 'room') {
       // numeric only
@@ -86,6 +138,7 @@ export default function DoctorRoomManagement() {
   const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
   const handleWeekdayToggle = (day) => {
+    if (form.doctorId) return;
     setForm((prev) => {
       const has = prev.availability.includes(day);
       return {
@@ -98,14 +151,13 @@ export default function DoctorRoomManagement() {
 
   const validateForm = (f) => {
     const e = {};
-    if (!f.doctorName || !f.doctorName.trim()) e.doctorName = 'Doctor name is required';
-    else if (!/^[A-Za-z\s]+$/.test(f.doctorName)) e.doctorName = 'Doctor name may only contain letters and spaces';
+    if (!f.doctorId) e.doctorName = 'Please select a doctor';
     if (!f.room || !String(f.room).trim()) e.room = 'Room is required';
     else if (!/^\d+$/.test(String(f.room))) e.room = 'Room must contain only numbers';
     const q = Number(f.queueLimit);
     if (!Number.isFinite(q) || !Number.isInteger(q) || q <= 0) e.queueLimit = 'Queue limit must be a positive integer';
     if (f.specialization === 'Other' && (!f.otherSpecialization || !f.otherSpecialization.trim())) e.otherSpecialization = 'Please provide specialization';
-    if (!Array.isArray(f.availability) || f.availability.length === 0) e.availability = 'Select at least one weekday';
+    if (!Array.isArray(f.availability) || f.availability.length === 0) e.availability = 'No availability days found for selected doctor';
     return e;
   };
 
@@ -119,6 +171,8 @@ export default function DoctorRoomManagement() {
     try {
       if (editId) {
         const payload = { ...form };
+        payload.doctorName = (payload.doctorName || '').trim();
+        payload.room = String(payload.room).trim();
         if (payload.specialization === 'Other') payload.specialization = payload.otherSpecialization || '';
         payload.availability = Array.isArray(payload.availability) ? payload.availability : [];
         payload.queueLimit = Number(payload.queueLimit);
@@ -128,6 +182,8 @@ export default function DoctorRoomManagement() {
         setEditId(null);
       } else {
         const payload = { ...form };
+        payload.doctorName = (payload.doctorName || '').trim();
+        payload.room = String(payload.room).trim();
         if (payload.specialization === 'Other') payload.specialization = payload.otherSpecialization || '';
         payload.availability = Array.isArray(payload.availability) ? payload.availability : [];
         payload.queueLimit = Number(payload.queueLimit);
@@ -137,6 +193,7 @@ export default function DoctorRoomManagement() {
       }
 
       setForm({
+        doctorId: '',
         doctorName: '',
         room: '',
         queueLimit: '',
@@ -145,11 +202,12 @@ export default function DoctorRoomManagement() {
         availability: [],
       });
       setErrors({});
+      setSubmitError('');
 
       fetchDoctorRooms();
     } catch (error) {
       console.error('Error saving doctor room:', error);
-      alert('Something went wrong');
+      setSubmitError(error?.response?.data?.message || 'Something went wrong');
     } finally {
       setSubmitting(false);
     }
@@ -168,7 +226,9 @@ export default function DoctorRoomManagement() {
   };
 
   const handleEdit = (item) => {
+    const selected = doctors.find((d) => d.fullName === item.doctorName);
     setForm({
+      doctorId: selected?._id || '',
       doctorName: item.doctorName,
       room: item.room,
       queueLimit: item.queueLimit,
@@ -195,19 +255,29 @@ export default function DoctorRoomManagement() {
             onSubmit={handleSubmit}
             className="bg-white rounded-2xl shadow-lg p-6 mb-8"
           >
+              {submitError && (
+                <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {submitError}
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Doctor Name
                 </label>
-                <input
-                  type="text"
-                  name="doctorName"
-                  placeholder="Enter doctor name"
-                  value={form.doctorName}
+                <select
+                  name="doctorId"
+                  value={form.doctorId}
                   onChange={handleChange}
-                  className={`w-full rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.doctorName ? 'border-red-500' : 'border border-gray-300'}`}
-                />
+                  className={`w-full rounded-lg p-2 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.doctorName ? 'border-red-500' : 'border border-gray-300'}`}
+                >
+                  <option value="">Select doctor</option>
+                  {doctors.map((doctor) => (
+                    <option key={doctor._id} value={doctor._id}>
+                      {doctor.fullName}
+                    </option>
+                  ))}
+                </select>
                 {errors.doctorName && <div className="text-xs text-red-600 mt-1">{errors.doctorName}</div>}
               </div>
 
@@ -234,6 +304,7 @@ export default function DoctorRoomManagement() {
                   name="specialization"
                   value={form.specialization}
                   onChange={handleChange}
+                  disabled
                   className={`w-full rounded-lg p-2 bg-white ${errors.specialization ? 'border-red-500' : 'border border-gray-300'}`}
                 >
                   <optgroup label="General Categories">
@@ -271,7 +342,7 @@ export default function DoctorRoomManagement() {
                       name="otherSpecialization"
                       placeholder="Enter specialization"
                       value={form.otherSpecialization}
-                      onChange={handleChange}
+                      readOnly
                       className={`mt-2 w-full rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${errors.otherSpecialization ? 'border-red-500' : 'border border-gray-300'}`}
                     />
                     {errors.otherSpecialization && <div className="text-xs text-red-600 mt-1">{errors.otherSpecialization}</div>}
@@ -301,7 +372,12 @@ export default function DoctorRoomManagement() {
                 <div className="flex flex-wrap gap-2">
                   {WEEKDAYS.map((d) => (
                     <label key={d} className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border ${form.availability.includes(d) ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-700'}`}>
-                      <input type="checkbox" checked={form.availability.includes(d)} onChange={() => handleWeekdayToggle(d)} />
+                      <input
+                        type="checkbox"
+                        checked={form.availability.includes(d)}
+                        disabled={Boolean(form.doctorId)}
+                        onChange={() => handleWeekdayToggle(d)}
+                      />
                       <span className="text-sm">{d}</span>
                     </label>
                   ))}

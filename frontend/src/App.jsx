@@ -19,12 +19,14 @@ import AdminLayout from "./admin/AdminLayout";
 import AdminDashboard from "./admin/pages/AdminDashboard";
 import UserManagementPage from "./admin/pages/UserManagementPage";
 import StaffAccountsPage from "./admin/pages/StaffAccountsPage";
+import AdminDoctorsPage from "./admin/pages/AdminDoctorsPage";
 import SystemPerformancePage from "./admin/pages/SystemPerformancePage";
 import NoticesPage from "./admin/pages/NoticesPage";
 import AuditLogsPage from "./admin/pages/AuditLogsPage";
 import AdminSettingsPage from "./admin/pages/AdminSettingsPage";
 import ReportsPage from "./admin/pages/ReportsPage";
 import PatientDetailsSummaryReport from "./admin/pages/PatientDetailsSummaryReport";
+import AdminProfilePage from "./admin/pages/AdminProfilePage";
 import StaffDoctors from "./Pages/StaffDoctors";
 import StaffNotices from "./Pages/StaffNotices";
 import StaffProfile from "./Pages/StaffProfile";
@@ -211,12 +213,14 @@ function AppRoutes() {
       >
         <Route index element={<AdminDashboard />} />
         <Route path="staff-accounts" element={<StaffAccountsPage />} />
+        <Route path="doctors" element={<AdminDoctorsPage />} />
         <Route path="users" element={<UserManagementPage />} />
         <Route path="performance" element={<SystemPerformancePage />} />
         <Route path="notices" element={<NoticesPage />} />
         <Route path="audit-logs" element={<AuditLogsPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="patient-details-summary" element={<PatientDetailsSummaryReport />} />
+        <Route path="profile" element={<AdminProfilePage />} />
         <Route path="settings" element={<AdminSettingsPage />} />
       </Route>
     </Routes>

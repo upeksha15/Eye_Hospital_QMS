@@ -5,7 +5,7 @@ import {
   me,
   syncPatient,
   syncStaff,
-  deletePatientAccount,
+  deleteMyAccount,
 } from '../controllers/authController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import { forgotPassword, verifyOtp, resetPassword } from '../controllers/fogotPassword.js';
@@ -15,7 +15,7 @@ const router = express.Router();
 router.post('/register', register);
 router.post('/login', login);
 router.get('/me', authMiddleware, me);
-router.delete('/account', authMiddleware, deletePatientAccount);
+router.delete('/account', authMiddleware, deleteMyAccount);
 router.put('/sync-patient', authMiddleware, syncPatient);
 router.put('/sync-staff', authMiddleware, syncStaff);
 
