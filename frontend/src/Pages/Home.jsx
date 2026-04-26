@@ -7,7 +7,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { 
   Eye, ChevronDown, AlertTriangle, ClipboardList, Clock, ShieldPlus, Megaphone, 
-  PenIcon, User
+  PenIcon, User, MapPin, Phone, Mail
 } from 'lucide-react';
 import backg2 from '../assets/backg2.png';
 import backg3 from '../assets/back3g.png';
@@ -74,17 +74,17 @@ useEffect(() => {
     <div className="min-h-screen bg-[#f0f7ff] font-sans text-slate-800 w-full">
 
       {/* --- NAVBAR --- */}
-      <nav className="flex items-center justify-between px-12 py-4 bg-white shadow-sm sticky top-0 z-50 w-full">
+      <nav className="flex items-center justify-between px-12 py-4 bg-[#041a3f]/90 backdrop-blur-xl border-b border-cyan-100/10 sticky top-0 z-50 w-full shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => navigate('/')}
             className="flex items-center gap-2 focus:outline-none"
           >
-            <div className="p-1.5 bg-blue-600 rounded-full">
-              <Eye className="text-white w-6 h-6" />
+            <div className="p-1.5 border border-cyan-200/40 bg-cyan-400/10 shadow-[0_0_15px_rgba(46,174,255,0.3)] rounded-full">
+              <Eye className="text-cyan-200 w-6 h-6" />
             </div>
-            <span className="text-2xl font-bold text-[#004a99]">Sri Lanka National Eye Hospital Colombo</span>
+            <span className="text-2xl font-bold text-cyan-50 tracking-wide">Sri Lanka National Eye Hospital Colombo</span>
           </button>
             <div className="flex items-center gap-3">
   <div className="flex items-center gap-3">
@@ -112,17 +112,18 @@ useEffect(() => {
 
   </div>
         </div>
-        <div className="flex items-center gap-8 font-semibold text-[#004a99]">
-          <Link to="/" className="border-b-2 border-blue-600">Home</Link>
-          <Link to="/services">Services</Link>
-          <Link to="/about">About Us</Link>
-          <Link to="/contact">Contact</Link>
+        <div className="flex items-center gap-8 font-semibold text-cyan-100/90">
+          <Link to="/" className="border-b-2 border-cyan-400 text-cyan-50">Home</Link>
+          <Link to="/services" className="hover:text-cyan-50 transition-colors">Services</Link>
+          <Link to="/about" className="hover:text-cyan-50 transition-colors">About Us</Link>
+          <Link to="/contact" className="hover:text-cyan-50 transition-colors">Contact</Link>
 
           {/* Right side: Login button (guest) or patient profile (logged-in) */}
           {!isPatientLoggedIn ? (
             <Link to="/login">
-              <button className="bg-[#2d9d78] text-white px-6 py-2 rounded-lg font-bold hover:bg-[#248263] transition">
-                Login
+              <button className="relative group overflow-hidden bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-500 text-white px-6 py-2 rounded-full font-bold shadow-[0_0_20px_rgba(56,189,248,0.55)] transition-all hover:scale-105 border border-cyan-200/80">
+                <span className="absolute inset-0 bg-white/20 opacity-0 transition-opacity group-hover:opacity-100" />
+                <span className="relative z-10">Login</span>
               </button>
             </Link>
           ) : (
@@ -130,9 +131,9 @@ useEffect(() => {
               <button
                 type="button"
                 onClick={() => setProfileMenuOpen((o) => !o)}
-                className="flex items-center gap-3 px-3 py-2 rounded-lg border border-blue-100 bg-blue-50/70 hover:bg-blue-100 transition"
+                className="flex items-center gap-3 px-3 py-2 rounded-xl border border-cyan-100/20 bg-white/5 hover:bg-white/10 transition backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.2)]"
               >
-                <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-[#2d9d78] bg-[#e0f7f0] flex items-center justify-center">
+                <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-cyan-300/50 bg-cyan-900/40 flex items-center justify-center">
                   {patient?.profileImage && !avatarError ? (
                     <img
                       src={patient.profileImage}
@@ -141,43 +142,43 @@ useEffect(() => {
                       onError={() => setAvatarError(true)}
                     />
                   ) : (
-                    <User className="w-5 h-5 text-[#2d9d78]" />
+                    <User className="w-5 h-5 text-cyan-200" />
                   )}
                 </div>
                 <div className="text-left">
-                  <p className="text-sm font-semibold text-[#004a99] leading-tight">
+                  <p className="text-sm font-semibold text-cyan-50 leading-tight">
                     {patient?.fullName || 'Patient'}
                   </p>
-                  <p className="text-xs text-slate-500 leading-tight">
+                  <p className="text-xs text-cyan-100/70 leading-tight">
                     {patient?.email || patient?.nic || ''}
                   </p>
                 </div>
-                <ChevronDown className="w-4 h-4 text-slate-500" />
+                <ChevronDown className="w-4 h-4 text-cyan-100/70" />
               </button>
 
               {profileMenuOpen && (
-                <div className="absolute right-0 mt-2 w-44 rounded-lg bg-white shadow-lg border border-slate-100 py-1 text-sm text-slate-700">
+                <div className="absolute right-0 mt-2 w-44 rounded-xl bg-[#07214c] shadow-[0_18px_60px_rgba(0,0,0,0.5)] border border-cyan-100/20 py-2 text-sm text-cyan-50 backdrop-blur-xl">
                   <button
                     type="button"
-                    className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center gap-2"
+                    className="w-full text-left px-4 py-2 hover:bg-white/10 flex items-center gap-2 transition-colors"
                     onClick={() => {
                       setProfileMenuOpen(false);
                       navigate('/dashboard');
                     }}
                   >
-                    <ClipboardList className="w-4 h-4 text-slate-500" />
+                    <ClipboardList className="w-4 h-4 text-cyan-200" />
                     Dashboard
                   </button>
                   <button
                     type="button"
-                    className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center gap-2 border-t border-slate-100"
+                    className="w-full text-left px-4 py-2 hover:bg-white/10 flex items-center gap-2 border-t border-cyan-100/10 mt-1 pt-2 transition-colors"
                     onClick={() => {
                       setProfileMenuOpen(false);
                       logout();
                       navigate('/');
                     }}
                   >
-                    <User className="w-4 h-4 text-slate-500" />
+                    <User className="w-4 h-4 text-cyan-200" />
                     Logout
                   </button>
                 </div>
@@ -209,6 +210,7 @@ useEffect(() => {
       y="50"
       fontSize="50"
       fontWeight="900"
+      fontFamily="Montserrat, 'Segoe UI', sans-serif"
       stroke="black"
       strokeWidth="3"
       strokeLinejoin="round"
@@ -230,6 +232,7 @@ useEffect(() => {
       y="35"
       fontSize="45"
       fontWeight="800"
+      fontFamily="Montserrat, 'Segoe UI', sans-serif"
       stroke="black"
       strokeWidth="2.5"
       strokeLinejoin="round"
@@ -274,32 +277,35 @@ useEffect(() => {
       </section>
 
       {/* --- MIDDLE BRANDING SECTION --- */}
-      <section className="py-20 px-6 w-full mt-1">
-        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-12">
+      <section className="py-20 px-6 w-full mt-1 bg-[#041a3f] relative overflow-hidden">
+        {/* Abstract grids from login page to blend */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(80,170,255,0.15),transparent_45%),radial-gradient(circle_at_80%_65%,rgba(20,90,180,0.25),transparent_50%)] pointer-events-none z-0" />
+        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-12 relative z-10">
           <div className="flex-1 relative">
-            <img src={QueueI} alt="Queue background" className="w-full h-full object-contain opacity-70"/>
+            <img src={QueueI} alt="Queue background" className="w-full h-full object-contain opacity-80 drop-shadow-[0_0_30px_rgba(56,189,248,0.2)]"/>
           </div>
 
           <div className="flex-1 text-center lg:text-center z-10">
-            <h2 className="text-4xl font-bold text-[#003366]">Welcome </h2>
-            <p className="mt-4 text-slate-600 max-w-3xl mx-auto lg:mx-0 text-lg leading-relaxed">
+            <h2 className="text-4xl font-bold text-cyan-50 drop-shadow-[0_0_15px_rgba(46,174,255,0.4)]">Welcome </h2>
+            <p className="mt-4 text-cyan-100/80 max-w-3xl mx-auto lg:mx-0 text-lg leading-relaxed font-light">
               Our Eye Hospital Queue Management System is designed to make your visit seamless and efficient. With just a few clicks, patients can get a queue number, track their position in real time, and schedule appointments with experienced ophthalmologists.
-
-            This system leverages modern technology to reduce waiting times, streamline hospital operations, and provide a smooth experience for both patients and staff. Our goal is to make quality eye care more accessible, convenient, and stress-free for everyone.
+              <br/><br/>
+              This system leverages modern technology to reduce waiting times, streamline hospital operations, and provide a smooth experience for both patients and staff. Our goal is to make quality eye care more accessible, convenient, and stress-free for everyone.
             </p>
           <div className="flex justify-center">
           <Link to="/register">          
-  <button className="mt-8 bg-[#2d9d78] text-white px-10 py-3 rounded-lg font-bold flex items-center gap-2 shadow-md">
-    <PenIcon size={20} /> Register Now
-  </button>
-  </Link>
-</div>
-
-
+            <button className="mt-8 relative group overflow-hidden bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-500 text-white px-10 py-3 rounded-full font-bold flex items-center gap-2 shadow-[0_0_20px_rgba(56,189,248,0.55)] transition-all hover:scale-105 border border-cyan-200/80">
+              <span className="absolute inset-0 bg-white/20 opacity-0 transition-opacity group-hover:opacity-100" />
+              <span className="relative z-10 flex items-center gap-2">
+                <PenIcon size={20} /> Register Now
+              </span>
+            </button>
+          </Link>
+          </div>
           </div>
 
           <div className="flex-1 relative">
-            <img src={doctorImg} alt="Doctor" className="w-90 h-full object-contain"/>
+            <img src={doctorImg} alt="Doctor" className="w-90 h-full object-contain drop-shadow-[0_0_30px_rgba(56,189,248,0.2)]"/>
           </div>
         </div>
       </section>
@@ -337,32 +343,37 @@ useEffect(() => {
       </section>
 
       {/* --- FOOTER --- */}
-      <footer className="bg-[#004a99] text-white mt-8 pt-4 pb-2 w-full">
+      <footer className="bg-[#021028] border-t border-cyan-100/10 text-cyan-50 pt-10 pb-6 w-full relative z-10">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 px-6">
           <div>
-            <h3 className="font-bold text-lg mb-4">About Eye Hospital</h3>
-            <p className="text-sm text-white/80 leading-relaxed">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-1.5 border border-cyan-200/40 bg-cyan-400/10 shadow-[0_0_10px_rgba(46,174,255,0.3)] rounded-full inline-flex">
+                <Eye className="text-cyan-200 w-5 h-5" />
+              </div>
+              <h3 className="font-bold text-lg text-cyan-50">About Eye Hospital</h3>
+            </div>
+            <p className="text-sm text-cyan-100/70 leading-relaxed">
               We provide specialized eye care services with a dedicated team of doctors and staff. 
               Our Queue Management System helps you save time and manage your visit easily.
             </p>
           </div>
           <div>
-            <h3 className="font-bold text-lg mb-4">Quick Links</h3>
-            <ul className="space-y-2 text-sm">
-              <li><Link to="/" className="hover:underline">Home</Link></li>
-              <li><Link to="/services" className="hover:underline">Services</Link></li>
-              <li><Link to="/about" className="hover:underline">About Us</Link></li>
-              <li><Link to="/contact" className="hover:underline">Contact</Link></li>
+            <h3 className="font-bold text-lg mb-4 text-cyan-50">Quick Links</h3>
+            <ul className="space-y-2 text-sm text-cyan-100/70">
+              <li><Link to="/" className="hover:text-cyan-300 transition-colors">Home</Link></li>
+              <li><Link to="/services" className="hover:text-cyan-300 transition-colors">Services</Link></li>
+              <li><Link to="/about" className="hover:text-cyan-300 transition-colors">About Us</Link></li>
+              <li><Link to="/contact" className="hover:text-cyan-300 transition-colors">Contact</Link></li>
             </ul>
           </div>
           <div>
-            <h3 className="font-bold text-lg mb-4">Contact Us</h3>
-            <p className="text-sm text-white/80 mb-2">123 Eye Care Street, Colombo, Sri Lanka</p>
-            <p className="text-sm text-white/80 mb-2">+94 11 123 4567</p>
-            <p className="text-sm text-white/80">info@eyehospital.lk</p>
+            <h3 className="font-bold text-lg mb-4 text-cyan-50">Contact Us</h3>
+            <p className="text-sm text-cyan-100/70 mb-2 flex items-center gap-2"><MapPin className="w-4 h-4 text-cyan-400"/> 123 Eye Care Street, Colombo, Sri Lanka</p>
+            <p className="text-sm text-cyan-100/70 mb-2 flex items-center gap-2"><Phone className="w-4 h-4 text-cyan-400"/> +94 11 123 4567</p>
+            <p className="text-sm text-cyan-100/70 flex items-center gap-2"><Mail className="w-4 h-4 text-cyan-400"/> info@eyehospital.lk</p>
           </div>
         </div>
-        <div className="text-center text-white/70 mt-8 text-sm">
+        <div className="text-center text-cyan-100/50 mt-12 text-sm border-t border-cyan-100/10 pt-6">
           &copy; {new Date().getFullYear()} Eye Hospital. All rights reserved.
         </div>
       </footer>
