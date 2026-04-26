@@ -86,7 +86,7 @@ const Doctors = () => {
   const rawStatus =
     (selectedDoctor && selectedDoctor._id && doctorStatuses && doctorStatuses[selectedDoctor._id]) ||
     selectedDoctor?.status ||
-    'Enabled';
+    'Disabled';
 
   let queueStatus;
   const rs = String(rawStatus || '').toLowerCase();

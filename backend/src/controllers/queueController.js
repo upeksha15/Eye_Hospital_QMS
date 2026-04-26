@@ -17,11 +17,14 @@ const CHECKIN_WINDOW_MINUTES = 30;
 const CHECKIN_WINDOW_MS = CHECKIN_WINDOW_MINUTES * 60 * 1000;
 
 function computeCheckinWindow(doctorRoom) {
-  const status = doctorRoom?.status || 'Enabled';
+  let status = doctorRoom?.status || 'Disabled';
   const enabledAt = doctorRoom?.queueEnabledAt ? new Date(doctorRoom.queueEnabledAt) : null;
+  if (String(status).toLowerCase() === 'enabled' && !enabledAt) {
+    status = 'Disabled';
+  }
   const closesAt = enabledAt ? new Date(enabledAt.getTime() + CHECKIN_WINDOW_MS) : null;
   const nowMs = Date.now();
-  const checkinOpen = String(status).toLowerCase() === 'enabled' && (!closesAt || nowMs <= closesAt.getTime());
+  const checkinOpen = String(status).toLowerCase() === 'enabled' && Boolean(closesAt) && nowMs <= closesAt.getTime();
   const remainingMinutes = closesAt ? Math.max(0, Math.ceil((closesAt.getTime() - nowMs) / 60000)) : null;
   return {
     queueStatus: status,

@@ -18,6 +18,8 @@ export const createDoctorRoom = async (req, res) => {
       specialization,
       availability: Array.isArray(availability) ? availability : [],
       queueLimit,
+      status: 'Disabled',
+      queueEnabledAt: null,
     });
 
     const savedDoctorRoom = await newDoctorRoom.save();
