@@ -651,6 +651,8 @@ export async function createDoctorRoomAdmin(req, res) {
       queueLimit: Number(queueLimit),
       specialization: specialization || '',
       availability: Array.isArray(availability) ? availability : [],
+      status: 'Disabled',
+      queueEnabledAt: null,
     });
 
     await createAuditLog({

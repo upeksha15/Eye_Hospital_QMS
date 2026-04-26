@@ -31,7 +31,7 @@ const doctorRoomSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: ['Enabled', 'Paused', 'Disabled'],
-      default: 'Enabled',
+      default: 'Disabled',
     },
     queueEnabledAt: {
       type: Date,

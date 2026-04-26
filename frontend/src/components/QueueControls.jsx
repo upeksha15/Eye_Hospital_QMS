@@ -14,7 +14,7 @@ const QueueControls = ({ doctorId }) => {
     doctorStatuses,
   } = useQueue();
 
-  const status = doctorId ? (doctorStatuses || {})[doctorId] : 'Enabled';
+  const status = doctorId ? (doctorStatuses || {})[doctorId] : 'Disabled';
   // keep the serving panel visible for Enabled or Paused, only hide when Disabled
   const localActive = String(status) === 'Enabled' || String(status) === 'Paused';
 
