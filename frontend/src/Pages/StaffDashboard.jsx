@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueue } from '../context/QueueContext';
+import { useAuth } from '../hooks/useAuth';
 import Navbar from '../components/StaffTopBar';
 import { bookingStrings } from '../i18n/bookingStrings';
 import SidebarNav from '../components/StaffSidebar';
@@ -18,7 +19,8 @@ import {
 // will load from backend
 
 const Dashboard = () => {
-  const { user, doctorStatuses } = useQueue();
+  const { doctorStatuses } = useQueue();
+  const { staff, user: authUser } = useAuth();
   const navigate = useNavigate();
 
   const today = new Date();
@@ -87,7 +89,7 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 grid grid-rows-[82px_1fr]">
-      <Navbar strings={bookingStrings.en} patient={user} />
+      <Navbar strings={bookingStrings.en} />
 
       <div className="h-full flex overflow-hidden">
         <SidebarNav />
@@ -101,9 +103,8 @@ const Dashboard = () => {
                     <p className="text-sm font-semibold text-white/90 uppercase tracking-wider">Staff Dashboard</p>
                     {
                       (() => {
-                        const online = (staffList || []).filter(s => s?.isOnline).map(s => s.fullName).filter(Boolean);
-                        const fallback = online.length ? online.join(', ') : 'Staff';
-                        return <h1 className="mt-2 text-3xl sm:text-4xl font-extrabold text-white">Welcome back, {user?.name || fallback}</h1>;
+                        const displayName = (staff && (staff.name || staff.fullName)) || (authUser && (authUser.name || authUser.fullName)) || 'Staff';
+                        return <h1 className="mt-2 text-3xl sm:text-4xl font-extrabold text-white">Welcome back, {displayName}</h1>;
                       })()
                     }
                     <p className="mt-1 text-sm text-white/90">Overview of today's clinic operations</p>
