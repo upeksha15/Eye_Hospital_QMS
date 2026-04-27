@@ -19,6 +19,7 @@ const QueueTokenSchema = new mongoose.Schema(
       enum: ['waiting', 'called', 'completed', 'absent'],
       default: 'waiting',
     },
+    calledAt: { type: Date },
   },
   { timestamps: true }
 );

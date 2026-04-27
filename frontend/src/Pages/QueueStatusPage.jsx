@@ -170,10 +170,21 @@ export default function QueueStatusPage() {
                     </div>
                     <div className="rounded-xl bg-slate-50 border border-slate-200 p-4">
                       <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Estimated wait</p>
-                      <p className="mt-1 text-2xl font-extrabold text-slate-900">
-                        {typeof myStatus?.estimatedWaitMinutes === 'number'
-                          ? `${myStatus.estimatedWaitMinutes} min`
-                          : '—'}
+                      <p className="mt-1 text-2xl font-extrabold text-slate-900 flex items-end gap-2">
+                        <span>
+                          {typeof myStatus?.estimatedWaitMinutes === 'number'
+                            ? `${myStatus.estimatedWaitMinutes} min`
+                            : '—'}
+                        </span>
+                        {typeof myStatus?.estimatedWaitMinutes === 'number' && (
+                          <span className="text-sm text-slate-500 font-bold mb-1">
+                            ({(() => {
+                              const d = new Date();
+                              d.setMinutes(d.getMinutes() + myStatus.estimatedWaitMinutes);
+                              return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                            })()})
+                          </span>
+                        )}
                       </p>
                     </div>
                   </div>
