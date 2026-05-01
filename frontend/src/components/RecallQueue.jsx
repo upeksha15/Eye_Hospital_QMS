@@ -2,9 +2,12 @@ import React from 'react';
 import { useQueue } from '../context/QueueContext';
 
 const RecallQueue = () => {
-  const { recallQueue, cancelToken } = useQueue();
+  const { recallQueue, cancelToken, activeDoctorId } = useQueue();
   const now = Date.now();
-
+  // Show only recall entries relevant to the currently-active doctor (if set)
+  const filteredRecall = (activeDoctorId && String(activeDoctorId).length > 0)
+    ? recallQueue.filter(p => String(p.doctorId || '') === String(activeDoctorId))
+    : recallQueue;
   return (
     <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-200/60 transition-transform p-6 h-full flex flex-col">
       <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-200/60">
@@ -19,8 +22,8 @@ const RecallQueue = () => {
             <p className="text-xs text-slate-500 font-medium">Skipped patients</p>
           </div>
         </div>
-        <div className="px-4 py-1.5 bg-gradient-to-r from-amber-500 to-orange-600 rounded-full border border-amber-400/30 shadow-md">
-          <span className="text-sm font-bold text-white">{recallQueue.length}</span>
+          <div className="px-4 py-1.5 bg-gradient-to-r from-amber-500 to-orange-600 rounded-full border border-amber-400/30 shadow-md">
+          <span className="text-sm font-bold text-white">{filteredRecall.length}</span>
         </div>
       </div>
       
@@ -36,7 +39,7 @@ const RecallQueue = () => {
       </div>
 
       <ul className="list-none max-h-[60vh] overflow-y-auto p-0 m-0 space-y-3 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-        {recallQueue.length === 0 ? (
+        {filteredRecall.length === 0 ? (
           <li className="text-center py-12">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
               <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -44,10 +47,10 @@ const RecallQueue = () => {
               </svg>
             </div>
             <p className="text-gray-500 font-medium">All patients seen</p>
-            <p className="text-sm text-gray-400 mt-1">No skipped patients in recall queue</p>
+            <p className="text-sm text-gray-400 mt-1">No skipped patients in this queue</p>
           </li>
         ) : (
-          recallQueue.map(p => {
+          filteredRecall.map(p => {
             const elapsed = (now - p.skippedAt) / 1000;
             const remainingSecs = 600 - elapsed;
             const minsLeft = Math.ceil(remainingSecs / 60);

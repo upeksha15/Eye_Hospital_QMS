@@ -1,5 +1,14 @@
-const STORAGE_KEY = 'patient.notifications.v1';
-const HAS_NEW_KEY = 'patient.notifications.hasNew.v1';
+import { getStoredUser } from '../api/authApi';
+
+function getStorageKey() {
+  const user = getStoredUser();
+  return user && user._id ? `patient.notifications.v1.${user._id}` : 'patient.notifications.v1';
+}
+
+function getHasNewKey() {
+  const user = getStoredUser();
+  return user && user._id ? `patient.notifications.hasNew.v1.${user._id}` : 'patient.notifications.hasNew.v1';
+}
 export const PATIENT_NOTIFICATIONS_UPDATED_EVENT = 'patient-notifications-updated';
 
 function emitNotificationsUpdated() {
@@ -10,7 +19,7 @@ function emitNotificationsUpdated() {
 function readNotifications() {
   if (typeof window === 'undefined') return [];
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(getStorageKey());
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? parsed : [];
   } catch {
@@ -20,13 +29,13 @@ function readNotifications() {
 
 function writeNotifications(items) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  window.localStorage.setItem(getStorageKey(), JSON.stringify(items));
   emitNotificationsUpdated();
 }
 
 function setHasNewNotificationFlag(value) {
   if (typeof window === 'undefined') return;
-  window.localStorage.setItem(HAS_NEW_KEY, value ? '1' : '0');
+  window.localStorage.setItem(getHasNewKey(), value ? '1' : '0');
   emitNotificationsUpdated();
 }
 
@@ -36,7 +45,7 @@ export function getPatientNotifications() {
 
 export function hasNewPatientNotification() {
   if (typeof window === 'undefined') return false;
-  return window.localStorage.getItem(HAS_NEW_KEY) === '1';
+  return window.localStorage.getItem(getHasNewKey()) === '1';
 }
 
 export function clearNewPatientNotificationFlag() {

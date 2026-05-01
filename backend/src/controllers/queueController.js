@@ -12,7 +12,7 @@ function todayBounds() {
   return { todayStart, tomorrow };
 }
 
-const ESTIMATED_WAIT_PER_PATIENT = 5;
+const ESTIMATED_WAIT_PER_PATIENT = 15;
 const CHECKIN_WINDOW_MINUTES = 30;
 const CHECKIN_WINDOW_MS = CHECKIN_WINDOW_MINUTES * 60 * 1000;
 
@@ -176,7 +176,7 @@ export async function getMyQueueStatusToday(req, res) {
       status: { $in: ['waiting', 'called'] },
     })
       .sort({ checkinTime: 1 })
-      .select('tokenNumber status appointmentId checkinTime')
+      .select('tokenNumber status appointmentId checkinTime calledAt')
       .lean();
 
     const called = waitingTokens.find((t) => t.status === 'called');
@@ -188,8 +188,19 @@ export async function getMyQueueStatusToday(req, res) {
       position = idx >= 0 ? idx + 1 : null;
     }
 
-    const estimatedWaitMinutes =
-      position && position > 1 ? (position - 1) * ESTIMATED_WAIT_PER_PATIENT : 0;
+    let lateDelay = 0;
+    if (called && called.calledAt) {
+      const elapsed = Date.now() - new Date(called.calledAt).getTime();
+      const baseMs = ESTIMATED_WAIT_PER_PATIENT * 60 * 1000;
+      if (elapsed > baseMs) {
+        lateDelay = Math.floor((elapsed - baseMs) / 60000);
+      }
+    }
+
+    let estimatedWaitMinutes = 0;
+    if (position && position > 1) {
+      estimatedWaitMinutes = (position - 1) * ESTIMATED_WAIT_PER_PATIENT + lateDelay;
+    }
 
     res.json({
       success: true,
@@ -236,7 +247,7 @@ export async function callNextPatient(req, res) {
         status: 'waiting',
         checkinTime: { $gte: todayStart, $lt: tomorrow },
       },
-      { status: 'called' },
+      { status: 'called', calledAt: new Date() },
       { sort: { checkinTime: 1 }, new: true }
     );
 
@@ -250,6 +261,15 @@ export async function callNextPatient(req, res) {
         currentlyServing: next ? next.tokenNumber : '',
         totalWaiting,
       });
+      if (next) {
+        io.to(`queue:${String(doctorId)}`).emit('patient:notification', {
+          doctorId: String(doctorId),
+          type: 'queue',
+          title: 'Queue Moving',
+          message: `Current token being served is ${next.tokenNumber}.`,
+          activity: 'next'
+        });
+      }
     }
 
     res.json({ success: true, token: next || null, totalWaiting });
@@ -265,7 +285,9 @@ export async function skipCurrentPatient(req, res) {
     if (!ensureValidDoctorId(req, res, doctorId)) return;
     const { todayStart, tomorrow } = todayBounds();
 
-    const current = await QueueToken.findOne({ doctorId, status: 'called', checkinTime: { $gte: todayStart, $lt: tomorrow } }).sort({ checkinTime: 1 });
+    const current = await QueueToken.findOne({ doctorId, status: 'called', checkinTime: { $gte: todayStart, $lt: tomorrow } })
+      .populate('appointmentId')
+      .sort({ checkinTime: 1 });
     if (!current) return res.status(404).json({ success: false, message: 'No currently called patient' });
 
     current.status = 'absent';
@@ -278,7 +300,7 @@ export async function skipCurrentPatient(req, res) {
         status: 'waiting',
         checkinTime: { $gte: todayStart, $lt: tomorrow },
       },
-      { status: 'called' },
+      { status: 'called', calledAt: new Date() },
       { sort: { checkinTime: 1 }, new: true }
     );
 
@@ -286,6 +308,22 @@ export async function skipCurrentPatient(req, res) {
 
     const io = req.app.get('io');
     if (io) {
+      if (current.appointmentId && current.appointmentId.patientId) {
+        io.to(`patient:${String(current.appointmentId.patientId)}`).emit('patient:notification', {
+          doctorId: String(doctorId),
+          type: 'queue',
+          title: 'You have been skipped',
+          message: 'you are skipped , schedule a new appointment or Talked with the OPD',
+          activity: 'skipped'
+        });
+      }
+      io.to(`queue:${String(doctorId)}`).emit('patient:notification', {
+        doctorId: String(doctorId),
+        type: 'queue',
+        title: 'Patient Skipped',
+        message: 'A patient has been skipped and the queue has moved forward.',
+        activity: 'skipped_others'
+      });
       io.to(`queue:${String(doctorId)}`).emit('queue:update', {
         doctorId: String(doctorId),
         action: 'skip',

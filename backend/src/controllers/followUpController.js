@@ -204,9 +204,10 @@ export async function patientCancelFollowUp(req, res) {
     const nic = req.user.nic || req.user.NIC || '';
     const owns = (existing.patientId && String(existing.patientId) === patientId) || (existing.patientNIC && existing.patientNIC === nic);
     if (!owns) return res.status(403).json({ success: false, message: 'Forbidden' });
-
-    const updated = await FollowUp.findByIdAndUpdate(id, { status: 'cancelled' }, { new: true }).lean();
-    res.json({ success: true, followUp: updated });
+    // Delete the follow-up record so it is removed from both patient and staff views
+    const deleted = await FollowUp.findByIdAndDelete(id).lean();
+    if (!deleted) return res.status(404).json({ success: false, message: 'Follow-up not found' });
+    res.json({ success: true, followUp: deleted });
   } catch (e) {
     console.error(e);
     res.status(500).json({ success: false, message: e.message || 'Failed to cancel follow-up' });
@@ -223,9 +224,9 @@ export async function patientRescheduleFollowUp(req, res) {
     const existing = await FollowUp.findById(id).lean();
     if (!existing) return res.status(404).json({ success: false, message: 'Follow-up not found' });
 
-    const patientId = String(req.user._1d || req.user._id);
+    const patientId = String(req.user._id);
     const nic = req.user.nic || req.user.NIC || '';
-    const owns = (existing.patientId && String(existing.patientId) === String(req.user._id)) || (existing.patientNIC && existing.patientNIC === nic);
+    const owns = (existing.patientId && String(existing.patientId) === patientId) || (existing.patientNIC && existing.patientNIC === nic);
     if (!owns) return res.status(403).json({ success: false, message: 'Forbidden' });
 
     const rec = new Date(recommendedDate);

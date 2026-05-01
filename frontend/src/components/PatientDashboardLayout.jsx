@@ -26,6 +26,8 @@ import NotificationsPage from '../Pages/NotificationsPage';
 import ReportsPage from '../Pages/ReportsPage';
 import { fetchMyAppointments } from '../api/appointmentsApi';
 import { fetchMyQueueStatusToday } from '../api/queueApi';
+import { useSocket } from '../hooks/useSocket';
+import { hasNewPatientNotification, addIncomingPatientNotification, PATIENT_NOTIFICATIONS_UPDATED_EVENT } from '../utils/patientNotifications';
 
 function getStatusColor(status) {
   switch (status) {
@@ -114,6 +116,24 @@ export default function PatientDashboardLayout() {
     return () => clearInterval(timerId);
   }, []);
 
+  const [todayDoctorId, setTodayDoctorId] = useState('');
+  const [hasUnread, setHasUnread] = useState(false);
+
+  useEffect(() => {
+    setHasUnread(hasNewPatientNotification());
+    const handleUpdate = () => setHasUnread(hasNewPatientNotification());
+    window.addEventListener(PATIENT_NOTIFICATIONS_UPDATED_EVENT, handleUpdate);
+    return () => window.removeEventListener(PATIENT_NOTIFICATIONS_UPDATED_EVENT, handleUpdate);
+  }, []);
+
+  useSocket(todayDoctorId, null, null, null, user?._id, (notification) => {
+    // Filter out notifications from other doctors' queues
+    if (notification.doctorId && String(notification.doctorId) !== String(todayDoctorId)) {
+      return;
+    }
+    addIncomingPatientNotification(notification);
+  });
+
   const [queueStatus, setQueueStatus] = useState({
     isInQueue: false,
     queueNumber: null,
@@ -167,13 +187,15 @@ export default function PatientDashboardLayout() {
         setAppointments({ upcoming, past });
 
         const todayAppt = all.find((a) => new Date(a.appointmentDate).toDateString() === todayKey);
-        const todayDoctorId = todayAppt?.doctorId?._id || todayAppt?.doctorId || '';
+        const todayDoctorIdLocal = todayAppt?.doctorId?._id || todayAppt?.doctorId || '';
         const todayDoctorName =
           todayAppt?.doctorId?.doctorName || todayAppt?.doctorId?.fullName || '';
 
-        if (todayDoctorId) {
+        setTodayDoctorId(todayDoctorIdLocal);
+
+        if (todayDoctorIdLocal) {
           try {
-            const q = await fetchMyQueueStatusToday(todayDoctorId);
+            const q = await fetchMyQueueStatusToday(todayDoctorIdLocal);
             if (!mounted) return;
             setQueueStatus({
               isInQueue: Boolean(q?.tokenNumber),
@@ -208,8 +230,8 @@ export default function PatientDashboardLayout() {
       }
     };
 
-    // load only for dashboard view; other routes render their own pages
-    if (location.pathname === '/dashboard') load();
+    // load for all views so that todayDoctorId and socket connection are available globally
+    load();
     return () => {
       mounted = false;
     };
@@ -508,6 +530,9 @@ export default function PatientDashboardLayout() {
               aria-label="Notifications"
             >
               <Bell size={20} className="text-white" />
+              {hasUnread && (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 border border-white" />
+              )}
             </button>
             <div className="hidden sm:flex items-center gap-3">
               <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-white bg-white/30 flex items-center justify-center">

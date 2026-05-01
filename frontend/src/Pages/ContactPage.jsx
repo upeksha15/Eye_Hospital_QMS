@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Eye, Bell, MapPin, Phone, Mail, Clock, ClipboardList, ChevronDown, User } from 'lucide-react';
+import { Eye, MapPin, Phone, Mail, Clock, ClipboardList, ChevronDown, User } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { submitFeedback } from '../api/feedbackApi';
 
@@ -64,31 +64,58 @@ const ContactPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 via-sky-50 to-indigo-50 font-sans text-slate-800 w-full">
+    <div className="min-h-screen flex flex-col bg-[#f0f7ff] font-sans text-slate-800 w-full">
       {/* Navbar */}
-      <nav className="flex items-center justify-between px-12 py-4 bg-white shadow-sm sticky top-0 z-50 w-full">
+      <nav className="flex items-center justify-between px-12 py-4 bg-[#041a3f]/90 backdrop-blur-xl border-b border-cyan-100/10 sticky top-0 z-50 w-full shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => navigate('/')}
             className="flex items-center gap-2 focus:outline-none"
           >
-            <div className="p-1.5 bg-blue-600 rounded-full">
-              <Eye className="text-white w-6 h-6" />
+            <div className="p-1.5 border border-cyan-200/40 bg-cyan-400/10 shadow-[0_0_15px_rgba(46,174,255,0.3)] rounded-full">
+              <Eye className="text-cyan-200 w-6 h-6" />
             </div>
-            <span className="text-2xl font-bold text-[#004a99]">Sri Lanka National Eye Hospital Colombo</span>
+            <span className="text-2xl font-bold text-cyan-50 tracking-wide">Sri Lanka National Eye Hospital Colombo</span>
           </button>
+            <div className="flex items-center gap-3">
+  <div className="flex items-center gap-3">
+  <img
+    src="https://flagcdn.com/w40/lk.png"
+    alt="Sri Lanka Flag"
+    style={{
+      animation: "wave 2s infinite ease-in-out",
+      transformOrigin: "left center"
+    }}
+    className="w-14 h-7"
+  />
+  
+</div>
+
+<style>
+{`
+@keyframes wave {
+  0% { transform: rotate(0deg); }
+  50% { transform: rotate(4deg); }
+  100% { transform: rotate(0deg); }
+}
+`}
+</style>
+
+  </div>
         </div>
-        <div className="flex items-center gap-8 font-semibold text-[#004a99]">
-          <Link to="/" className="hover:text-blue-700">Home</Link>
-          <Link to="/services" className="hover:text-blue-700">Services</Link>
-          <Link to="/about" className="hover:text-blue-700">About Us</Link>
-          <span className="border-b-2 border-blue-600">Contact</span>
-          <Bell className="w-6 h-6 text-slate-600" />
-          {!isLoggedIn ? (
+        <div className="flex items-center gap-8 font-semibold text-cyan-100/90">
+          <Link to="/" className="hover:text-cyan-50 transition-colors">Home</Link>
+          <Link to="/services" className="hover:text-cyan-50 transition-colors">Services</Link>
+          <Link to="/about" className="hover:text-cyan-50 transition-colors">About Us</Link>
+          <Link to="/contact" className="border-b-2 border-cyan-400 text-cyan-50">Contact</Link>
+
+          {/* Right side: Login button (guest) or patient profile (logged-in) */}
+          {!isPatientLoggedIn ? (
             <Link to="/login">
-              <button className="bg-[#2d9d78] text-white px-6 py-2 rounded-lg font-bold hover:bg-[#248263] transition">
-                Login
+              <button className="relative group overflow-hidden bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-500 text-white px-6 py-2 rounded-full font-bold shadow-[0_0_20px_rgba(56,189,248,0.55)] transition-all hover:scale-105 border border-cyan-200/80">
+                <span className="absolute inset-0 bg-white/20 opacity-0 transition-opacity group-hover:opacity-100" />
+                <span className="relative z-10">Login</span>
               </button>
             </Link>
           ) : (
@@ -96,10 +123,10 @@ const ContactPage = () => {
               <button
                 type="button"
                 onClick={() => setProfileMenuOpen((o) => !o)}
-                className="flex items-center gap-3 px-3 py-2 rounded-lg border border-blue-100 bg-blue-50/70 hover:bg-blue-100 transition"
+                className="flex items-center gap-3 px-3 py-2 rounded-xl border border-cyan-100/20 bg-white/5 hover:bg-white/10 transition backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.2)]"
               >
-                <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-[#2d9d78] bg-[#e0f7f0] flex items-center justify-center">
-                  {activeUser?.profileImage && !avatarError ? (
+                <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-cyan-300/50 bg-cyan-900/40 flex items-center justify-center">
+                  {patient?.profileImage && !avatarError ? (
                     <img
                       src={activeUser.profileImage}
                       alt="Profile"
@@ -107,25 +134,25 @@ const ContactPage = () => {
                       onError={() => setAvatarError(true)}
                     />
                   ) : (
-                    <User className="w-5 h-5 text-[#2d9d78]" />
+                    <User className="w-5 h-5 text-cyan-200" />
                   )}
                 </div>
                 <div className="text-left">
-                  <p className="text-sm font-semibold text-[#004a99] leading-tight">
-                    {activeUser?.fullName || 'User'}
+                  <p className="text-sm font-semibold text-cyan-50 leading-tight">
+                    {patient?.fullName || 'Patient'}
                   </p>
-                  <p className="text-xs text-slate-500 leading-tight">
-                    {activeUser?.email || activeUser?.nic || userType}
+                  <p className="text-xs text-cyan-100/70 leading-tight">
+                    {patient?.email || patient?.nic || ''}
                   </p>
                 </div>
-                <ChevronDown className="w-4 h-4 text-slate-500" />
+                <ChevronDown className="w-4 h-4 text-cyan-100/70" />
               </button>
 
               {profileMenuOpen && (
-                <div className="absolute right-0 mt-2 w-44 rounded-lg bg-white shadow-lg border border-slate-100 py-1 text-sm text-slate-700">
+                <div className="absolute right-0 mt-2 w-44 rounded-xl bg-[#07214c] shadow-[0_18px_60px_rgba(0,0,0,0.5)] border border-cyan-100/20 py-2 text-sm text-cyan-50 backdrop-blur-xl">
                   <button
                     type="button"
-                    className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center gap-2"
+                    className="w-full text-left px-4 py-2 hover:bg-white/10 flex items-center gap-2 transition-colors"
                     onClick={() => {
                       setProfileMenuOpen(false);
                       if (userType === 'staff') {
@@ -135,19 +162,19 @@ const ContactPage = () => {
                       }
                     }}
                   >
-                    <ClipboardList className="w-4 h-4 text-slate-500" />
+                    <ClipboardList className="w-4 h-4 text-cyan-200" />
                     Dashboard
                   </button>
                   <button
                     type="button"
-                    className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center gap-2 border-t border-slate-100"
+                    className="w-full text-left px-4 py-2 hover:bg-white/10 flex items-center gap-2 border-t border-cyan-100/10 mt-1 pt-2 transition-colors"
                     onClick={() => {
                       setProfileMenuOpen(false);
                       logout();
                       navigate('/');
                     }}
                   >
-                    <User className="w-4 h-4 text-slate-500" />
+                    <User className="w-4 h-4 text-cyan-200" />
                     Logout
                   </button>
                 </div>
@@ -301,6 +328,42 @@ const ContactPage = () => {
           </div>
         </div>
       </section>
+
+      {/* --- FOOTER --- */}
+      <footer className="bg-[#021028] border-t border-cyan-100/10 text-cyan-50 pt-10 pb-6 w-full relative z-10 mt-auto">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 px-6">
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-1.5 border border-cyan-200/40 bg-cyan-400/10 shadow-[0_0_10px_rgba(46,174,255,0.3)] rounded-full inline-flex">
+                <Eye className="text-cyan-200 w-5 h-5" />
+              </div>
+              <h3 className="font-bold text-lg text-cyan-50">About Eye Hospital</h3>
+            </div>
+            <p className="text-sm text-cyan-100/70 leading-relaxed">
+              We provide specialized eye care services with a dedicated team of doctors and staff. 
+              Our Queue Management System helps you save time and manage your visit easily.
+            </p>
+          </div>
+          <div>
+            <h3 className="font-bold text-lg mb-4 text-cyan-50">Quick Links</h3>
+            <ul className="space-y-2 text-sm text-cyan-100/70">
+              <li><Link to="/" className="hover:text-cyan-300 transition-colors">Home</Link></li>
+              <li><Link to="/services" className="hover:text-cyan-300 transition-colors">Services</Link></li>
+              <li><Link to="/about" className="hover:text-cyan-300 transition-colors">About Us</Link></li>
+              <li><Link to="/contact" className="hover:text-cyan-300 transition-colors">Contact</Link></li>
+            </ul>
+          </div>
+          <div>
+            <h3 className="font-bold text-lg mb-4 text-cyan-50">Contact Us</h3>
+            <p className="text-sm text-cyan-100/70 mb-2 flex items-center gap-2"><MapPin className="w-4 h-4 text-cyan-400"/> 123 Eye Care Street, Colombo, Sri Lanka</p>
+            <p className="text-sm text-cyan-100/70 mb-2 flex items-center gap-2"><Phone className="w-4 h-4 text-cyan-400"/> +94 11 123 4567</p>
+            <p className="text-sm text-cyan-100/70 flex items-center gap-2"><Mail className="w-4 h-4 text-cyan-400"/> info@eyehospital.lk</p>
+          </div>
+        </div>
+        <div className="text-center text-cyan-100/50 mt-12 text-sm border-t border-cyan-100/10 pt-6">
+          &copy; {new Date().getFullYear()} Eye Hospital. All rights reserved.
+        </div>
+      </footer>
     </div>
   );
 };

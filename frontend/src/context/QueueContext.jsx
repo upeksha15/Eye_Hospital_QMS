@@ -134,10 +134,12 @@ export const QueueProvider = ({ children }) => {
         const skipped = res.data.skipped;
         if (skipped) {
           try {
+            const entryDoctor = doctorId || (skipped.doctorId && (skipped.doctorId._id || skipped.doctorId)) || null;
             const entry = {
               id: String(skipped._id || skipped.id),
               token: skipped.tokenNumber || skipped.token || '',
               skippedAt: Date.now(),
+              doctorId: entryDoctor,
             };
             setRecallQueue((prev) => [entry, ...prev]);
           } catch (e) {

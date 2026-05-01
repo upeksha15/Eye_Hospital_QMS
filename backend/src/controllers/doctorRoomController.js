@@ -126,6 +126,13 @@ export const getSpecializations = async (req, res) => {
         checkinClosesAt: new Date(enabledAt.getTime() + CHECKIN_WINDOW_MS).toISOString(),
         checkinWindowMinutes: CHECKIN_WINDOW_MINUTES,
       });
+      io?.to(`queue:${String(updated._id)}`).emit('patient:notification', {
+        doctorId: String(updated._id),
+        type: 'queue',
+        title: 'Queue Started',
+        message: 'The queue has started.',
+        activity: 'enabled'
+      });
     } catch (e) {
       // ignore socket emit errors
     }
@@ -143,6 +150,13 @@ export const getSpecializations = async (req, res) => {
     try {
       const io = req.app.get('io');
       io?.to(`queue:${String(updated._id)}`).emit('queue:status', { doctorId: String(updated._id), status: 'Disabled' });
+      io?.to(`queue:${String(updated._id)}`).emit('patient:notification', {
+        doctorId: String(updated._id),
+        type: 'queue',
+        title: 'Queue Stopped',
+        message: 'The queue is temporarily paused.',
+        activity: 'stopped'
+      });
     } catch (e) {
       // ignore socket emit errors
     }
@@ -183,6 +197,13 @@ export const getSpecializations = async (req, res) => {
           activity: 'paused',
         });
       }
+      io?.to(`queue:${String(updated._id)}`).emit('patient:notification', {
+        doctorId: String(updated._id),
+        type: 'queue',
+        title: 'Queue Paused',
+        message: 'The queue is temporarily paused.',
+        activity: 'paused'
+      });
     } catch (e) {
       // ignore socket emit errors
     }
@@ -200,6 +221,13 @@ export const getSpecializations = async (req, res) => {
     try {
       const io = req.app.get('io');
       io?.to(`queue:${String(updated._id)}`).emit('queue:status', { doctorId: String(updated._id), status: 'Enabled' });
+      io?.to(`queue:${String(updated._id)}`).emit('patient:notification', {
+        doctorId: String(updated._id),
+        type: 'queue',
+        title: 'Queue Resumed',
+        message: 'The queue has started again.',
+        activity: 'resumed'
+      });
     } catch (e) {
       // ignore socket emit errors
     }

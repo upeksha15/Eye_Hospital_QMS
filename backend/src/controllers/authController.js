@@ -312,7 +312,7 @@ export async function syncStaff(req, res) {
     const profile = await StaffProfile.findOneAndUpdate(
       { staff: staff._id },
       { $set: profileUpdate },
-      { new: true, upsert: true, setDefaultsOnInsert: true }
+      { new: true, upsert: true, setDefaultsOnInsert: true, runValidators: true, context: 'query' }
     );
 
     const merged = mergeStaff(staff, profile);

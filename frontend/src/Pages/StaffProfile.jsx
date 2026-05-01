@@ -31,6 +31,8 @@ const Profile = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [pwErrors, setPwErrors] = useState({ current: '', new: '', confirm: '', general: '' });
   const [profileErrors, setProfileErrors] = useState({ phone: '' });
+  // add fullName and staffId validation errors
+  // profileErrors: { phone, fullName, staffId }
 
   useEffect(() => {
     if (!user) return;
@@ -83,6 +85,14 @@ const Profile = () => {
       const ok = val === '' || /^(?:\+94|0)?\d{9}$/.test(val);
       setProfileErrors((prev) => ({ ...prev, phone: ok ? '' : 'Enter a valid phone number (e.g. 0771234567 or +94771234567)' }));
     }
+    if (field === 'fullName') {
+      const ok = val === '' || String(val).trim().length >= 2;
+      setProfileErrors((prev) => ({ ...prev, fullName: ok ? '' : 'Full name must be at least 2 characters' }));
+    }
+    if (field === 'staffId') {
+      const ok = val === '' || /^[A-Za-z0-9\-_.]{2,30}$/.test(val);
+      setProfileErrors((prev) => ({ ...prev, staffId: ok ? '' : 'Staff ID may contain letters, numbers, -_. and be 2-30 chars' }));
+    }
   };
 
   const handlePhotoChange = (e) => {
@@ -133,7 +143,7 @@ const Profile = () => {
           logout();
         } catch (e) {}
         alert('Password updated — you have been logged out. Please log in again.');
-        navigate('/');
+        navigate('/login', { replace: true });
       } else {
         // try to map server-side field errors to inline fields
         const msg = res?.message || res?.error || 'Failed to change password';
@@ -170,7 +180,7 @@ const Profile = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     // final profile validation
-    if (profileErrors.phone) {
+    if (profileErrors.phone || profileErrors.fullName || profileErrors.staffId) {
       alert('Please fix validation errors before saving');
       return;
     }
@@ -200,7 +210,20 @@ const Profile = () => {
       setSaved(true);
     } catch (err) {
       console.error('Failed to update staff profile', err);
-      alert(err?.response?.data?.message || 'Failed to save profile');
+      const data = err?.response?.data || {};
+      const msg = data?.message || 'Failed to save profile';
+      const errors = data?.errors || data?.validationErrors || null;
+      if (errors && typeof errors === 'object') {
+        setProfileErrors((prev) => ({
+          ...prev,
+          fullName: errors.fullName || errors.name || prev.fullName || '',
+          staffId: errors.staffId || prev.staffId || '',
+          phone: errors.contactNumber || errors.phone || prev.phone || '',
+        }));
+        alert(msg);
+      } else {
+        alert(msg);
+      }
     }
   };
 
@@ -348,9 +371,25 @@ const Profile = () => {
 
                 <div>
                   <h3 className="text-lg font-semibold mb-3">Change Password</h3>
-                  <form onSubmit={handlePasswordSubmit} className="grid gap-3 max-w-xl relative">
+                  <form onSubmit={handlePasswordSubmit} className="grid gap-3 max-w-xl relative" autoComplete="off">
+                    {/* Hidden dummy fields to reduce browser password-manager prompts */}
+                    <input
+                      type="text"
+                      name="fake-username"
+                      autoComplete="username"
+                      tabIndex={-1}
+                      style={{position: 'absolute', left: '-9999px', width: '1px', height: '1px', opacity: 0}}
+                    />
+                    <input
+                      type="password"
+                      name="fake-password"
+                      autoComplete="current-password"
+                      tabIndex={-1}
+                      style={{position: 'absolute', left: '-9999px', width: '1px', height: '1px', opacity: 0}}
+                    />
+
                     <div className="relative">
-                      <input type={showPassword ? 'text' : 'password'} placeholder="Current password" value={formData.currentPassword} onChange={handleChange('currentPassword')} className="w-full px-4 py-3 border rounded-xl bg-slate-50 pr-10" />
+                      <input name="current-password" autoComplete="current-password" type={showPassword ? 'text' : 'password'} placeholder="Current password" value={formData.currentPassword} onChange={handleChange('currentPassword')} className="w-full px-4 py-3 border rounded-xl bg-slate-50 pr-10" />
                       <button type="button" onClick={() => setShowPassword((s) => !s)} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500">
                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                       </button>
@@ -358,18 +397,18 @@ const Profile = () => {
                     </div>
 
                     <div className="relative">
-                      <input type={showPassword ? 'text' : 'password'} placeholder="New password" value={formData.newPassword} onChange={handleChange('newPassword')} className="w-full px-4 py-3 border rounded-xl bg-slate-50 pr-10" />
-                      <div className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500">
+                      <input name="new-password" autoComplete="new-password" type={showPassword ? 'text' : 'password'} placeholder="New password" value={formData.newPassword} onChange={handleChange('newPassword')} className="w-full px-4 py-3 border rounded-xl bg-slate-50 pr-10" />
+                      <button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword((s) => !s)} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500">
                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                      </div>
+                      </button>
                       {pwErrors.new && <div className="text-sm text-red-600 mt-1">{pwErrors.new}</div>}
                     </div>
 
                     <div className="relative">
-                      <input type={showPassword ? 'text' : 'password'} placeholder="Confirm new password" value={formData.confirmPassword} onChange={handleChange('confirmPassword')} className="w-full px-4 py-3 border rounded-xl bg-slate-50 pr-10" />
-                      <div className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500">
+                      <input name="new-password-confirm" autoComplete="new-password" type={showPassword ? 'text' : 'password'} placeholder="Confirm new password" value={formData.confirmPassword} onChange={handleChange('confirmPassword')} className="w-full px-4 py-3 border rounded-xl bg-slate-50 pr-10" />
+                      <button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword((s) => !s)} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500">
                         {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                      </div>
+                      </button>
                       {pwErrors.confirm && <div className="text-sm text-red-600 mt-1">{pwErrors.confirm}</div>}
                     </div>
 
