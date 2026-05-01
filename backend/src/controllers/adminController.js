@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import Doctor from '../models/Doctor.js';
 import DoctorRoom from '../models/DoctorRoom.js';
 import Patient from '../models/Patient.js';
+import User from '../models/User.js';
 import StaffAccount from '../models/StaffAccount.js';
 import Appointment from '../models/Appointment.js';
 import QueueToken from '../models/QueueToken.js';
@@ -13,10 +14,12 @@ import Announcement from '../models/Announcement.js';
 import SystemSettings from '../models/SystemSettings.js';
 import { startOfDayColombo } from '../utils/dateUtils.js';
 import { createAuditLog } from '../utils/auditLogHelper.js';
+import { deletePatientCascade } from '../utils/patientDeletion.js';
 
 const TZ = 'Asia/Colombo';
 const VALID_WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
+// Admin dashboard helpers (Colombo time).
 function hourColombo(d) {
   return parseInt(
     new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: 'numeric', hour12: false }).format(
@@ -32,6 +35,7 @@ function todayRange() {
   return { start, end };
 }
 
+// Admin dashboard stat cards.
 export async function getDashboardStats(req, res) {
   try {
     const { start, end } = todayRange();
@@ -106,6 +110,7 @@ export async function getDashboardStats(req, res) {
   }
 }
 
+// Admin dashboard chart series.
 export async function getChartSeries(req, res) {
   try {
     const { start, end } = todayRange();
@@ -116,7 +121,7 @@ export async function getChartSeries(req, res) {
       Patient.find({ createdAt: { $gte: start, $lt: end } }).select('createdAt').lean(),
     ]);
 
-    const hours = [8, 9, 10, 11, 12, 13, 14];
+    const hours = Array.from({ length: 10 }, (_, i) => 7 + i); // 07:00 - 16:00
     const zero = () => Object.fromEntries(hours.map((h) => [h, 0]));
 
     const registrations = zero();
@@ -150,6 +155,7 @@ export async function getChartSeries(req, res) {
   }
 }
 
+// Admin dashboard recent activity feed.
 export async function getRecentActivity(req, res) {
   try {
     const items = await AuditLog.find()
@@ -194,6 +200,7 @@ export async function getRecentActivity(req, res) {
   }
 }
 
+// Admin dashboard doctor summary tiles.
 export async function getDoctorsSummary(req, res) {
   try {
     const doctors = await Doctor.find().sort({ fullName: 1 }).lean();
@@ -223,6 +230,7 @@ export async function getDoctorsSummary(req, res) {
   }
 }
 
+// Admin notification badge count.
 export async function getNotifications(req, res) {
   try {
     const since = new Date(Date.now() - 48 * 60 * 60 * 1000);
@@ -234,6 +242,7 @@ export async function getNotifications(req, res) {
   }
 }
 
+// Admin system health overview.
 export async function getSystemHealth(req, res) {
   try {
     const uptimeSec = process.uptime();
@@ -258,8 +267,10 @@ export async function getSystemHealth(req, res) {
   }
 }
 
+// Admin audit log feed (audit + notices).
 export async function listAuditLogs(req, res) {
   try {
+    // Validation: clamp pagination inputs and normalize category filter.
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
     const limit = Math.min(100, Math.max(10, parseInt(req.query.limit, 10) || 25));
     const skip = (page - 1) * limit;
@@ -315,6 +326,7 @@ export async function listAuditLogs(req, res) {
   }
 }
 
+// Admin patient directory.
 export async function listPatients(req, res) {
   try {
     const users = await Patient.find()
@@ -328,6 +340,51 @@ export async function listPatients(req, res) {
   }
 }
 
+// Admin-only patient deletion (cascades related records).
+export async function deletePatient(req, res) {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    // Validation: ensure target patient exists before deletion.
+    const patient = await Patient.findById(req.params.id).session(session);
+    if (!patient) {
+      await session.abortTransaction();
+      return res.status(404).json({ success: false, message: 'Patient not found' });
+    }
+
+    const nic = patient.nic?.trim();
+    const email = patient.email?.trim().toLowerCase();
+    const userOr = [];
+    if (nic) userOr.push({ nicNumber: nic });
+    if (email) userOr.push({ email });
+
+    await deletePatientCascade(patient._id, session);
+
+    if (userOr.length > 0) {
+      await User.deleteMany({ $or: userOr }, { session });
+    }
+
+    await createAuditLog({
+      action: 'Patient deleted',
+      category: 'user',
+      description: patient.fullName || String(patient._id),
+      actorId: req.user._id,
+      actorName: req.user.fullName || 'Admin',
+      meta: { patientId: patient._id },
+    });
+
+    await session.commitTransaction();
+    return res.json({ success: true });
+  } catch (e) {
+    await session.abortTransaction();
+    console.error(e);
+    return res.status(500).json({ success: false, message: e.message || 'Failed to delete patient' });
+  } finally {
+    session.endSession();
+  }
+}
+
+// Admin staff account directory.
 export async function listStaffAccounts(req, res) {
   try {
     const staff = await StaffAccount.find()
@@ -341,19 +398,23 @@ export async function listStaffAccounts(req, res) {
   }
 }
 
+// Admin create staff account (admin/medical staff).
 export async function createStaffAccount(req, res) {
   try {
     const { fullName, email, password, role } = req.body;
+    // Validation: required fields.
     if (!fullName?.trim() || !email?.trim() || !password || !role) {
       return res.status(400).json({
         success: false,
         message: 'fullName, email, password, and role are required',
       });
     }
+    // Validation: role whitelist.
     if (!['admin', 'medical_staff'].includes(role)) {
       return res.status(400).json({ success: false, message: 'Invalid role' });
     }
 
+    // Validation: unique staff email.
     const exists = await StaffAccount.findOne({ email: email.trim().toLowerCase() });
     if (exists) {
       return res.status(400).json({ success: false, message: 'Email already used for a staff account' });
@@ -389,13 +450,16 @@ export async function createStaffAccount(req, res) {
   }
 }
 
+// Admin update staff account details and role.
 export async function updateStaffAccount(req, res) {
   try {
     const { fullName, email, password, role, isActive } = req.body;
     const target = await StaffAccount.findById(req.params.id);
+    // Validation: ensure target staff exists.
     if (!target) {
       return res.status(404).json({ success: false, message: 'Not found' });
     }
+    // Validation: prevent self-deactivation.
     if (String(target._id) === String(req.user._id) && isActive === false) {
       return res.status(400).json({ success: false, message: 'You cannot deactivate your own account' });
     }
@@ -404,6 +468,7 @@ export async function updateStaffAccount(req, res) {
     if (fullName !== undefined) updates.fullName = fullName.trim();
     if (email !== undefined) updates.email = email.trim().toLowerCase();
     if (role !== undefined) {
+      // Validation: role whitelist and self-admin lock.
       if (!['admin', 'medical_staff'].includes(role)) {
         return res.status(400).json({ success: false, message: 'Invalid role' });
       }
@@ -434,8 +499,10 @@ export async function updateStaffAccount(req, res) {
   }
 }
 
+// Admin deactivate staff account.
 export async function deleteStaffAccount(req, res) {
   try {
+    // Validation: prevent self-deletion.
     if (String(req.params.id) === String(req.user._id)) {
       return res.status(400).json({ success: false, message: 'You cannot delete your own account' });
     }
@@ -454,6 +521,7 @@ export async function deleteStaffAccount(req, res) {
   }
 }
 
+// Admin create doctor profile for scheduling and booking.
 export async function createDoctor(req, res) {
   try {
     const {
@@ -480,6 +548,7 @@ export async function createDoctor(req, res) {
         )
       : [];
 
+    // Validation: name, speciality, and weekday availability required.
     if (!nameWithoutPrefix || !normalizedSpeciality || normalizedAvailability.length === 0) {
       return res.status(400).json({
         success: false,
@@ -524,6 +593,7 @@ export async function createDoctor(req, res) {
   }
 }
 
+// Admin doctor directory.
 export async function listDoctorsAdmin(req, res) {
   try {
     const doctors = await Doctor.find().sort({ createdAt: -1 }).lean();
@@ -534,17 +604,20 @@ export async function listDoctorsAdmin(req, res) {
   }
 }
 
+// Admin update doctor profile fields and availability.
 export async function updateDoctor(req, res) {
   try {
     const updates = { ...req.body };
     delete updates._id;
     const existingDoctor = await Doctor.findById(req.params.id).lean();
+    // Validation: ensure target doctor exists.
     if (!existingDoctor) {
       return res.status(404).json({ success: false, message: 'Doctor not found' });
     }
     if (updates.fullName !== undefined) {
       const normalizedName = String(updates.fullName || '').trim();
       const nameWithoutPrefix = normalizedName.replace(/^Dr\.\s*/i, '').trim();
+      // Validation: non-empty doctor name.
       if (!nameWithoutPrefix) {
         return res.status(400).json({ success: false, message: 'Doctor name is required.' });
       }
@@ -552,6 +625,7 @@ export async function updateDoctor(req, res) {
     }
     if (updates.speciality !== undefined) {
       const normalizedSpeciality = String(updates.speciality || '').trim();
+      // Validation: non-empty speciality.
       if (!normalizedSpeciality) {
         return res.status(400).json({ success: false, message: 'Speciality is required.' });
       }
@@ -568,6 +642,7 @@ export async function updateDoctor(req, res) {
             )
           )
         : [];
+        // Validation: availability must include at least one valid weekday.
       if (normalizedAvailability.length === 0) {
         return res.status(400).json({ success: false, message: 'Select at least one valid availability day.' });
       }
@@ -606,6 +681,7 @@ export async function updateDoctor(req, res) {
   }
 }
 
+// Admin remove doctor profile.
 export async function deleteDoctor(req, res) {
   try {
     const doc = await Doctor.findByIdAndDelete(req.params.id);
@@ -628,6 +704,7 @@ export async function deleteDoctor(req, res) {
   }
 }
 
+// Admin doctor room directory.
 export async function listDoctorRoomsAdmin(req, res) {
   try {
     const rows = await DoctorRoom.find().sort({ createdAt: -1 }).lean();
@@ -638,9 +715,11 @@ export async function listDoctorRoomsAdmin(req, res) {
   }
 }
 
+// Admin create doctor room mapping.
 export async function createDoctorRoomAdmin(req, res) {
   try {
     const { doctorName, room, queueLimit, specialization, availability } = req.body;
+    // Validation: required room mapping fields.
     if (!doctorName || !room || queueLimit == null) {
       return res.status(400).json({ success: false, message: 'doctorName, room and queueLimit are required' });
     }
@@ -670,6 +749,7 @@ export async function createDoctorRoomAdmin(req, res) {
   }
 }
 
+// Admin update doctor room mapping.
 export async function updateDoctorRoomAdmin(req, res) {
   try {
     const { doctorName, room, queueLimit, specialization, availability } = req.body;
@@ -681,6 +761,7 @@ export async function updateDoctorRoomAdmin(req, res) {
     if (availability !== undefined) patch.availability = Array.isArray(availability) ? availability : [];
 
     const row = await DoctorRoom.findByIdAndUpdate(req.params.id, patch, { new: true });
+    // Validation: ensure target room exists.
     if (!row) {
       return res.status(404).json({ success: false, message: 'Not found' });
     }
@@ -700,9 +781,11 @@ export async function updateDoctorRoomAdmin(req, res) {
   }
 }
 
+// Admin delete doctor room mapping.
 export async function deleteDoctorRoomAdmin(req, res) {
   try {
     const row = await DoctorRoom.findByIdAndDelete(req.params.id);
+    // Validation: ensure target room exists.
     if (!row) {
       return res.status(404).json({ success: false, message: 'Not found' });
     }
@@ -713,6 +796,7 @@ export async function deleteDoctorRoomAdmin(req, res) {
   }
 }
 
+// Admin schedules overview for upcoming slots.
 export async function getSchedulesOverview(req, res) {
   try {
     const doctors = await Doctor.find({ isActive: true }).sort({ fullName: 1 }).lean();
@@ -730,9 +814,11 @@ export async function getSchedulesOverview(req, res) {
   }
 }
 
+// Admin upsert daily slot allocations.
 export async function upsertDailySlot(req, res) {
   try {
     const { doctorId, slotDate, totalSlots, bookedCount } = req.body;
+    // Validation: required slot fields.
     if (!doctorId || !slotDate || totalSlots == null) {
       return res.status(400).json({ success: false, message: 'doctorId, slotDate, totalSlots required' });
     }
@@ -758,6 +844,7 @@ export async function upsertDailySlot(req, res) {
   }
 }
 
+// Admin announcement list.
 export async function listAnnouncementsAdmin(req, res) {
   try {
     const items = await Announcement.find().sort({ createdAt: -1 }).lean();
@@ -768,9 +855,11 @@ export async function listAnnouncementsAdmin(req, res) {
   }
 }
 
+// Admin create announcement.
 export async function createAnnouncementAdmin(req, res) {
   try {
     const { message, isActive } = req.body;
+    // Validation: non-empty announcement message.
     if (!message?.trim()) {
       return res.status(400).json({ success: false, message: 'Message required' });
     }
@@ -795,6 +884,7 @@ export async function createAnnouncementAdmin(req, res) {
   }
 }
 
+// Admin update announcement.
 export async function updateAnnouncementAdmin(req, res) {
   try {
     const { message, isActive } = req.body;
@@ -803,6 +893,7 @@ export async function updateAnnouncementAdmin(req, res) {
       { ...(message != null && { message: message.trim() }), ...(isActive != null && { isActive }) },
       { new: true }
     );
+    // Validation: ensure target announcement exists.
     if (!a) {
       return res.status(404).json({ success: false, message: 'Not found' });
     }
@@ -813,6 +904,7 @@ export async function updateAnnouncementAdmin(req, res) {
   }
 }
 
+// Admin delete announcement.
 export async function deleteAnnouncementAdmin(req, res) {
   try {
     await Announcement.findByIdAndDelete(req.params.id);
@@ -823,6 +915,7 @@ export async function deleteAnnouncementAdmin(req, res) {
   }
 }
 
+// Admin system settings read.
 export async function getSettings(req, res) {
   try {
     let doc = await SystemSettings.findOne();
@@ -836,6 +929,7 @@ export async function getSettings(req, res) {
   }
 }
 
+// Admin system settings update.
 export async function updateSettings(req, res) {
   try {
     const allowed = [
@@ -865,6 +959,7 @@ export async function updateSettings(req, res) {
   }
 }
 
+// Admin performance metrics snapshot.
 export async function getPerformanceMetrics(req, res) {
   try {
     const { start, end } = todayRange();
@@ -897,6 +992,7 @@ export async function getPerformanceMetrics(req, res) {
   }
 }
 
+// Admin detail: appointments by doctor for today.
 export async function getTodayAppointmentsDetail(req, res) {
   try {
     const { start, end } = todayRange();
@@ -947,6 +1043,7 @@ export async function getTodayAppointmentsDetail(req, res) {
   }
 }
 
+// Admin detail: active queues by doctor.
 export async function getActiveQueuesDetail(req, res) {
   try {
     const activeQueues = await QueueToken.find({ status: 'waiting' })
@@ -987,6 +1084,7 @@ export async function getActiveQueuesDetail(req, res) {
   }
 }
 
+// Admin detail: wait time analysis by doctor.
 export async function getWaitingTimeDetail(req, res) {
   try {
     const { start, end } = todayRange();

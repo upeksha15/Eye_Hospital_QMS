@@ -21,6 +21,7 @@ import * as adminApi from '../../api/adminApi';
 import TodayAppointmentsDetail from './TodayAppointmentsDetail';
 import ActiveQueuesDetail from './ActiveQueuesDetail';
 
+// Admin dashboard landing page (stats, charts, and health).
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [series, setSeries] = useState([]);
@@ -34,7 +35,8 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+
+    const loadDashboard = async () => {
       try {
         const [s, ch, act, h] = await Promise.all([
           adminApi.getDashboardStats(),
@@ -48,14 +50,21 @@ export default function AdminDashboard() {
         setSeries(ch.series || []);
         setActivity(act.items || []);
         setHealth(h.health);
+        setError(null);
       } catch (e) {
         console.error('Dashboard error:', e);
-        setError(e.message || 'Failed to load dashboard data');
+        if (!cancelled) setError(e.message || 'Failed to load dashboard data');
       } finally {
         if (!cancelled) setLoading(false);
       }
-    })();
-    return () => { cancelled = true; };
+    };
+
+    loadDashboard();
+    const intervalId = setInterval(loadDashboard, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+    };
   }, []);
 
   const handleAppointmentsClick = async () => {

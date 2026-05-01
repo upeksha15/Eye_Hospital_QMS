@@ -67,6 +67,7 @@ app.use('/api/feedback', feedbackRoutes);
 
 // ✅ NEW ROUTE
 app.use('/api/doctor-rooms', doctorRoomRoutes);
+// Admin-only API surface (protected via auth + admin role middleware inside router).
 app.use('/api/admin', adminRoutes);
 // Notices API
 app.use('/api/notices', noticeRoutes);

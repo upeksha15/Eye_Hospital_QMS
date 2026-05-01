@@ -211,6 +211,7 @@ function AppRoutes() {
           </AdminRoute>
         }
       >
+        {/* Admin-only route group */}
         <Route index element={<AdminDashboard />} />
         <Route path="staff-accounts" element={<StaffAccountsPage />} />
         <Route path="doctors" element={<AdminDoctorsPage />} />

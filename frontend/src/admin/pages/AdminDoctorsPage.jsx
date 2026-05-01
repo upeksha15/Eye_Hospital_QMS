@@ -3,6 +3,7 @@ import { Stethoscope, Trash2, UserPlus } from 'lucide-react';
 import AdminHeader from '../AdminHeader';
 import * as adminApi from '../../api/adminApi';
 
+// Admin doctor directory management.
 const SPECIALITIES = [
   'General Ophthalmology',
   'Consultant Ophthalmologist',
@@ -28,10 +29,13 @@ const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Satur
 
 const DOCTOR_PREFIX = 'Dr. ';
 
-function normalizeDoctorName(value) {
-  const raw = String(value || '').trimStart();
+function normalizeDoctorName(value, options = {}) {
+  const { keepTrailingSpace = false } = options;
+  const raw = String(value || '');
   const withoutPrefix = raw.replace(/^dr\.?\s*/i, '');
-  return `${DOCTOR_PREFIX}${withoutPrefix}`.trimEnd();
+  const trimmedStart = withoutPrefix.replace(/^\s+/, '');
+  const normalized = `${DOCTOR_PREFIX}${trimmedStart}`;
+  return keepTrailingSpace ? normalized : normalized.trim();
 }
 
 const emptyForm = {
@@ -52,12 +56,17 @@ export default function AdminDoctorsPage() {
     const nextErrors = {};
     const normalizedName = normalizeDoctorName(form.fullName);
     const nameWithoutPrefix = normalizedName.replace(/^Dr\.\s*/i, '').trim();
+    // Validation: required doctor name and no digits.
     if (!nameWithoutPrefix) {
       nextErrors.fullName = 'Doctor name is required.';
+    } else if (/\d/.test(nameWithoutPrefix)) {
+      nextErrors.fullName = 'Doctor name cannot contain numbers.';
     }
+    // Validation: required speciality.
     if (!form.speciality?.trim()) {
       nextErrors.speciality = 'Speciality is required.';
     }
+    // Validation: require at least one weekday.
     if (!Array.isArray(form.availability) || form.availability.length === 0) {
       nextErrors.availability = 'Select at least one weekday.';
     }
@@ -77,6 +86,7 @@ export default function AdminDoctorsPage() {
   const submit = async (e) => {
     e.preventDefault();
     setMsg('');
+    // Validation: block submit until form rules pass.
     if (!validateForm()) {
       setMsg('All fields should be completed before creating a doctor.');
       return;
@@ -174,7 +184,10 @@ export default function AdminDoctorsPage() {
               className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
               value={form.fullName}
               onChange={(e) => {
-                setForm({ ...form, fullName: normalizeDoctorName(e.target.value) });
+                setForm({
+                  ...form,
+                  fullName: normalizeDoctorName(e.target.value, { keepTrailingSpace: true }),
+                });
                 setFieldErrors((prev) => ({ ...prev, fullName: '' }));
               }}
               onFocus={() => {

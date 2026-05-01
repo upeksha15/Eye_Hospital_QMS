@@ -4,6 +4,7 @@ import * as adminApi from '../../api/adminApi';
 import { Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+// Admin special notices management.
 export default function NoticesPage() {
   const navigate = useNavigate();
   const [items, setItems] = useState([]);
@@ -56,11 +57,13 @@ export default function NoticesPage() {
     const title = draft.title.trim();
     const message = draft.message.trim();
 
+    // Validation: title length must be at least 3 characters.
     if (title.length < 3) {
       setMsg('Title must be at least 3 characters long.');
       return;
     }
 
+    // Validation: message length must be at least 10 characters.
     if (message.length < 10) {
       setMsg('Message must be at least 10 characters long.');
       return;
@@ -89,6 +92,7 @@ export default function NoticesPage() {
   };
 
   const remove = async (id) => {
+    // Validation: confirm destructive action.
     if (!window.confirm('Delete this notice?')) return;
     try {
       await adminApi.deleteSpecialNotice(id);

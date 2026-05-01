@@ -3,6 +3,7 @@ import AdminHeader from '../AdminHeader';
 import * as adminApi from '../../api/adminApi';
 import { CheckCircle2, Trash2, UserPlus } from 'lucide-react';
 
+// Admin staff account creation and deactivation.
 const emptyForm = {
   fullName: '',
   email: '',
@@ -64,6 +65,7 @@ export default function StaffAccountsPage() {
   };
 
   const deactivate = async (id) => {
+    // Validation: confirm destructive action.
     if (!window.confirm('Deactivate this account? They will no longer be able to sign in.')) return;
     setMsg('');
     try {
@@ -79,6 +81,7 @@ export default function StaffAccountsPage() {
   };
 
   const makeAvailable = async (id) => {
+    // Validation: confirm re-activation.
     if (!window.confirm('Make this account available? They will be able to sign in.')) return;
     setMsg('');
     try {
@@ -114,6 +117,7 @@ export default function StaffAccountsPage() {
           </h2>
           <label className="block">
             <span className="text-xs font-semibold text-slate-500">Full name</span>
+            {/* Validation: required staff name. */}
             <input
               required
               className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
@@ -123,6 +127,7 @@ export default function StaffAccountsPage() {
           </label>
           <label className="block">
             <span className="text-xs font-semibold text-slate-500">Work email (login)</span>
+            {/* Validation: required email format. */}
             <input
               type="email"
               required
@@ -135,6 +140,7 @@ export default function StaffAccountsPage() {
             <span className="text-xs font-semibold text-slate-500">
               {editingId ? 'New password (leave blank to keep)' : 'Initial password'}
             </span>
+            {/* Validation: password required for new accounts only. */}
             <input
               type="password"
               required={!editingId}

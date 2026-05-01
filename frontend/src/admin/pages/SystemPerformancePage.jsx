@@ -11,6 +11,7 @@ import {
 import AdminHeader from '../AdminHeader';
 import * as adminApi from '../../api/adminApi';
 
+// Admin system performance dashboard.
 export default function SystemPerformancePage() {
   const [metrics, setMetrics] = useState(null);
   const [series, setSeries] = useState([]);

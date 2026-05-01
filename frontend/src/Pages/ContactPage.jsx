@@ -20,7 +20,8 @@ function isFeedbackValid(text) {
 
 const ContactPage = () => {
   const navigate = useNavigate();
-  const { patient, isAuthenticated, userType, logout } = useAuth();
+  const { patient, staff, user, isAuthenticated, userType, logout } = useAuth();
+  const activeUser = userType === 'patient' ? patient : (staff || user);
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [feedback, setFeedback] = useState('');
@@ -30,7 +31,7 @@ const ContactPage = () => {
   const [avatarError, setAvatarError] = useState(false);
 
   const canSubmitFeedback = isAuthenticated && userType === 'patient';
-  const isPatientLoggedIn = Boolean(canSubmitFeedback && patient);
+  const isLoggedIn = Boolean(isAuthenticated && activeUser);
   const feedbackIsValid = isFeedbackValid(feedback);
 
   const handleSubmit = async (e) => {
@@ -84,7 +85,7 @@ const ContactPage = () => {
           <Link to="/about" className="hover:text-blue-700">About Us</Link>
           <span className="border-b-2 border-blue-600">Contact</span>
           <Bell className="w-6 h-6 text-slate-600" />
-          {!isPatientLoggedIn ? (
+          {!isLoggedIn ? (
             <Link to="/login">
               <button className="bg-[#2d9d78] text-white px-6 py-2 rounded-lg font-bold hover:bg-[#248263] transition">
                 Login
@@ -98,9 +99,9 @@ const ContactPage = () => {
                 className="flex items-center gap-3 px-3 py-2 rounded-lg border border-blue-100 bg-blue-50/70 hover:bg-blue-100 transition"
               >
                 <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-[#2d9d78] bg-[#e0f7f0] flex items-center justify-center">
-                  {patient?.profileImage && !avatarError ? (
+                  {activeUser?.profileImage && !avatarError ? (
                     <img
-                      src={patient.profileImage}
+                      src={activeUser.profileImage}
                       alt="Profile"
                       className="w-full h-full object-cover"
                       onError={() => setAvatarError(true)}
@@ -111,10 +112,10 @@ const ContactPage = () => {
                 </div>
                 <div className="text-left">
                   <p className="text-sm font-semibold text-[#004a99] leading-tight">
-                    {patient?.fullName || 'Patient'}
+                    {activeUser?.fullName || 'User'}
                   </p>
                   <p className="text-xs text-slate-500 leading-tight">
-                    {patient?.email || patient?.nic || ''}
+                    {activeUser?.email || activeUser?.nic || userType}
                   </p>
                 </div>
                 <ChevronDown className="w-4 h-4 text-slate-500" />
@@ -127,7 +128,11 @@ const ContactPage = () => {
                     className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center gap-2"
                     onClick={() => {
                       setProfileMenuOpen(false);
-                      navigate('/dashboard');
+                      if (userType === 'staff') {
+                        navigate(activeUser?.role === 'admin' ? '/admin' : '/staffdashboard');
+                      } else {
+                        navigate('/dashboard');
+                      }
                     }}
                   >
                     <ClipboardList className="w-4 h-4 text-slate-500" />
@@ -270,27 +275,8 @@ const ContactPage = () => {
               {showAuthPrompt && (
                 <div className="mt-3 text-xs bg-yellow-50 border border-yellow-300 rounded-lg p-3 space-y-2 text-slate-700">
                   <p className="font-semibold text-yellow-800">
-                    You can add feedback by logging in. Do you want to log in now?
+                    Only patients can add feedbacks!
                   </p>
-                  <div className="flex gap-3">
-                    <button
-                      type="button"
-                      onClick={() => navigate('/login')}
-                      className="inline-flex items-center justify-center rounded-md bg-[#2d9d78] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[#248263] transition"
-                    >
-                      Yes
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowAuthPrompt(false);
-                        navigate('/');
-                      }}
-                      className="inline-flex items-center justify-center rounded-md border border-slate-300 px-4 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 transition"
-                    >
-                      No
-                    </button>
-                  </div>
                 </div>
               )}
               {submitError && (

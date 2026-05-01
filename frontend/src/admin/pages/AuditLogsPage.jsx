@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import AdminHeader from '../AdminHeader';
 import * as adminApi from '../../api/adminApi';
 
+// Admin audit log viewer.
 const catColor = {
   system: 'bg-slate-100 text-slate-700',
   user: 'bg-sky-100 text-sky-800',

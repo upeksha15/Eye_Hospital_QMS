@@ -19,6 +19,7 @@ export async function createFeedback(req, res) {
 
     const feedback = await Feedback.create({
       patientId: req.user._id,
+      patientName: req.user.fullName || '',
       message: String(message).trim(),
       rating: numRating,
     });
@@ -46,7 +47,7 @@ export async function listFeedback(req, res) {
       message: f.message,
       rating: f.rating,
       createdAt: f.createdAt,
-      patientName: f.patientId?.fullName || 'Patient',
+      patientName: f.patientName || f.patientId?.fullName || 'Patient',
       patientNIC: f.patientId?.nic || '',
     }));
 

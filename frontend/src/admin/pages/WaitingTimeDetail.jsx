@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Clock, TrendingDown } from 'lucide-react';
 
+// Admin dashboard detail modal: waiting time analysis.
 export default function WaitingTimeDetail({ data, onClose }) {
   if (!data) return null;
 

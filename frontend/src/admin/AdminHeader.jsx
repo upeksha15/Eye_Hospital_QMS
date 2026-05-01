@@ -3,6 +3,7 @@ import { Bell, Calendar, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import * as adminApi from '../api/adminApi';
 
+// Admin header with clock, date, and audit-log notifications.
 const AUDIT_LOG_LAST_SEEN_KEY = 'admin_audit_log_last_seen_at';
 
 function readLastSeenAuditLogTime() {

@@ -3,6 +3,7 @@ import AdminHeader from '../AdminHeader';
 import * as adminApi from '../../api/adminApi';
 import PatientDetailsSummaryPanel from '../../components/PatientDetailsSummaryPanel';
 
+// Admin report wrapper for patient details summary.
 export default function PatientDetailsSummaryReport() {
   return (
     <div className="font-admin space-y-6">

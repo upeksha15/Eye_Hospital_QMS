@@ -9,8 +9,9 @@ import image4 from '../assets/image4.png';
 
 const AboutPage = () => {
   const navigate = useNavigate();
-  const { patient, isAuthenticated, userType, logout } = useAuth();
-  const isPatientLoggedIn = Boolean(isAuthenticated && userType === 'patient' && patient);
+  const { patient, staff, user, isAuthenticated, userType, logout } = useAuth();
+  const activeUser = userType === 'patient' ? patient : (staff || user);
+  const isLoggedIn = Boolean(isAuthenticated && activeUser);
   const slides = [image1, image2, image3, image4];
   const [slideIndex, setSlideIndex] = useState(0);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -45,7 +46,7 @@ const AboutPage = () => {
           <span className="border-b-2 border-blue-600">About Us</span>
           <Link to="/contact" className="hover:text-blue-700">Contact</Link>
           <Bell className="w-6 h-6 text-slate-600" />
-          {!isPatientLoggedIn ? (
+          {!isLoggedIn ? (
             <Link to="/login">
               <button className="bg-[#2d9d78] text-white px-6 py-2 rounded-lg font-bold hover:bg-[#248263] transition">
                 Login
@@ -59,9 +60,9 @@ const AboutPage = () => {
                 className="flex items-center gap-3 px-3 py-2 rounded-lg border border-blue-100 bg-blue-50/70 hover:bg-blue-100 transition"
               >
                 <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-[#2d9d78] bg-[#e0f7f0] flex items-center justify-center">
-                  {patient?.profileImage && !avatarError ? (
+                  {activeUser?.profileImage && !avatarError ? (
                     <img
-                      src={patient.profileImage}
+                      src={activeUser.profileImage}
                       alt="Profile"
                       className="w-full h-full object-cover"
                       onError={() => setAvatarError(true)}
@@ -72,10 +73,10 @@ const AboutPage = () => {
                 </div>
                 <div className="text-left">
                   <p className="text-sm font-semibold text-[#004a99] leading-tight">
-                    {patient?.fullName || 'Patient'}
+                    {activeUser?.fullName || 'User'}
                   </p>
                   <p className="text-xs text-slate-500 leading-tight">
-                    {patient?.email || patient?.nic || ''}
+                    {activeUser?.email || activeUser?.nic || userType}
                   </p>
                 </div>
                 <ChevronDown className="w-4 h-4 text-slate-500" />
@@ -88,7 +89,11 @@ const AboutPage = () => {
                     className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center gap-2"
                     onClick={() => {
                       setProfileMenuOpen(false);
-                      navigate('/dashboard');
+                      if (userType === 'staff') {
+                        navigate(activeUser?.role === 'admin' ? '/admin' : '/staffdashboard');
+                      } else {
+                        navigate('/dashboard');
+                      }
                     }}
                   >
                     <ClipboardList className="w-4 h-4 text-slate-500" />

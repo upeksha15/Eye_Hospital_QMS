@@ -7,6 +7,11 @@ const FeedbackSchema = new mongoose.Schema(
       ref: 'Patient',
       required: true,
     },
+    patientName: {
+      type: String,
+      trim: true,
+      default: '',
+    },
     message: {
       type: String,
       required: true,

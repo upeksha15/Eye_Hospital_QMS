@@ -1,5 +1,6 @@
 import api from './client';
 
+// Admin-only API wrapper for dashboard, staff, reports, and settings.
 export async function getDashboardStats() {
   const { data } = await api.get('/api/admin/dashboard/stats');
   return data;
@@ -32,6 +33,11 @@ export async function getAuditLogs(params) {
 
 export async function getPatients() {
   const { data } = await api.get('/api/admin/patients');
+  return data;
+}
+
+export async function deletePatient(id) {
+  const { data } = await api.delete(`/api/admin/patients/${id}`);
   return data;
 }
 

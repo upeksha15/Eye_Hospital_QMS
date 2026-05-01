@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Clock, Ticket, ChevronDown, ChevronUp } from 'lucide-react';
 
+// Admin dashboard detail modal: active queues by doctor.
 export default function ActiveQueuesDetail({ data, onClose }) {
   const [expandedDoctor, setExpandedDoctor] = useState(null);
 

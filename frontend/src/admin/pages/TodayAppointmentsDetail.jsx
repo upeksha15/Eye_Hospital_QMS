@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Calendar, User, Phone, Mail } from 'lucide-react';
 
+// Admin dashboard detail modal: today's appointments by doctor.
 export default function TodayAppointmentsDetail({ data, onClose }) {
   if (!data) return null;
 

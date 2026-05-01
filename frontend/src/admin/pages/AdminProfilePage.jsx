@@ -15,6 +15,7 @@ import AdminHeader from '../AdminHeader';
 import { useAuth } from '../../context/AuthContext';
 import * as authApi from '../../api/authApi';
 
+// Admin self-service profile view (edit + delete account).
 export default function AdminProfilePage() {
   const navigate = useNavigate();
   const { user, updateStaff, logout } = useAuth();
@@ -74,6 +75,7 @@ export default function AdminProfilePage() {
   };
 
   const handleDelete = async () => {
+    // Validation: require DELETE confirmation text.
     if (deleteConfirmText.trim().toUpperCase() !== 'DELETE') {
       setError('Type DELETE to confirm account removal.');
       return;

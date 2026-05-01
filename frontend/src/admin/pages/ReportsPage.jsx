@@ -13,6 +13,7 @@ import AdminHeader from '../AdminHeader';
 import * as adminApi from '../../api/adminApi';
 import { FileDown } from 'lucide-react';
 
+// Admin reports and PDF exports.
 export default function ReportsPage() {
   const [granularity, setGranularity] = useState('week');
   const [referenceDate, setReferenceDate] = useState(() => new Date().toISOString().slice(0, 10));

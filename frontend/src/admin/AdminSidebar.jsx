@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
+// Admin navigation items for the sidebar.
 const nav = [
   { to: '/admin', end: true, label: 'Dashboard', icon: LayoutDashboard },
   { to: '/admin/staff-accounts', label: 'Staff accounts', icon: UserCog },

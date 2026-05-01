@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import AdminSidebar from './AdminSidebar';
 
+// Admin workspace shell with sidebar and routed content area.
 export default function AdminLayout() {
   return (
     <div className="min-h-screen flex bg-admin-panel font-admin">

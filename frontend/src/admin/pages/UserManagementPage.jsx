@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { Trash2 } from 'lucide-react';
 import AdminHeader from '../AdminHeader';
 import * as adminApi from '../../api/adminApi';
 
+// Admin patient directory management.
 export default function UserManagementPage() {
   const [users, setUsers] = useState([]);
   const [error, setError] = useState('');
@@ -9,6 +11,18 @@ export default function UserManagementPage() {
   const load = async () => {
     const d = await adminApi.getPatients();
     setUsers(d.users || []);
+  };
+
+  const remove = async (id) => {
+    // Validation: confirm destructive action.
+    if (!window.confirm('Delete this patient? This cannot be undone.')) return;
+    setError('');
+    try {
+      await adminApi.deletePatient(id);
+      await load();
+    } catch (e) {
+      setError(e.message || 'Failed to delete patient');
+    }
   };
 
   useEffect(() => {
@@ -42,6 +56,7 @@ export default function UserManagementPage() {
                 <th className="px-3 py-3">NIC</th>
                 <th className="px-3 py-3">Phone</th>
                 <th className="px-3 py-3">Registered</th>
+                <th className="px-3 py-3 w-16" />
               </tr>
             </thead>
             <tbody>
@@ -53,6 +68,16 @@ export default function UserManagementPage() {
                   <td className="px-3 py-3 text-slate-600">{u.contactNumber || '—'}</td>
                   <td className="px-3 py-3 text-slate-500">
                     {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}
+                  </td>
+                  <td className="px-3 py-3">
+                    <button
+                      type="button"
+                      className="p-2 rounded-lg hover:bg-red-50"
+                      onClick={() => remove(u._id)}
+                      title="Delete"
+                    >
+                      <Trash2 className="w-4 h-4 text-red-600" />
+                    </button>
                   </td>
                 </tr>
               ))}

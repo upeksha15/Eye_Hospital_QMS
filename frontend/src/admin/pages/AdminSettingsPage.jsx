@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import AdminHeader from '../AdminHeader';
 import * as adminApi from '../../api/adminApi';
 
+// Admin system settings editor.
 export default function AdminSettingsPage() {
   const [form, setForm] = useState({
     hospitalName: '',
@@ -48,14 +49,16 @@ export default function AdminSettingsPage() {
         <label className="block">
           <span className="text-xs font-semibold text-slate-500">Timezone</span>
           <input
-            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-mono"
+            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm font-mono bg-slate-50 text-slate-500 cursor-not-allowed"
             value={form.timezone}
-            onChange={(e) => setForm({ ...form, timezone: e.target.value })}
+            readOnly
+            aria-readonly="true"
           />
         </label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <label className="block">
             <span className="text-xs font-semibold text-slate-500">Default slot length (minutes)</span>
+            {/* Validation: enforce minimum slot length via input min. */}
             <input
               type="number"
               min={5}
@@ -66,6 +69,7 @@ export default function AdminSettingsPage() {
           </label>
           <label className="block">
             <span className="text-xs font-semibold text-slate-500">Max advance booking (days)</span>
+            {/* Validation: enforce minimum booking window via input min. */}
             <input
               type="number"
               min={1}
