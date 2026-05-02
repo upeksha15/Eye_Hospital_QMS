@@ -3,7 +3,6 @@ import Appointment from '../models/Appointment.js';
 import DailySlot from '../models/DailySlot.js';
 import Patient from '../models/Patient.js';
 import DoctorRoom from '../models/DoctorRoom.js';
-import FollowUp from '../models/FollowUp.js';
 import { formatYMD, nowColombo, startOfDayColombo, getDayOfWeekColombo, totalSlotsForDate } from '../utils/dateUtils.js';
 
 async function generateBookingRef() {
@@ -137,39 +136,7 @@ export async function getMyAppointments(req, res) {
       .populate({ path: 'doctorId', model: 'DoctorRoom', select: 'doctorName specialization room status' })
       .sort({ appointmentDate: -1 })
       .lean();
-
-    // Also include follow-ups that were scheduled by staff but not yet converted to an Appointment
-    const nic = req.user.nic || req.user.NIC || '';
-    const followQuery = { status: 'scheduled', patientRescheduled: { $ne: true } };
-    followQuery.$or = [];
-    followQuery.$or.push({ patientId: req.user._id });
-    if (nic) followQuery.$or.push({ patientNIC: nic });
-
-    const followUps = await FollowUp.find(followQuery).sort({ recommendedDate: 1 }).lean();
-
-    // populate doctor room info for follow-ups
-    const doctorIds = Array.from(new Set((followUps || []).map((f) => String(f.doctorId)).filter(Boolean)));
-    const doctorRooms = await DoctorRoom.find({ _id: { $in: doctorIds } }).lean();
-    const drMap = doctorRooms.reduce((acc, d) => { acc[String(d._id)] = d; return acc; }, {});
-
-    // Map follow-ups to appointment-like objects so frontend shows them in My Appointments
-    const mappedFollowUps = (followUps || []).map((f) => ({
-      _id: `follow-${f._id}`,
-      patientId: f.patientId,
-      doctorId: drMap[String(f.doctorId)] || { doctorName: f.doctorName, specialization: '' },
-      appointmentDate: f.recommendedDate,
-      visitReason: 'follow_up',
-      status: 'scheduled',
-      isFollowUp: true,
-      followUpId: f._id,
-      bookingRef: f.bookingRef,
-    }));
-
-    // normalize appointments to match frontend expected shape and merge
-    const normalizedAppointments = (list || []).map((a) => ({ ...a, isFollowUp: false }));
-    const merged = [...normalizedAppointments, ...mappedFollowUps].sort((x, y) => new Date(y.appointmentDate) - new Date(x.appointmentDate));
-
-    res.json({ success: true, appointments: merged });
+    res.json({ success: true, appointments: list });
   } catch (e) {
     console.error(e);
     res.status(500).json({ success: false, message: e.message || 'Failed to load appointments' });
