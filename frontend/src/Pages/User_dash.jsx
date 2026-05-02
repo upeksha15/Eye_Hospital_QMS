@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from "react-router-dom";
-import { 
-  Calendar, 
-  Clock, 
-  User, 
-  LogOut, 
-  Eye, 
-  CheckCircle, 
+import {
+  Calendar,
+  Clock,
+  User,
+  LogOut,
+  Eye,
+  CheckCircle,
   AlertCircle,
   Activity,
   Bell,
@@ -19,13 +19,13 @@ import { useAuth } from '../context/AuthContext';
 import { fetchMyAppointments } from '../api/appointmentsApi';
 import { fetchMyQueueStatusToday } from '../api/queueApi';
 
-    
+
 
 const UserDashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { patient, logout } = useAuth();
-  
+
   const [user, setUser] = useState(patient || {
     fullName: 'Loading...',
     email: '',
@@ -35,7 +35,7 @@ const UserDashboard = () => {
   });
 
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
-  
+
   useEffect(() => {
     if (patient) {
       setUser(patient);
@@ -48,7 +48,7 @@ const UserDashboard = () => {
     }, 1000);
     return () => clearInterval(timerId);
   }, []);
-  
+
   const [queueStatus, setQueueStatus] = useState({
     isInQueue: false,
     queueNumber: null,
@@ -182,11 +182,11 @@ const UserDashboard = () => {
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'short', 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
     });
   };
 
@@ -209,7 +209,7 @@ const UserDashboard = () => {
             </div>
             <div>
               <h2 className="text-xl font-bold text-white">Queue Management System</h2>
-             
+
             </div>
           </div>
           <div className="flex items-center gap-4">
@@ -262,11 +262,10 @@ const UserDashboard = () => {
                   key={item.id}
                   type="button"
                   onClick={handleClick}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
-                    isActive
-                      ? 'bg-[#14B8A6] text-white shadow-md'
-                      : 'text-white/90 hover:bg-[#0D9488]'
-                  }`}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${isActive
+                    ? 'bg-[#14B8A6] text-white shadow-md'
+                    : 'text-white/90 hover:bg-[#0D9488]'
+                    }`}
                 >
                   <Icon size={20} />
                   <span className="font-medium">{item.label}</span>
@@ -289,175 +288,175 @@ const UserDashboard = () => {
 
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto bg-gray-50">
-            <div className="p-6 space-y-6">
-              {/* Welcome Section */}
-              <div className="bg-gradient-to-br from-[#2A9DF4] to-[#0F4C81] rounded-xl p-6 text-white shadow-lg">
-                <h2 className="text-2xl font-bold mb-2 text-white">Welcome, {user.fullName}!</h2>
-                <p className="text-white/90">Manage your appointments and track your queue status in real-time.</p>
-              </div>
+          <div className="p-6 space-y-6">
+            {/* Welcome Section */}
+            <div className="bg-gradient-to-br from-[#2A9DF4] to-[#0F4C81] rounded-xl p-6 text-white shadow-lg">
+              <h2 className="text-2xl font-bold mb-2 text-white">Welcome, {user.fullName}!</h2>
+              <p className="text-white/90">Manage your appointments and track your queue status in real-time.</p>
+            </div>
 
-              {/* Stats Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-white rounded-lg p-5 border border-[#E5E7EB] shadow-[0_1px_3px_0_rgba(0,0,0,0.08)]">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm mb-1 text-[#6B7280]">Upcoming</p>
-                      <p className="text-2xl font-bold text-[#1F2937]">{appointments.upcoming.length}</p>
-                    </div>
-                    <div className="bg-[#DBEAFE] p-3 rounded-lg">
-                      <Calendar size={24} className="text-[#2563EB]" />
-                    </div>
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-white rounded-lg p-5 border border-[#E5E7EB] shadow-[0_1px_3px_0_rgba(0,0,0,0.08)]">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm mb-1 text-[#6B7280]">Upcoming</p>
+                    <p className="text-2xl font-bold text-[#1F2937]">{appointments.upcoming.length}</p>
                   </div>
-                </div>
-                <div className="bg-white rounded-lg p-5 border border-[#E5E7EB] shadow-[0_1px_3px_0_rgba(0,0,0,0.08)]">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm mb-1 text-[#6B7280]">In Queue</p>
-                      <p className="text-2xl font-bold text-[#1F2937]">
-                        {queueStatus.isInQueue ? 'Yes' : 'No'}
-                      </p>
-                    </div>
-                    <div className="bg-[#CCFBF1] p-3 rounded-lg">
-                      <Activity size={24} className="text-[#0D9488]" />
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-white rounded-lg p-5 border border-[#E5E7EB] shadow-[0_1px_3px_0_rgba(0,0,0,0.08)]">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm mb-1 text-[#6B7280]">Completed</p>
-                      <p className="text-2xl font-bold text-[#1F2937]">{appointments.past.length}</p>
-                    </div>
-                    <div className="bg-[#DCFCE7] p-3 rounded-lg">
-                      <CheckCircle size={24} className="text-[#16A34A]" />
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-white rounded-lg p-5 border border-[#E5E7EB] shadow-[0_1px_3px_0_rgba(0,0,0,0.08)]">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm mb-1 text-[#6B7280]">Wait Time</p>
-                      <p className="text-2xl font-bold text-[#1F2937]">
-                        {queueStatus.isInQueue ? `${queueStatus.estimatedWaitTime}m` : 'N/A'}
-                      </p>
-                    </div>
-                    <div className="bg-[#FEF3C7] p-3 rounded-lg">
-                      <Timer size={24} className="text-[#EA580C]" />
-                    </div>
+                  <div className="bg-[#DBEAFE] p-3 rounded-lg">
+                    <Calendar size={24} className="text-[#2563EB]" />
                   </div>
                 </div>
               </div>
-
-              {/* Queue Status Card */}
-              <div className="bg-[#F0F9FF] rounded-xl shadow-lg border-2 border-[#BAE6FD] p-6">
-                <div className="bg-[#F0F9FF] rounded-xl shadow-lg border-2 border-[#BAE6FD] p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-[#2A9DF4] p-3 rounded-lg">
-                        <Activity className="text-white" size={24} />
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-bold text-[#0F4C81]">Current Queue Status</h3>
-                        <p className="text-sm text-[#6B7280]">Real-time updates</p>
-                      </div>
-                    </div>
-                    <div className="bg-[#DCFCE7] px-4 py-2 rounded-full">
-                      <span className="font-semibold text-sm text-[#15803D]">{String(queueStatus.status || 'active')}</span>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-white rounded-lg p-4 border border-[#E5E7EB]">
-                      <p className="text-sm mb-1 text-[#6B7280]">Queue Number</p>
-                      <p className="text-3xl font-bold text-[#0F4C81]">{queueStatus.queueNumber || '--'}</p>
-                    </div>
-                    <div className="bg-white rounded-lg p-4 border border-[#E5E7EB]">
-                      <p className="text-sm mb-1 text-[#6B7280]">Position</p>
-                      <p className="text-3xl font-bold text-[#0F4C81]">{queueStatus.position ?? '--'}</p>
-                      <p className="text-xs mt-1 text-[#6B7280]">people ahead</p>
-                    </div>
-                    <div className="bg-white rounded-lg p-4 border border-[#E5E7EB]">
-                      <p className="text-sm mb-1 text-[#6B7280]">Est. Wait Time</p>
-                      <p className="text-3xl font-bold text-[#0F4C81]">{queueStatus.estimatedWaitTime}</p>
-                      <p className="text-xs mt-1 text-[#6B7280]">minutes</p>
-                    </div>
-                  </div>
-                  <div className="mt-4 p-3 bg-[#F0F9FF] rounded-lg border border-[#BAE6FD]">
-                    <p className="text-sm flex items-center gap-2 text-[#0F4C81]">
-                      <Bell size={16} />
-                      You'll be notified when it's your turn. Please stay nearby.
+              <div className="bg-white rounded-lg p-5 border border-[#E5E7EB] shadow-[0_1px_3px_0_rgba(0,0,0,0.08)]">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm mb-1 text-[#6B7280]">In Queue</p>
+                    <p className="text-2xl font-bold text-[#1F2937]">
+                      {queueStatus.isInQueue ? 'Yes' : 'No'}
                     </p>
                   </div>
+                  <div className="bg-[#CCFBF1] p-3 rounded-lg">
+                    <Activity size={24} className="text-[#0D9488]" />
+                  </div>
                 </div>
               </div>
-
-              {/* Upcoming Appointments */}
-              <div className="bg-[#F0F9FF] rounded-xl shadow-md border-2 border-[#BAE6FD] p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-bold text-[#0F4C81] flex items-center gap-2">
-                    <div className="bg-[#2A9DF4] p-2 rounded-lg">
-                      <Calendar className="text-white" size={20} />
-                    </div>
-                    Upcoming Appointments
-                  </h3>
-                  
-                  
+              <div className="bg-white rounded-lg p-5 border border-[#E5E7EB] shadow-[0_1px_3px_0_rgba(0,0,0,0.08)]">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm mb-1 text-[#6B7280]">Completed</p>
+                    <p className="text-2xl font-bold text-[#1F2937]">{appointments.past.length}</p>
+                  </div>
+                  <div className="bg-[#DCFCE7] p-3 rounded-lg">
+                    <CheckCircle size={24} className="text-[#16A34A]" />
+                  </div>
                 </div>
-                {appointments.upcoming.length > 0 ? (
-                  <div className="space-y-3">
-                    {appointments.upcoming.map((appointment) => (
-                      <div
-                        key={appointment.id}
-                        className="bg-white rounded-lg p-4 border border-[#E5E7EB] hover:shadow-md transition-all"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <h4 className="font-semibold text-[#0F4C81]">{appointment.doctor}</h4>
-                              <span className={`px-3 py-1 rounded-full text-xs font-medium border flex items-center gap-1 ${getStatusColor(appointment.status)}`}>
-                                {getStatusIcon(appointment.status)}
-                                {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
-                              </span>
-                            </div>
-                            <p className="text-sm text-[#6B7280] mb-1">{appointment.department}</p>
-                            <div className="flex items-center gap-4 text-sm text-[#6B7280] mt-2">
-                              <span className="flex items-center gap-1">
-                                <Calendar size={14} />
-                                {formatDate(appointment.date)}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Clock size={14} />
-                                {appointment.time}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <FileText size={14} />
-                                {appointment.type}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+              </div>
+              <div className="bg-white rounded-lg p-5 border border-[#E5E7EB] shadow-[0_1px_3px_0_rgba(0,0,0,0.08)]">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm mb-1 text-[#6B7280]">Wait Time</p>
+                    <p className="text-2xl font-bold text-[#1F2937]">
+                      {queueStatus.isInQueue ? `${queueStatus.estimatedWaitTime}m` : 'N/A'}
+                    </p>
                   </div>
-                ) : (
-                  <div className="text-center py-8 text-[#6B7280]">
-                    <Calendar size={48} className="mx-auto mb-2 text-[#BAE6FD]" />
-                    <p>No upcoming appointments</p>
-                    <button
-                      type="button"
-                      onClick={() => navigate('/appointments/book')}
-                      className="mt-4 font-semibold text-[#0F4C81] hover:text-[#2A9DF4] transition-colors"
-                    >
-                      Book an Appointment
-                    </button>
+                  <div className="bg-[#FEF3C7] p-3 rounded-lg">
+                    <Timer size={24} className="text-[#EA580C]" />
                   </div>
-                )}
+                </div>
               </div>
             </div>
 
-              </main>
+            {/* Queue Status Card */}
+            <div className="bg-[#F0F9FF] rounded-xl shadow-lg border-2 border-[#BAE6FD] p-6">
+              <div className="bg-[#F0F9FF] rounded-xl shadow-lg border-2 border-[#BAE6FD] p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-[#2A9DF4] p-3 rounded-lg">
+                      <Activity className="text-white" size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-[#0F4C81]">Current Queue Status</h3>
+                      <p className="text-sm text-[#6B7280]">Real-time updates</p>
+                    </div>
+                  </div>
+                  <div className="bg-[#DCFCE7] px-4 py-2 rounded-full">
+                    <span className="font-semibold text-sm text-[#15803D]">{String(queueStatus.status || 'active')}</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-white rounded-lg p-4 border border-[#E5E7EB]">
+                    <p className="text-sm mb-1 text-[#6B7280]">Queue Number</p>
+                    <p className="text-3xl font-bold text-[#0F4C81]">{queueStatus.queueNumber || '--'}</p>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 border border-[#E5E7EB]">
+                    <p className="text-sm mb-1 text-[#6B7280]">Position</p>
+                    <p className="text-3xl font-bold text-[#0F4C81]">{queueStatus.position ?? '--'}</p>
+                    <p className="text-xs mt-1 text-[#6B7280]">people ahead</p>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 border border-[#E5E7EB]">
+                    <p className="text-sm mb-1 text-[#6B7280]">Est. Wait Time</p>
+                    <p className="text-3xl font-bold text-[#0F4C81]">{queueStatus.estimatedWaitTime}</p>
+                    <p className="text-xs mt-1 text-[#6B7280]">minutes</p>
+                  </div>
+                </div>
+                <div className="mt-4 p-3 bg-[#F0F9FF] rounded-lg border border-[#BAE6FD]">
+                  <p className="text-sm flex items-center gap-2 text-[#0F4C81]">
+                    <Bell size={16} />
+                    You'll be notified when it's your turn. Please stay nearby.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Upcoming Appointments */}
+            <div className="bg-[#F0F9FF] rounded-xl shadow-md border-2 border-[#BAE6FD] p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-[#0F4C81] flex items-center gap-2">
+                  <div className="bg-[#2A9DF4] p-2 rounded-lg">
+                    <Calendar className="text-white" size={20} />
+                  </div>
+                  Upcoming Appointments
+                </h3>
+
+
+              </div>
+              {appointments.upcoming.length > 0 ? (
+                <div className="space-y-3">
+                  {appointments.upcoming.map((appointment) => (
+                    <div
+                      key={appointment.id}
+                      className="bg-white rounded-lg p-4 border border-[#E5E7EB] hover:shadow-md transition-all"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h4 className="font-semibold text-[#0F4C81]">{appointment.doctor}</h4>
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium border flex items-center gap-1 ${getStatusColor(appointment.status)}`}>
+                              {getStatusIcon(appointment.status)}
+                              {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
+                            </span>
+                          </div>
+                          <p className="text-sm text-[#6B7280] mb-1">{appointment.department}</p>
+                          <div className="flex items-center gap-4 text-sm text-[#6B7280] mt-2">
+                            <span className="flex items-center gap-1">
+                              <Calendar size={14} />
+                              {formatDate(appointment.date)}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Clock size={14} />
+                              {appointment.time}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <FileText size={14} />
+                              {appointment.type}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-[#6B7280]">
+                  <Calendar size={48} className="mx-auto mb-2 text-[#BAE6FD]" />
+                  <p>No upcoming appointments</p>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/appointments/book')}
+                    className="mt-4 font-semibold text-[#0F4C81] hover:text-[#2A9DF4] transition-colors"
+                  >
+                    Book an Appointment
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+        </main>
       </div>
 
-      
+
     </div>
   );
 };

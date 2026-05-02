@@ -124,11 +124,11 @@ export async function getQueueBoardToday(req, res) {
       success: true,
       doctor: doctorRoom
         ? {
-            _id: String(doctorId),
-            doctorName: doctorRoom.doctorName,
-            room: doctorRoom.room,
-            specialization: doctorRoom.specialization,
-          }
+          _id: String(doctorId),
+          doctorName: doctorRoom.doctorName,
+          room: doctorRoom.room,
+          specialization: doctorRoom.specialization,
+        }
         : { _id: String(doctorId) },
       status: window.queueStatus,
       queueEnabledAt: window.queueEnabledAt,
@@ -168,7 +168,10 @@ export async function getMyQueueStatusToday(req, res) {
     const doctorRoom = await DoctorRoom.findById(doctorId).select('status queueEnabledAt').lean();
     const window = computeCheckinWindow(doctorRoom);
 
-    const token = await QueueToken.findOne({ appointmentId: appt._id }).lean();
+    const token = await QueueToken.findOne({
+      appointmentId: appt._id,
+      status: { $in: ['waiting', 'called'] },
+    }).lean();
 
     const waitingTokens = await QueueToken.find({
       doctorId,
@@ -238,6 +241,7 @@ export async function callNextPatient(req, res) {
     if (current) {
       current.status = 'completed';
       await current.save();
+      await Appointment.findByIdAndUpdate(current.appointmentId, { status: 'completed' });
     }
 
     // find next waiting and mark called
@@ -292,6 +296,7 @@ export async function skipCurrentPatient(req, res) {
 
     current.status = 'absent';
     await current.save();
+    await Appointment.findByIdAndUpdate(current.appointmentId?._id || current.appointmentId, { status: 'absent' });
 
     // after skipping, call next automatically
     const next = await QueueToken.findOneAndUpdate(
@@ -354,6 +359,7 @@ export async function removePatientFromQueue(req, res) {
 
     token.status = 'absent';
     await token.save();
+    await Appointment.findByIdAndUpdate(token.appointmentId, { status: 'absent' });
 
     const totalWaiting = await QueueToken.countDocuments({ doctorId, status: 'waiting', checkinTime: { $gte: todayStart, $lt: tomorrow } });
 
