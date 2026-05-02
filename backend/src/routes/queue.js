@@ -6,6 +6,8 @@ import {
 	callNextPatient,
 	skipCurrentPatient,
 	removePatientFromQueue,
+	getSkippedToday,
+  markSkippedDone,
 } from '../controllers/queueController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 
@@ -16,6 +18,8 @@ router.get('/:doctorId/board/today', getQueueBoardToday);
 router.get('/:doctorId/my-status/today', authMiddleware, getMyQueueStatusToday);
 router.post('/:doctorId/call-next', callNextPatient);
 router.post('/:doctorId/skip', skipCurrentPatient);
+router.get('/:doctorId/skipped/today', getSkippedToday);
+router.post('/:doctorId/mark-done/:tokenId', markSkippedDone);
 router.post('/:doctorId/remove/:tokenId', removePatientFromQueue);
 
 export default router;

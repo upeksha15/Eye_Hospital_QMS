@@ -119,16 +119,9 @@ export default function PatientFollowUpsPage() {
                     const updated = res.data?.followUp || res.data;
                     setFollowUps((s) => s.map(x => (x._id||x.id) === (updated._id||updated.id) ? { ...x, recommendedDate: updated.recommendedDate } : x));
                     // Try to create a corresponding appointment so it appears in My Appointments
-                    try {
-                      await api.post('/api/appointments', {
-                        doctorId: updated.doctorId,
-                        appointmentDate: updated.recommendedDate,
-                        visitReason: 'follow_up',
-                      });
-                    } catch (e2) {
-                      // non-fatal: if appointment creation fails (full/duplicate), ignore and surface nothing
-                      // optional: you could inform the user here
-                    }
+                    // Server will create the appointment and return it (if successful).
+                    // Response contains followUp and optional appointment.
+                    // (No additional client POST required.)
                     setRescheduleId(null);
                   } catch (e) {
                     setRescheduleError(e.response?.data?.message || e.message || 'Reschedule failed');
