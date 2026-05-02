@@ -146,44 +146,6 @@ export async function getQueueBoardToday(req, res) {
   }
 }
 
-export async function getSkippedToday(req, res) {
-  try {
-    const { doctorId } = req.params;
-    if (!ensureValidDoctorId(req, res, doctorId)) return;
-    const { todayStart, tomorrow } = todayBounds();
-
-    const tokens = await QueueToken.find({
-      doctorId,
-      checkinTime: { $gte: todayStart, $lt: tomorrow },
-      status: 'absent',
-    })
-      .populate({
-        path: 'appointmentId',
-        populate: { path: 'patientId', select: 'fullName contactNumber' },
-      })
-      .sort({ checkinTime: 1 })
-      .lean();
-
-    const list = tokens.map((t) => ({
-      _id: String(t._id),
-      tokenNumber: t.tokenNumber,
-      skippedAt: t.updatedAt || t.calledAt || t.checkinTime,
-      patient: t.appointmentId?.patientId
-        ? {
-            _id: t.appointmentId.patientId._id,
-            fullName: t.appointmentId.patientId.fullName,
-            contactNumber: t.appointmentId.patientId.contactNumber,
-          }
-        : null,
-    }));
-
-    res.json({ success: true, skipped: list });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ success: false, message: e.message || 'Failed to load skipped tokens' });
-  }
-}
-
 export async function getMyQueueStatusToday(req, res) {
   try {
     const { doctorId } = req.params;
@@ -324,10 +286,7 @@ export async function skipCurrentPatient(req, res) {
     const { todayStart, tomorrow } = todayBounds();
 
     const current = await QueueToken.findOne({ doctorId, status: 'called', checkinTime: { $gte: todayStart, $lt: tomorrow } })
-      .populate({
-        path: 'appointmentId',
-        populate: { path: 'patientId', select: 'fullName contactNumber' }
-      })
+      .populate('appointmentId')
       .sort({ checkinTime: 1 });
     if (!current) return res.status(404).json({ success: false, message: 'No currently called patient' });
 
@@ -374,23 +333,7 @@ export async function skipCurrentPatient(req, res) {
       });
     }
 
-    // include patient basic info in response (if available)
-    const skippedResponse = current
-      ? {
-          _id: current._id,
-          tokenNumber: current.tokenNumber,
-          appointmentId: current.appointmentId && current.appointmentId._id ? current.appointmentId._id : null,
-          patient: current.appointmentId?.patientId
-            ? {
-                _id: current.appointmentId.patientId._id,
-                fullName: current.appointmentId.patientId.fullName,
-                contactNumber: current.appointmentId.patientId.contactNumber,
-              }
-            : null,
-        }
-      : null;
-
-    res.json({ success: true, skipped: skippedResponse, next: next || null, totalWaiting });
+    res.json({ success: true, skipped: current, next: next || null, totalWaiting });
   } catch (e) {
     console.error(e);
     res.status(500).json({ success: false, message: e.message || 'skip failed' });
@@ -428,40 +371,5 @@ export async function removePatientFromQueue(req, res) {
   } catch (e) {
     console.error(e);
     res.status(500).json({ success: false, message: e.message || 'remove failed' });
-  }
-}
-
-export async function markSkippedDone(req, res) {
-  try {
-    const { doctorId, tokenId } = req.params;
-    if (!ensureValidDoctorId(req, res, doctorId)) return;
-    if (!mongoose.Types.ObjectId.isValid(String(tokenId))) {
-      return res.status(400).json({ success: false, message: 'Invalid token id' });
-    }
-    const { todayStart, tomorrow } = todayBounds();
-
-    const token = await QueueToken.findOne({ _id: tokenId, doctorId, checkinTime: { $gte: todayStart, $lt: tomorrow } });
-    if (!token) return res.status(404).json({ success: false, message: 'Token not found' });
-
-    // Only allow marking done if token is absent (skipped) or waiting/called
-    token.status = 'completed';
-    await token.save();
-
-    const totalWaiting = await QueueToken.countDocuments({ doctorId, status: 'waiting', checkinTime: { $gte: todayStart, $lt: tomorrow } });
-
-    const io = req.app.get('io');
-    if (io) {
-      io.to(`queue:${String(doctorId)}`).emit('queue:update', {
-        doctorId: String(doctorId),
-        action: 'markDone',
-        markedToken: token.tokenNumber,
-        totalWaiting,
-      });
-    }
-
-    res.json({ success: true, marked: token, totalWaiting });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ success: false, message: e.message || 'markDone failed' });
   }
 }

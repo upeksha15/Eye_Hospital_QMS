@@ -14,8 +14,3 @@ export async function fetchMyQueueStatusToday(doctorId) {
   const { data } = await api.get(`/api/queue/${doctorId}/my-status/today`);
   return data;
 }
-
-export async function fetchSkippedToday(doctorId) {
-  const { data } = await api.get(`/api/queue/${doctorId}/skipped/today`);
-  return data;
-}

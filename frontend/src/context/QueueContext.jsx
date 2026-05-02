@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useEffect, useContext, useState } from 'react';
 import api from '../api/client';
 import { useSocket } from '../hooks/useSocket';
-import { fetchQueueBoardToday, fetchSkippedToday } from '../api/queueApi';
+import { fetchQueueBoardToday } from '../api/queueApi';
 
 const QueueContext = createContext();
 
@@ -14,6 +14,7 @@ export const QueueProvider = ({ children }) => {
   const [doctorStatuses, setDoctorStatuses] = useState({});
   const [waitingQueue, setWaitingQueue] = useState([]);
   const [recallQueue, setRecallQueue] = useState([]);
+  const RECALL_EXPIRE_MS = 10 * 60 * 1000; // 10 minutes
   const [currentToken, setCurrentToken] = useState(null);
   const [timer, setTimer] = useState('00:00');
   const [toasts, setToasts] = useState([]);
@@ -97,23 +98,6 @@ export const QueueProvider = ({ children }) => {
     try {
       const board = await fetchQueueBoardToday(activeDoctorId);
       syncFromBoard(board);
-      // fetch skipped tokens persisted in backend and populate recallQueue
-      try {
-        const skippedRes = await fetchSkippedToday(activeDoctorId);
-        if (skippedRes && skippedRes.skipped) {
-          const items = skippedRes.skipped.map((s) => ({
-            id: String(s._id),
-            token: s.tokenNumber || '',
-            skippedAt: s.skippedAt ? new Date(s.skippedAt).getTime() : Date.now(),
-            doctorId: activeDoctorId,
-            patientName: s.patient?.fullName || '',
-            patientPhone: s.patient?.contactNumber || '',
-          }));
-          setRecallQueue(items);
-        }
-      } catch (err) {
-        console.error('Failed to load skipped tokens', err);
-      }
     } catch (e) {
       // do not toast on every poll/update failure
       console.error('Failed to reload queue board', e);
@@ -151,14 +135,11 @@ export const QueueProvider = ({ children }) => {
         if (skipped) {
           try {
             const entryDoctor = doctorId || (skipped.doctorId && (skipped.doctorId._id || skipped.doctorId)) || null;
-            const patient = skipped.patient || null;
             const entry = {
               id: String(skipped._id || skipped.id),
               token: skipped.tokenNumber || skipped.token || '',
               skippedAt: Date.now(),
               doctorId: entryDoctor,
-              patientName: patient?.fullName || '',
-              patientPhone: patient?.contactNumber || '',
             };
             setRecallQueue((prev) => [entry, ...prev]);
           } catch (e) {
@@ -176,7 +157,17 @@ export const QueueProvider = ({ children }) => {
     }
   };
 
-  // NOTE: recall entries are persisted by backend; we'll auto-remove them at 5:00 PM local time (end of day)
+  // Auto-remove recalled tokens after expiry (10 minutes)
+  useEffect(() => {
+    // initial cleanup in case some entries are stale
+    setRecallQueue((prev) => prev.filter((p) => (Date.now() - (p.skippedAt || 0)) < RECALL_EXPIRE_MS));
+
+    const timer = setInterval(() => {
+      setRecallQueue((prev) => prev.filter((p) => (Date.now() - (p.skippedAt || 0)) < RECALL_EXPIRE_MS));
+    }, 5000);
+
+    return () => clearInterval(timer);
+  }, [RECALL_EXPIRE_MS]);
 
   const removePatientFromQueue = async (doctorId, tokenId) => {
     try {
@@ -198,74 +189,11 @@ export const QueueProvider = ({ children }) => {
     addToast("Patient marked as missed.", "error");
   };
 
-  const cancelToken = async (id) => {
+  const cancelToken = (id) => {
     if (!window.confirm("Cancel this token?")) return;
-    const entry = recallQueue.find((p) => String(p.id) === String(id));
-    const doctorForEntry = entry?.doctorId || activeDoctorId || '';
-    try {
-      await removePatientFromQueue(doctorForEntry, id);
-      setRecallQueue((prev) => prev.filter((p) => String(p.id) !== String(id)));
-    } catch (e) {
-      // fallback to local removal if API call fails
-      setRecallQueue((prev) => prev.filter((p) => String(p.id) !== String(id)));
-    }
+    setRecallQueue(prev => prev.filter(p => p.id !== id));
+    addToast("Token Cancelled.", "error");
   };
-
-  const markSkippedDone = async (id) => {
-    if (!window.confirm('Mark this skipped patient as done?')) return;
-    const entry = recallQueue.find((p) => String(p.id) === String(id));
-    const doctorForEntry = entry?.doctorId || activeDoctorId || '';
-    try {
-      const res = await api.post(`/api/queue/${doctorForEntry}/mark-done/${id}`);
-      if (res.data && res.data.success) {
-        addToast('Marked skipped patient as done.', 'success');
-        setRecallQueue((prev) => prev.filter((p) => String(p.id) !== String(id)));
-        await reloadBoard();
-      } else {
-        addToast('Mark as done failed.', 'error');
-      }
-    } catch (err) {
-      console.error('markSkippedDone API error', err);
-      addToast('Mark as done failed (server).', 'error');
-    }
-  };
-
-  // Auto-remove all recall entries at 5:00 PM local time (calls removal API for each)
-  useEffect(() => {
-    let timeoutId = null;
-
-    const schedule = () => {
-      const now = Date.now();
-      const end = new Date();
-      end.setHours(17, 0, 0, 0);
-      const endMs = end.getTime();
-
-      if (now >= endMs) {
-        // already past 5pm: remove immediately
-        recallQueue.forEach((p) => {
-          const did = p?.doctorId || activeDoctorId || '';
-          if (p?.id) removePatientFromQueue(did, p.id);
-        });
-        setRecallQueue([]);
-        return;
-      }
-
-      const ms = endMs - now + 1000;
-      timeoutId = setTimeout(() => {
-        recallQueue.forEach((p) => {
-          const did = p?.doctorId || activeDoctorId || '';
-          if (p?.id) removePatientFromQueue(did, p.id);
-        });
-        setRecallQueue([]);
-      }, ms);
-    };
-
-    schedule();
-
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, [recallQueue, activeDoctorId, removePatientFromQueue]);
 
   const enableDoctor = async (doctorId) => {
     if (!doctorId) return;
@@ -321,7 +249,6 @@ export const QueueProvider = ({ children }) => {
       pauseQueue, resumeQueue, enableDoctor, disableDoctor,
       doctorStatuses,
       callNext, skipToken, cancelToken,
-      markSkippedDone,
       removePatientFromQueue, markPatientMissed
       ,activeDoctorId, setActiveDoctorId
     }}>

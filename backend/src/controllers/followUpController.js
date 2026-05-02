@@ -1,4 +1,3 @@
-import mongoose from 'mongoose';
 import FollowUp from '../models/FollowUp.js';
 import DoctorRoom from '../models/DoctorRoom.js';
 import DailySlot from '../models/DailySlot.js';
@@ -65,18 +64,6 @@ export async function createFollowUp(req, res) {
       return res.status(400).json({ success: false, message: 'This date queue is full. Please schedule another date.' });
     }
 
-    // generate booking reference for this follow-up so staff and patient share it
-    async function generateBookingRef() {
-      const year = new Date().getFullYear();
-      const count = await Appointment.countDocuments({
-        createdAt: {
-          $gte: new Date(`${year}-01-01`),
-          $lt: new Date(`${year + 1}-01-01`),
-        },
-      });
-      return `OPD-${year}-${String(count + 1).padStart(4, '0')}`;
-    }
-
     const payload = {
       appointmentId: appointmentId || undefined,
       patientId: patientId || undefined,
@@ -89,7 +76,6 @@ export async function createFollowUp(req, res) {
       intervalType: intervalType || 'days',
       recommendedDate: dayStart,
       createdBy: req.user._id,
-      bookingRef: await generateBookingRef(),
     };
 
     const created = await FollowUp.create(payload);
@@ -270,113 +256,8 @@ export async function patientRescheduleFollowUp(req, res) {
     const existingCount = await Appointment.countDocuments({ doctorId, appointmentDate: dayStart, status: { $ne: 'cancelled' } });
     if (existingCount >= total) return res.status(400).json({ success: false, message: 'This date queue is full. Please schedule another date.' });
 
-    // move or create appointment for patient using same booking reference as follow-up
-    const session = await mongoose.startSession();
-    session.startTransaction();
-    try {
-      const follow = await FollowUp.findById(id).session(session);
-      if (!follow) {
-        await session.abortTransaction();
-        return res.status(404).json({ success: false, message: 'Follow-up not found' });
-      }
-
-      // check capacity for target date
-      const targetDaily = await DailySlot.findOne({ doctorId, slotDate: dayStart }).session(session).lean();
-      let targetTotal = targetDaily?.totalSlots ?? totalSlotsForDate(dayStart);
-      const doctorRoomDoc = await DoctorRoom.findById(doctorId).lean();
-      if (doctorRoomDoc && typeof doctorRoomDoc.queueLimit === 'number') targetTotal = Math.min(targetTotal, doctorRoomDoc.queueLimit);
-
-      const existingCount = await Appointment.countDocuments({ doctorId, appointmentDate: dayStart, status: { $ne: 'cancelled' } }).session(session);
-      if (existingCount >= targetTotal) {
-        await session.abortTransaction();
-        return res.status(400).json({ success: false, message: 'This date queue is full. Please schedule another date.' });
-      }
-
-      // find any existing appointments that correspond to this follow-up
-      const oldDayStart = follow.recommendedDate ? startOfDayColombo(follow.recommendedDate) : null;
-      const oldDayEnd = oldDayStart ? new Date(oldDayStart) : null;
-      if (oldDayEnd) oldDayEnd.setDate(oldDayEnd.getDate() + 1);
-
-      const matchQuery = {
-        patientId: req.user._id,
-        visitReason: 'follow_up',
-        status: { $ne: 'cancelled' },
-        $or: [],
-      };
-      if (follow.patientAppointmentId) matchQuery.$or.push({ _id: follow.patientAppointmentId });
-      if (follow.bookingRef) matchQuery.$or.push({ bookingRef: follow.bookingRef });
-      if (oldDayStart && oldDayEnd) matchQuery.$or.push({ appointmentDate: { $gte: oldDayStart, $lt: oldDayEnd } });
-
-      // if no match criteria (very unlikely), ensure array has something impossible to avoid matching everything
-      if (matchQuery.$or.length === 0) matchQuery.$or.push({ _id: null });
-
-      const matches = await Appointment.find(matchQuery).session(session);
-
-      let appt = null;
-      if (matches && matches.length > 0) {
-        // take the first as primary, cancel duplicates
-        appt = matches[0];
-        for (let i = 1; i < matches.length; i++) {
-          const dup = matches[i];
-          const dupOldDay = startOfDayColombo(dup.appointmentDate);
-          await DailySlot.updateOne({ doctorId: dup.doctorId, slotDate: dupOldDay, bookedCount: { $gt: 0 } }, { $inc: { bookedCount: -1 } }).session(session);
-          dup.status = 'cancelled';
-          await dup.save({ session });
-        }
-
-        // update primary appointment date if changed
-        const primaryOldDay = startOfDayColombo(appt.appointmentDate);
-        if (primaryOldDay.getTime() !== dayStart.getTime()) {
-          await DailySlot.updateOne({ doctorId: appt.doctorId, slotDate: primaryOldDay, bookedCount: { $gt: 0 } }, { $inc: { bookedCount: -1 } }).session(session);
-          if (targetDaily) {
-            await DailySlot.updateOne({ _id: targetDaily._id }, { $inc: { bookedCount: 1 } }).session(session);
-          } else {
-            await DailySlot.create([{ doctorId, slotDate: dayStart, totalSlots: targetTotal, bookedCount: 1 }], { session });
-          }
-        }
-
-        appt.appointmentDate = dayStart;
-        appt.status = 'booked';
-        await appt.save({ session });
-      } else {
-        // create new appointment
-        appt = new Appointment({
-          patientId: req.user._id,
-          doctorId: doctorId,
-          appointmentDate: dayStart,
-          visitReason: 'follow_up',
-          notes: '',
-          bookingRef: follow.bookingRef || undefined,
-          status: 'booked',
-        });
-        await appt.save({ session });
-
-        if (targetDaily) {
-          await DailySlot.updateOne({ _id: targetDaily._id }, { $inc: { bookedCount: 1 } }).session(session);
-        } else {
-          await DailySlot.create([{ doctorId, slotDate: dayStart, totalSlots: targetTotal, bookedCount: 1 }], { session });
-        }
-      }
-
-      // update follow-up to link appointment and mark patientRescheduled
-      follow.recommendedDate = dayStart;
-      follow.patientRescheduled = true;
-      follow.patientRescheduledDate = dayStart;
-      follow.patientAppointmentId = appt._id;
-      await follow.save({ session });
-
-      await session.commitTransaction();
-      session.endSession();
-
-      const updated = await FollowUp.findById(id).lean();
-      const populatedAppt = await Appointment.findById(appt._id).populate({ path: 'doctorId', model: 'DoctorRoom', select: 'doctorName specialization room status' }).lean();
-      res.json({ success: true, followUp: updated, appointment: populatedAppt });
-      return;
-    } catch (innerErr) {
-      await session.abortTransaction();
-      session.endSession();
-      throw innerErr;
-    }
+    const updated = await FollowUp.findByIdAndUpdate(id, { recommendedDate: dayStart }, { new: true }).lean();
+    res.json({ success: true, followUp: updated });
   } catch (e) {
     console.error(e);
     res.status(500).json({ success: false, message: e.message || 'Failed to reschedule follow-up' });
