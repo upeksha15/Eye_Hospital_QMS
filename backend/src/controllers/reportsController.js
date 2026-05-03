@@ -1,5 +1,7 @@
+import mongoose from 'mongoose';
 import PDFDocument from 'pdfkit';
 import Appointment from '../models/Appointment.js';
+import Doctor from '../models/Doctor.js';
 import { startOfDayColombo, formatYMD } from '../utils/dateUtils.js';
 
 const TZ = 'Asia/Colombo';
@@ -59,8 +61,9 @@ function linearPredict(values) {
   return Math.max(0, Math.round(a + b * n));
 }
 
-async function bucketStats(start, end) {
+async function bucketStats(start, end, doctorId) {
   const q = { appointmentDate: { $gte: start, $lt: end } };
+  if (doctorId) q.doctorId = doctorId;
   const appointmentCount = await Appointment.countDocuments(q);
   const patientIds = await Appointment.distinct('patientId', q);
   return {
@@ -69,9 +72,26 @@ async function bucketStats(start, end) {
   };
 }
 
-export async function buildAppointmentReport({ granularity = 'week', referenceDate } = {}) {
+function buildPredictionRange(values, predicted) {
+  if (!values.length || predicted == null) {
+    return { min: predicted ?? 0, max: predicted ?? 0 };
+  }
+  const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
+  const variance = values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / values.length;
+  const stdDev = Math.sqrt(variance);
+  const margin = Math.max(1, Math.round(stdDev));
+  return {
+    min: Math.max(0, Math.round(predicted - margin)),
+    max: Math.max(0, Math.round(predicted + margin)),
+  };
+}
+
+export async function buildAppointmentReport({ granularity = 'week', referenceDate, doctorId } = {}) {
   const ref = referenceDate ? new Date(referenceDate) : new Date();
   const refDay = startOfDayColombo(ref);
+  const doctorFilter = mongoose.Types.ObjectId.isValid(doctorId)
+    ? new mongoose.Types.ObjectId(doctorId)
+    : null;
 
   const buckets = [];
 
@@ -80,7 +100,7 @@ export async function buildAppointmentReport({ granularity = 'week', referenceDa
     for (let w = 0; w < 4; w++) {
       const start = new Date(monday.getTime() - (3 - w) * 7 * 86400000);
       const end = new Date(start.getTime() + 7 * 86400000);
-      const stats = await bucketStats(start, end);
+      const stats = await bucketStats(start, end, doctorFilter);
       buckets.push({
         label: `${formatYMD(start)} → ${formatYMD(new Date(end.getTime() - 86400000))}`,
         start: start.toISOString(),
@@ -100,7 +120,7 @@ export async function buildAppointmentReport({ granularity = 'week', referenceDa
     for (let i = 5; i >= 0; i--) {
       const { y: yy, m: mm } = addMonths(y, m, -i);
       const { start, end, label } = monthBoundsColombo(yy, mm);
-      const stats = await bucketStats(start, end);
+      const stats = await bucketStats(start, end, doctorFilter);
       buckets.push({
         label,
         start: start.toISOString(),
@@ -115,6 +135,8 @@ export async function buildAppointmentReport({ granularity = 'week', referenceDa
 
   const predictedAppointments = linearPredict(apptSeries);
   const predictedUniquePatients = linearPredict(uniqueSeries);
+  const appointmentRange = buildPredictionRange(apptSeries, predictedAppointments);
+  const uniquePatientRange = buildPredictionRange(uniqueSeries, predictedUniquePatients);
 
   return {
     granularity,
@@ -124,6 +146,8 @@ export async function buildAppointmentReport({ granularity = 'week', referenceDa
       method: 'linear_trend_on_buckets',
       nextPeriodAppointments: predictedAppointments,
       nextPeriodUniquePatients: predictedUniquePatients,
+      appointmentRange,
+      uniquePatientRange,
       note:
         'Forecasts extend the recent trend from the displayed periods. Use alongside clinical planning.',
     },
@@ -132,11 +156,11 @@ export async function buildAppointmentReport({ granularity = 'week', referenceDa
 
 export async function getReportSummary(req, res) {
   try {
-    const { granularity = 'week', referenceDate } = req.query;
+    const { granularity = 'week', referenceDate, doctorId } = req.query;
     if (!['week', 'month'].includes(granularity)) {
       return res.status(400).json({ success: false, message: 'granularity must be week or month' });
     }
-    const report = await buildAppointmentReport({ granularity, referenceDate });
+    const report = await buildAppointmentReport({ granularity, referenceDate, doctorId });
     res.json({ success: true, report });
   } catch (e) {
     console.error(e);
@@ -277,6 +301,7 @@ async function buildPatientDetailsSummary({ referenceDate } = {}) {
 const PDF_BRAND = '#001f3f';
 const PDF_ACCENT = '#0d9488';
 const PDF_MUTED = '#64748b';
+const PDF_PANEL = '#f8fafc';
 
 function fmtDatePdf(d) {
   if (!d) return '—';
@@ -308,6 +333,9 @@ function drawPatientDetailsPdfHeader(doc, opts = {}) {
   const w = doc.page.width - 100;
   const y = doc.y;
   const size = compact ? 28 : 40;
+  doc.save();
+  doc.roundedRect(left, y - 6, w, compact ? 46 : 58, 6).fill(PDF_PANEL);
+  doc.restore();
   drawEyeLogoPdf(doc, left, y, size);
   const textX = left + size + 12;
   doc.fillColor(PDF_BRAND).font('Helvetica-Bold').fontSize(compact ? 11 : 15);
@@ -436,7 +464,7 @@ function drawMonthlyKpis(doc, monthly) {
   rows.forEach((row, i) => {
     const x = left + i * (colW + gap);
     doc.save();
-    doc.roundedRect(x, y0, colW, 58, 3).fill('#f8fafc');
+    doc.roundedRect(x, y0, colW, 58, 4).fill(PDF_PANEL);
     doc.roundedRect(x, y0, colW, 58, 3).stroke('#e2e8f0');
     doc.fillColor(PDF_BRAND).font('Helvetica-Bold').fontSize(8).text(row.t, x + 8, y0 + 6, { width: colW - 16 });
     doc.font('Helvetica').fontSize(6.5).fillColor(PDF_MUTED).text(row.l, x + 8, y0 + 18, { width: colW - 16 });
@@ -473,7 +501,7 @@ function drawPatientWeekTable(doc, summary, week) {
 
   ensurePdfSpace(doc, 80);
   let y = doc.y;
-  doc.rect(left, y, w, headH).fill(PDF_BRAND);
+  doc.roundedRect(left, y, w, headH, 3).fill(PDF_BRAND);
   doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(7.5);
   const headers = ['Patient name', 'NIC', 'Contact', 'Appts', 'Last visit'];
   let cx = left + 5;
@@ -650,11 +678,14 @@ export async function getPatientDetailsSummaryPdf(req, res) {
 
 export async function getReportPdf(req, res) {
   try {
-    const { granularity = 'week', referenceDate } = req.query;
+    const { granularity = 'week', referenceDate, doctorId } = req.query;
     if (!['week', 'month'].includes(granularity)) {
       return res.status(400).json({ success: false, message: 'granularity must be week or month' });
     }
-    const report = await buildAppointmentReport({ granularity, referenceDate });
+    const report = await buildAppointmentReport({ granularity, referenceDate, doctorId });
+    const doctor = mongoose.Types.ObjectId.isValid(doctorId)
+      ? await Doctor.findById(doctorId).select('fullName').lean()
+      : null;
 
     const doc = new PDFDocument({ margin: 50 });
     res.setHeader('Content-Type', 'application/pdf');
@@ -664,37 +695,119 @@ export async function getReportPdf(req, res) {
     );
     doc.pipe(res);
 
-    doc.fontSize(18).text('Eye Hospital — OPD Queue Management', { align: 'center' });
-    doc.moveDown(0.5);
-    doc.fontSize(14).text('Appointment & patient volume report', { align: 'center' });
-    doc.moveDown();
-    doc.fontSize(10).fillColor('#444').text(`Period mode: ${granularity === 'week' ? 'Week-wise (4 weeks)' : 'Month-wise (6 months)'}`, {
-      align: 'left',
-    });
-    doc.text(`Generated: ${new Date().toLocaleString('en-GB', { timeZone: TZ })} (Colombo)`, {
-      align: 'left',
-    });
-    doc.moveDown();
-    doc.fillColor('#000');
+    const left = 50;
+    const w = doc.page.width - 100;
+    doc.save();
+    doc.roundedRect(left, doc.y - 4, w, 60, 6).fill(PDF_PANEL);
+    doc.restore();
+    drawEyeLogoPdf(doc, left, doc.y, 36);
+    doc.font('Helvetica-Bold').fontSize(15).fillColor(PDF_BRAND);
+    doc.text('National Eye Hospital', left + 52, doc.y + 6, { width: w - 60 });
+    doc.font('Helvetica').fontSize(9).fillColor(PDF_MUTED);
+    doc.text('Sri Lanka · OPD Queue Management', left + 52, doc.y + 24, { width: w - 60 });
+    doc.font('Helvetica-Bold').fontSize(12).fillColor(PDF_BRAND);
+    doc.text('Appointment volume report', left, doc.y + 44, { width: w, align: 'center' });
+    doc.y += 68;
 
-    doc.fontSize(11).text('Buckets', { underline: true });
-    doc.moveDown(0.3);
-    report.buckets.forEach((b) => {
-      doc.fontSize(10).text(
-        `${b.label}: ${b.appointmentCount} appointments, ${b.uniquePatientCount} unique patients`,
-        { indent: 10 }
-      );
+    doc.font('Helvetica').fontSize(9).fillColor(PDF_MUTED);
+    doc.text(`Period mode: ${granularity === 'week' ? 'Week-wise (4 weeks)' : 'Month-wise (6 months)'}`, left, doc.y, {
+      width: w,
+      align: 'left',
     });
-    doc.moveDown();
-    doc.fontSize(11).text('Trend-based forecast (next period)', { underline: true });
-    doc.moveDown(0.3);
-    doc
-      .fontSize(10)
-      .text(
-        `Predicted appointments: ${report.prediction.nextPeriodAppointments} · Predicted unique patients: ${report.prediction.nextPeriodUniquePatients}`
-      );
-    doc.moveDown(0.5);
-    doc.fontSize(9).fillColor('#666').text(report.prediction.note, { align: 'left' });
+    if (doctor?.fullName) {
+      doc.text(`Doctor: ${doctor.fullName}`, { width: w, align: 'left' });
+    }
+    doc.text(`Generated: ${new Date().toLocaleString('en-GB', { timeZone: TZ })} (Asia/Colombo)`, {
+      width: w,
+      align: 'left',
+    });
+    doc.moveDown(0.8);
+
+    const lastBucket = report.buckets[report.buckets.length - 1];
+    const kpiY = doc.y;
+    const gap = 8;
+    const colW = (w - gap * 2) / 3;
+    const cards = [
+      {
+        title: 'Total appointments (latest)',
+        value: lastBucket?.appointmentCount ?? 0,
+        label: lastBucket?.label ?? '—',
+      },
+      {
+        title: 'Predicted appointments (next)',
+        value: report.prediction.nextPeriodAppointments,
+        label: `${report.prediction.appointmentRange.min}-${report.prediction.appointmentRange.max}`,
+      },
+      {
+        title: 'Predicted unique patients',
+        value: report.prediction.nextPeriodUniquePatients,
+        label: `${report.prediction.uniquePatientRange.min}-${report.prediction.uniquePatientRange.max}`,
+      },
+    ];
+    cards.forEach((card, i) => {
+      const x = left + i * (colW + gap);
+      doc.save();
+      doc.roundedRect(x, kpiY, colW, 58, 4).fill(PDF_PANEL);
+      doc.roundedRect(x, kpiY, colW, 58, 3).stroke('#e2e8f0');
+      doc.fillColor(PDF_BRAND).font('Helvetica-Bold').fontSize(8).text(card.title, x + 8, kpiY + 6, {
+        width: colW - 16,
+      });
+      doc.font('Helvetica-Bold').fontSize(18).fillColor(PDF_BRAND).text(String(card.value), x + 8, kpiY + 24, {
+        width: colW - 16,
+      });
+      doc.font('Helvetica').fontSize(7.5).fillColor(PDF_MUTED).text(card.label, x + 8, kpiY + 44, {
+        width: colW - 16,
+      });
+      doc.restore();
+    });
+    doc.y = kpiY + 70;
+
+    doc.font('Helvetica-Bold').fontSize(11).fillColor(PDF_BRAND);
+    doc.text('Weekly buckets', left, doc.y, { width: w });
+    doc.moveDown(0.4);
+
+    const tableY = doc.y;
+    const colWTable = [w * 0.46, w * 0.18, w * 0.18, w * 0.18];
+    const headH = 16;
+    doc.roundedRect(left, tableY, w, headH, 3).fill(PDF_BRAND);
+    doc.fillColor('#ffffff').font('Helvetica-Bold').fontSize(8);
+    const headers = ['Period', 'Appointments', 'Unique patients', 'Prediction range'];
+    let cx = left + 6;
+    headers.forEach((h, i) => {
+      doc.text(h, cx, tableY + 4, { width: colWTable[i] - 8 });
+      cx += colWTable[i];
+    });
+    let y = tableY + headH;
+    report.buckets.forEach((b, i) => {
+      const bg = i % 2 === 0 ? '#ffffff' : PDF_PANEL;
+      doc.rect(left, y, w, 16).fill(bg).stroke('#e2e8f0');
+      doc.fillColor('#111827').font('Helvetica').fontSize(8);
+      cx = left + 6;
+      const cells = [
+        b.label,
+        String(b.appointmentCount),
+        String(b.uniquePatientCount),
+        i === report.buckets.length - 1
+          ? `${report.prediction.appointmentRange.min}-${report.prediction.appointmentRange.max}`
+          : '—',
+      ];
+      cells.forEach((cell, j) => {
+        doc.text(cell, cx, y + 4, { width: colWTable[j] - 8 });
+        cx += colWTable[j];
+      });
+      y += 16;
+    });
+    doc.y = y + 8;
+
+    doc.font('Helvetica').fontSize(9).fillColor(PDF_MUTED).text('Trend-based forecast (next period)', left, doc.y, {
+      width: w,
+      align: 'left',
+    });
+    doc.moveDown(0.2);
+    doc.font('Helvetica').fontSize(9).fillColor(PDF_MUTED).text(report.prediction.note, left, doc.y, {
+      width: w,
+      align: 'left',
+    });
 
     doc.end();
   } catch (e) {
