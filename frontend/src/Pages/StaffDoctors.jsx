@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '../components/StaffTopBar';
 import SidebarNav from '../components/StaffSidebar';
 import QueueControls from '../components/QueueControls';
 import WaitingQueue from '../components/WaitingQueue';
-import RecallQueue from '../components/RecallQueue';
+// RecallQueue removed from staff layout; replaced by single skipped-patients section
 import { useQueue } from '../context/QueueContext';
 import api from '../api/client';
 
@@ -20,7 +20,11 @@ const Doctors = () => {
     markPatientMissed,
     doctorStatuses,
     setActiveDoctorId,
+    cancelToken,
+    markSkippedDone,
   } = useQueue();
+
+  
 
   const navigate = useNavigate();
 
@@ -75,6 +79,25 @@ const Doctors = () => {
     const id = selectedDoctor?._id ? String(selectedDoctor._id) : '';
     if (id) setActiveDoctorId(id);
   }, [selectedDoctor?._id, setActiveDoctorId]);
+
+  // Search and filtered skipped list (must run after selectedDoctor is defined)
+  const [searchQuery, setSearchQuery] = useState('');
+  const filteredRecall = useMemo(() => {
+    // show only skipped entries for the selected doctor
+    const doctorIdStr = selectedDoctor?._id ? String(selectedDoctor._id) : '';
+    const byDoctor = doctorIdStr
+      ? recallQueue.filter((p) => String(p.doctorId || doctorIdStr) === doctorIdStr)
+      : recallQueue;
+
+    const q = String(searchQuery || '').trim().toLowerCase();
+    if (!q) return byDoctor;
+    return byDoctor.filter((p) => {
+      const name = String(p.patientName || '').toLowerCase();
+      const phone = String(p.patientPhone || '').toLowerCase();
+      const token = String(p.token || '').toLowerCase();
+      return name.includes(q) || phone.includes(q) || token.includes(q);
+    });
+  }, [recallQueue, searchQuery, selectedDoctor]);
 
   // normalize display fields for API vs static entries
   const displayName = selectedDoctor?.doctorName || selectedDoctor?.name || 'Doctor';
@@ -187,79 +210,60 @@ const Doctors = () => {
               </section>
 
               {/* Queue controls and lists */}
-              <section className="grid grid-cols-[380px_1fr_320px] gap-6 lg:gap-8 lg:grid-cols-[1fr_1fr] lg:[&>*:last-child]:col-span-2 md:grid-cols-1 md:[&>*:last-child]:col-span-1">
-                <QueueControls doctorId={selectedDoctor?._id || ''} />
-                <WaitingQueue />
-                <RecallQueue />
+              <section className="grid grid-cols-2 gap-6 lg:gap-8 items-stretch">
+                <div className="h-full">
+                  <QueueControls doctorId={selectedDoctor?._id || ''} />
+                </div>
+                <div className="h-full">
+                  <WaitingQueue />
+                </div>
               </section>
 
               {/* Patient removal / control table */}
               <section className="bg-white/80 backdrop-blur-md rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-200/60 p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h2 className="text-lg font-extrabold text-slate-900">
-                      Patient Queue Control
-                    </h2>
-                    <p className="text-xs text-slate-500 font-medium">
-                      Remove patients who do not appear when called
-                    </p>
+                    <h2 className="text-lg font-extrabold text-slate-900">Patients who do not appear when called</h2>
+                    <p className="text-xs text-slate-500 font-medium">Manage skipped patients (recall queue)</p>
                   </div>
                 </div>
+                <div className="mb-4">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    placeholder="Search by name or phone"
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full max-w-sm border border-slate-200 rounded-lg px-3 py-2 text-sm shadow-sm"
+                  />
+                </div>
 
-                {waitingQueue.length === 0 ? (
-                  <div className="py-8 text-center text-sm text-slate-500 font-medium">
-                    No patients currently waiting in the queue.
-                  </div>
+                {filteredRecall.length === 0 ? (
+                  <div className="py-8 text-center text-sm text-slate-500 font-medium">No skipped patients in the recall queue.</div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="min-w-full text-sm">
                       <thead>
                         <tr className="bg-slate-50">
-                          <th className="px-4 py-2 text-left font-semibold text-slate-600">
-                            Token
-                          </th>
-                          <th className="px-4 py-2 text-left font-semibold text-slate-600">
-                            Patient Name
-                          </th>
-                          <th className="px-4 py-2 text-left font-semibold text-slate-600">
-                            Status
-                          </th>
-                          <th className="px-4 py-2 text-left font-semibold text-slate-600">
-                            Action
-                          </th>
+                          <th className="px-4 py-2 text-left font-semibold text-slate-600">Token</th>
+                          <th className="px-4 py-2 text-left font-semibold text-slate-600">Patient Name</th>
+                          <th className="px-4 py-2 text-left font-semibold text-slate-600">Phone</th>
+                          <th className="px-4 py-2 text-left font-semibold text-slate-600">Skipped at</th>
+                          <th className="px-4 py-2 text-left font-semibold text-slate-600">Action</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100">
-                        {waitingQueue.map((p) => (
-                          <tr key={p._id || p.id} className="hover:bg-slate-50/70">
-                            <td className="px-4 py-2 font-semibold text-slate-800">
-                              {p.token}
-                            </td>
-                            <td className="px-4 py-2 text-slate-700">
-                              {p.name || 'Walk-in Patient'}
-                            </td>
-                            <td className="px-4 py-2">
-                              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                Checked-In
-                              </span>
-                            </td>
+                        {filteredRecall.map((p) => (
+                          <tr key={p.id} className="hover:bg-slate-50/70">
+                            <td className="px-4 py-2 font-semibold text-slate-800">{p.token}</td>
+                            <td className="px-4 py-2 text-slate-700">{p.patientName || 'Walk-in Patient'}</td>
+                            <td className="px-4 py-2 text-slate-700">{p.patientPhone || '—'}</td>
+                            <td className="px-4 py-2 text-slate-700">{p.skippedAt ? new Date(p.skippedAt).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '—'}</td>
                             <td className="px-4 py-2 space-x-2">
                               <button
-                                onClick={() =>
-                                  removePatientFromQueue(
-                                    selectedDoctor?._id || '',
-                                    p._id || p.id
-                                  )
-                                }
-                                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-300 hover:bg-slate-200"
+                                onClick={() => markSkippedDone(p.id)}
+                                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100"
                               >
-                                Remove
-                              </button>
-                              <button
-                                onClick={() => markPatientMissed(p._id || p.id)}
-                                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-50 text-red-700 border border-red-300 hover:bg-red-100"
-                              >
-                                Mark as Missed
+                                Mark as done
                               </button>
                             </td>
                           </tr>

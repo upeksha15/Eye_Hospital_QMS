@@ -7,6 +7,8 @@ import { fileURLToPath } from 'url';
 import { Server } from 'socket.io';
 import connectDB from '../config/db.js';
 import { initQueueSocket } from './socket/queueSocket.js';
+import QueueToken from './models/QueueToken.js';
+import { startOfDayColombo, nowColombo } from './utils/dateUtils.js';
 
 import userRoutes from './routes/userRoutes.js';
 import authRoutes from './routes/auth.js';
@@ -91,6 +93,60 @@ const startServer = async () => {
   server.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
+
+  // Schedule end-of-day cleanup at 17:00 Colombo time to finalize skipped patients
+  const scheduleEndOfDayCleanup = () => {
+    const now = nowColombo();
+    const todayStart = startOfDayColombo(now);
+    const end = new Date(todayStart);
+    end.setHours(17, 0, 0, 0);
+
+    let delay = end.getTime() - now.getTime();
+    if (delay <= 0) {
+      // if already past 5pm today, schedule for next day
+      end.setDate(end.getDate() + 1);
+      delay = end.getTime() - now.getTime();
+    }
+
+    setTimeout(async function runCleanup() {
+      try {
+        const cleanupStart = startOfDayColombo(nowColombo());
+        const cleanupEnd = new Date(cleanupStart);
+        cleanupEnd.setDate(cleanupEnd.getDate() + 1);
+
+        // find today's skipped tokens
+        const skipped = await QueueToken.find({ status: 'absent', checkinTime: { $gte: cleanupStart, $lt: cleanupEnd } }).lean();
+        const doctorIds = Array.from(new Set(skipped.map((s) => String(s.doctorId))));
+
+        if (skipped.length > 0) {
+          // mark them completed so they no longer appear in waiting/called lists
+          await QueueToken.updateMany({ _id: { $in: skipped.map((s) => s._id) } }, { status: 'completed' });
+
+          // emit socket updates per affected doctor
+          const io = app.get('io');
+          for (const did of doctorIds) {
+            const totalWaiting = await QueueToken.countDocuments({ doctorId: did, status: 'waiting', checkinTime: { $gte: cleanupStart, $lt: cleanupEnd } });
+            if (io) {
+              io.to(`queue:${String(did)}`).emit('queue:update', {
+                doctorId: String(did),
+                action: 'endOfDayCleanup',
+                removedCount: skipped.filter(s => String(s.doctorId) === String(did)).length,
+                totalWaiting,
+              });
+            }
+          }
+          console.log(`End-of-day cleanup: finalized ${skipped.length} skipped tokens.`);
+        }
+      } catch (e) {
+        console.error('End-of-day cleanup failed', e);
+      }
+
+      // schedule next run in 24h
+      setTimeout(runCleanup, 24 * 60 * 60 * 1000);
+    }, delay + 1000);
+  };
+
+  scheduleEndOfDayCleanup();
 };
 
 startServer();
