@@ -35,7 +35,8 @@ function todayRange() {
   return { start, end };
 }
 
-// Admin dashboard stat cards.
+const ENABLED_ROOM_QUERY = { status: /^enabled$/i };
+
 export async function getDashboardStats(req, res) {
   try {
     const { start, end } = todayRange();
@@ -46,28 +47,27 @@ export async function getDashboardStats(req, res) {
       doctorsAddedToday,
       todayAppointments,
       yesterdayAppointments,
-      activeDoctorsWithQueues,
+      enabledDoctorRooms,
       queueTokensToday,
     ] = await Promise.all([
       Doctor.countDocuments({ isActive: true }),
       Doctor.countDocuments({ createdAt: { $gte: start, $lt: end } }),
-      Appointment.countDocuments({ appointmentDate: { $gte: start, $lt: end } }),
+      Appointment.countDocuments({
+        appointmentDate: { $gte: start, $lt: end },
+        status: { $ne: 'cancelled' },
+      }),
       Appointment.countDocuments({
         appointmentDate: {
           $gte: new Date(start.getTime() - 24 * 60 * 60 * 1000),
           $lt: start,
         },
+        status: { $ne: 'cancelled' },
       }),
-      // Count unique doctors with waiting queues
-      QueueToken.aggregate([
-        { $match: { status: 'waiting' } },
-        { $group: { _id: '$doctorId' } },
-        { $count: 'totalDoctors' },
-      ]),
+      DoctorRoom.countDocuments(ENABLED_ROOM_QUERY),
       QueueToken.find({ checkinTime: { $gte: start, $lt: end } }).lean(),
     ]);
 
-    const activeQueuesCount = activeDoctorsWithQueues[0]?.totalDoctors || 0;
+    const activeQueuesCount = enabledDoctorRooms || 0;
 
     console.log('Dashboard stats data:', {
       activeDoctors,
@@ -116,12 +116,17 @@ export async function getChartSeries(req, res) {
     const { start, end } = todayRange();
 
     const [appts, checkins, regs] = await Promise.all([
-      Appointment.find({ createdAt: { $gte: start, $lt: end } }).select('createdAt').lean(),
+      Appointment.find({
+        appointmentDate: { $gte: start, $lt: end },
+        status: { $ne: 'cancelled' },
+      })
+        .select('createdAt appointmentDate')
+        .lean(),
       QueueToken.find({ checkinTime: { $gte: start, $lt: end } }).select('checkinTime').lean(),
       Patient.find({ createdAt: { $gte: start, $lt: end } }).select('createdAt').lean(),
     ]);
 
-    const hours = Array.from({ length: 10 }, (_, i) => 7 + i); // 07:00 - 16:00
+    const hours = Array.from({ length: 24 }, (_, index) => index);
     const zero = () => Object.fromEntries(hours.map((h) => [h, 0]));
 
     const registrations = zero();
@@ -142,13 +147,38 @@ export async function getChartSeries(req, res) {
     });
 
     const points = hours.map((h) => ({
-      hour: `${h}:00`,
+      hour: `${String(h).padStart(2, '0')}:00`,
       registrations: registrations[h],
       checkins: checkInCounts[h],
       appointments: appointmentCounts[h],
+      total: registrations[h] + checkInCounts[h] + appointmentCounts[h],
     }));
 
-    res.json({ success: true, series: points });
+    const totals = points.reduce(
+      (acc, point) => ({
+        registrations: acc.registrations + point.registrations,
+        checkins: acc.checkins + point.checkins,
+        appointments: acc.appointments + point.appointments,
+        total: acc.total + point.total,
+      }),
+      { registrations: 0, checkins: 0, appointments: 0, total: 0 }
+    );
+
+    const peak = points.reduce(
+      (best, point) => (point.total > best.total ? point : best),
+      points[0] || { hour: '00:00', total: 0 }
+    );
+
+    res.json({
+      success: true,
+      series: points,
+      details: {
+        date: start.toISOString(),
+        totals,
+        peakHour: peak.total > 0 ? peak.hour : 'No activity yet',
+        peakTotal: peak.total || 0,
+      },
+    });
   } catch (e) {
     console.error(e);
     res.status(500).json({ success: false, message: e.message || 'Failed to load chart' });
@@ -999,20 +1029,21 @@ export async function getTodayAppointmentsDetail(req, res) {
 
     const appointments = await Appointment.find({
       appointmentDate: { $gte: start, $lt: end },
+      status: { $ne: 'cancelled' },
     })
-      .populate('doctorId', 'fullName speciality')
+      .populate({ path: 'doctorId', model: 'DoctorRoom', select: 'doctorName specialization room status' })
       .populate('patientId', 'fullName email contactNumber')
       .sort({ appointmentDate: 1 })
       .lean();
 
     const byDoctor = {};
     appointments.forEach((apt) => {
-      const doctorName = apt.doctorId?.fullName || 'Unknown Doctor';
+      const doctorName = apt.doctorId?.doctorName || 'Unknown Doctor';
       if (!byDoctor[doctorName]) {
         byDoctor[doctorName] = {
           doctorId: apt.doctorId?._id,
           doctorName,
-          speciality: apt.doctorId?.speciality || 'General',
+          speciality: apt.doctorId?.specialization || 'General',
           appointments: [],
         };
       }
@@ -1046,23 +1077,49 @@ export async function getTodayAppointmentsDetail(req, res) {
 // Admin detail: active queues by doctor.
 export async function getActiveQueuesDetail(req, res) {
   try {
-    const activeQueues = await QueueToken.find({ status: 'waiting' })
-      .populate('appointmentId', 'appointmentDate visitReason')
-      .populate('doctorId', 'fullName speciality')
-      .lean();
+    const { start, end } = todayRange();
 
-    const byDoctor = {};
+    const [enabledRooms, activeQueues] = await Promise.all([
+      DoctorRoom.find(ENABLED_ROOM_QUERY).sort({ queueEnabledAt: -1, doctorName: 1 }).lean(),
+      QueueToken.find({
+        status: 'waiting',
+        checkinTime: { $gte: start, $lt: end },
+      })
+      .populate('appointmentId', 'appointmentDate visitReason')
+        .populate({ path: 'doctorId', model: 'DoctorRoom', select: 'doctorName specialization room status queueLimit' })
+        .lean(),
+    ]);
+
+    const byDoctor = new Map();
+    enabledRooms.forEach((room) => {
+      byDoctor.set(String(room._id), {
+        doctorId: room._id,
+        doctorName: room.doctorName || 'Unknown Doctor',
+        speciality: room.specialization || 'General',
+        room: room.room || '',
+        status: room.status || 'Enabled',
+        queueLimit: room.queueLimit || 0,
+        queueEnabledAt: room.queueEnabledAt,
+        queues: [],
+      });
+    });
+
     activeQueues.forEach((queue) => {
-      const doctorName = queue.doctorId?.fullName || 'Unknown Doctor';
-      if (!byDoctor[doctorName]) {
-        byDoctor[doctorName] = {
+      const doctorId = queue.doctorId?._id || queue.doctorId;
+      const key = String(doctorId || '');
+      if (!byDoctor.has(key)) {
+        byDoctor.set(key, {
           doctorId: queue.doctorId?._id,
-          doctorName,
-          speciality: queue.doctorId?.speciality || 'General',
+          doctorName: queue.doctorId?.doctorName || 'Unknown Doctor',
+          speciality: queue.doctorId?.specialization || 'General',
+          room: queue.doctorId?.room || '',
+          status: queue.doctorId?.status || 'Enabled',
+          queueLimit: queue.doctorId?.queueLimit || 0,
+          queueEnabledAt: queue.doctorId?.queueEnabledAt || null,
           queues: [],
-        };
+        });
       }
-      byDoctor[doctorName].queues.push({
+      byDoctor.get(key).queues.push({
         _id: queue._id,
         tokenNumber: queue.tokenNumber || 'N/A',
         checkinTime: queue.checkinTime,
@@ -1071,11 +1128,11 @@ export async function getActiveQueuesDetail(req, res) {
       });
     });
 
-    const doctors = Object.values(byDoctor);
+    const doctors = Array.from(byDoctor.values());
 
     res.json({
       success: true,
-      total: activeQueues.length,
+      total: doctors.length,
       doctors,
     });
   } catch (e) {

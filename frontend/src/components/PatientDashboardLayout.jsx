@@ -29,6 +29,8 @@ import { fetchMyQueueStatusToday } from '../api/queueApi';
 import { useSocket } from '../hooks/useSocket';
 import { hasNewPatientNotification, addIncomingPatientNotification, PATIENT_NOTIFICATIONS_UPDATED_EVENT } from '../utils/patientNotifications';
 
+const QUEUE_POLL_INTERVAL_MS = 15000;
+
 function getStatusColor(status) {
   switch (status) {
     case 'approved':
@@ -143,11 +145,45 @@ export default function PatientDashboardLayout() {
     doctorName: '',
   });
 
-  const [appointments, setAppointments] = useState({ upcoming: [], past: [] });
+  const [appointments, setAppointments] = useState({ upcoming: [], past: [], all: [] });
   const [dashLoading, setDashLoading] = useState(false);
 
   useEffect(() => {
     let mounted = true;
+
+    const resetQueueStatus = (doctorName = '') => {
+      setQueueStatus({
+        isInQueue: false,
+        queueNumber: null,
+        position: null,
+        estimatedWaitTime: 0,
+        status: 'inactive',
+        doctorName,
+      });
+    };
+
+    const loadQueueStatus = async (doctorId, doctorName = '') => {
+      if (!doctorId) {
+        resetQueueStatus();
+        return;
+      }
+      try {
+        const q = await fetchMyQueueStatusToday(doctorId);
+        if (!mounted) return;
+        setQueueStatus({
+          isInQueue: Boolean(q?.tokenNumber),
+          queueNumber: q?.tokenNumber || null,
+          position: q?.position ?? null,
+          estimatedWaitTime: q?.estimatedWaitMinutes ?? 0,
+          status: q?.queueStatus || 'inactive',
+          doctorName,
+        });
+      } catch {
+        if (!mounted) return;
+        resetQueueStatus(doctorName);
+      }
+    };
+
     const load = async () => {
       setDashLoading(true);
       try {
@@ -184,7 +220,7 @@ export default function PatientDashboardLayout() {
             type: (a.visitReason || 'consultation').replace(/_/g, ' '),
           }));
 
-        setAppointments({ upcoming, past });
+        setAppointments({ upcoming, past, all });
 
         const todayAppt = all.find((a) => new Date(a.appointmentDate).toDateString() === todayKey);
         const todayDoctorIdLocal = todayAppt?.doctorId?._id || todayAppt?.doctorId || '';
@@ -193,38 +229,7 @@ export default function PatientDashboardLayout() {
 
         setTodayDoctorId(todayDoctorIdLocal);
 
-        if (todayDoctorIdLocal) {
-          try {
-            const q = await fetchMyQueueStatusToday(todayDoctorIdLocal);
-            if (!mounted) return;
-            setQueueStatus({
-              isInQueue: Boolean(q?.tokenNumber),
-              queueNumber: q?.tokenNumber || null,
-              position: q?.position ?? null,
-              estimatedWaitTime: q?.estimatedWaitMinutes ?? 0,
-              status: q?.queueStatus || 'inactive',
-              doctorName: todayDoctorName,
-            });
-          } catch {
-            setQueueStatus({
-              isInQueue: false,
-              queueNumber: null,
-              position: null,
-              estimatedWaitTime: 0,
-              status: 'inactive',
-              doctorName: todayDoctorName,
-            });
-          }
-        } else {
-          setQueueStatus({
-            isInQueue: false,
-            queueNumber: null,
-            position: null,
-            estimatedWaitTime: 0,
-            status: 'inactive',
-            doctorName: '',
-          });
-        }
+        await loadQueueStatus(todayDoctorIdLocal, todayDoctorName);
       } finally {
         if (mounted) setDashLoading(false);
       }
@@ -236,6 +241,38 @@ export default function PatientDashboardLayout() {
       mounted = false;
     };
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!todayDoctorId) return undefined;
+    const timerId = setInterval(async () => {
+      try {
+        const q = await fetchMyQueueStatusToday(todayDoctorId);
+        setQueueStatus((prev) => ({
+          ...prev,
+          isInQueue: Boolean(q?.tokenNumber),
+          queueNumber: q?.tokenNumber || null,
+          position: q?.position ?? null,
+          estimatedWaitTime: q?.estimatedWaitMinutes ?? 0,
+          status: q?.queueStatus || 'inactive',
+        }));
+      } catch {
+        setQueueStatus((prev) => ({
+          ...prev,
+          isInQueue: false,
+          queueNumber: null,
+          position: null,
+          estimatedWaitTime: 0,
+          status: 'inactive',
+        }));
+      }
+    }, QUEUE_POLL_INTERVAL_MS);
+
+    return () => clearInterval(timerId);
+  }, [todayDoctorId]);
+
+  const totalAppointmentsCount = appointments.all.filter((a) => a.status !== 'cancelled').length;
+  const completedAppointmentsCount = appointments.all.filter((a) => a.status === 'completed').length;
+  const notCompletedAppointmentsCount = appointments.all.filter((a) => a.status === 'absent').length;
 
   const handleLogoClick = () => {
     navigate('/');
@@ -269,16 +306,16 @@ export default function PatientDashboardLayout() {
             <p className="text-white/90">Manage your appointments and track your queue status in real-time.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <button
               type="button"
-              onClick={() => navigate('/appointments/mine?filter=upcoming')}
+              onClick={() => navigate('/appointments/mine')}
               className="text-left bg-white rounded-lg p-5 border border-[#E5E7EB] shadow-[0_1px_3px_0_rgba(0,0,0,0.08)] hover:shadow-md transition"
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm mb-1 text-[#6B7280]">Upcoming</p>
-                  <p className="text-2xl font-bold text-[#1F2937]">{appointments.upcoming.length}</p>
+                  <p className="text-sm mb-1 text-[#6B7280]">Total Appointments</p>
+                  <p className="text-2xl font-bold text-[#1F2937]">{totalAppointmentsCount}</p>
                 </div>
                 <div className="bg-[#DBEAFE] p-3 rounded-lg">
                   <Calendar size={24} className="text-[#2563EB]" />
@@ -310,10 +347,26 @@ export default function PatientDashboardLayout() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm mb-1 text-[#6B7280]">Completed</p>
-                  <p className="text-2xl font-bold text-[#1F2937]">{appointments.past.length}</p>
+                  <p className="text-2xl font-bold text-[#1F2937]">{completedAppointmentsCount}</p>
                 </div>
                 <div className="bg-[#DCFCE7] p-3 rounded-lg">
                   <CheckCircle size={24} className="text-[#16A34A]" />
+                </div>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate('/appointments/mine')}
+              className="text-left bg-white rounded-lg p-5 border border-[#E5E7EB] shadow-[0_1px_3px_0_rgba(0,0,0,0.08)] hover:shadow-md transition"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm mb-1 text-[#6B7280]">Not Completed</p>
+                  <p className="text-2xl font-bold text-[#1F2937]">{notCompletedAppointmentsCount}</p>
+                </div>
+                <div className="bg-[#FEE2E2] p-3 rounded-lg">
+                  <AlertCircle size={24} className="text-[#DC2626]" />
                 </div>
               </div>
             </button>

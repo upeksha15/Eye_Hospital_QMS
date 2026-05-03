@@ -38,11 +38,20 @@ export default function ActiveQueuesDetail({ data, onClose }) {
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <h3 className="font-semibold text-slate-900">{doctor.doctorName}</h3>
-                      <p className="text-sm text-slate-600">{doctor.speciality}</p>
+                      <p className="text-sm text-slate-600">
+                        {doctor.speciality}
+                        {doctor.room ? ` · Room ${doctor.room}` : ''}
+                      </p>
                     </div>
                     <div className="flex items-center gap-3">
+                      <div className="hidden sm:block bg-white rounded-lg px-3 py-2 border border-violet-200">
+                        <p className="text-xs text-slate-500">Capacity</p>
+                        <p className="text-lg font-bold text-violet-600">
+                          {doctor.queueLimit || 0}
+                        </p>
+                      </div>
                       <div className="bg-white rounded-lg px-3 py-2 border border-violet-200">
-                        <p className="text-xs text-slate-500">Queue Members</p>
+                        <p className="text-xs text-slate-500">Waiting</p>
                         <p className="text-lg font-bold text-violet-600">
                           {doctor.queues?.length || 0}
                         </p>
@@ -56,44 +65,50 @@ export default function ActiveQueuesDetail({ data, onClose }) {
                   </div>
                 </button>
 
-                {expandedDoctor === doctor.doctorId && doctor.queues && doctor.queues.length > 0 && (
+                {expandedDoctor === doctor.doctorId && (
                   <div className="ml-2 space-y-2">
-                    {doctor.queues.map((queue, idx) => (
-                      <div
-                        key={queue._id}
-                        className="bg-slate-50 rounded-lg p-3 border border-slate-200 hover:border-violet-300 transition"
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 text-violet-700 font-semibold text-sm shrink-0">
-                              #{idx + 1}
+                    {doctor.queues && doctor.queues.length > 0 ? (
+                      doctor.queues.map((queue, idx) => (
+                        <div
+                          key={queue._id}
+                          className="bg-slate-50 rounded-lg p-3 border border-slate-200 hover:border-violet-300 transition"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 text-violet-700 font-semibold text-sm shrink-0">
+                                #{idx + 1}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-slate-900">
+                                  {queue.tokenNumber || 'Token ' + (idx + 1)}
+                                </p>
+                                <p className="text-xs text-slate-500">
+                                  {queue.visitReason || 'Consultation'}
+                                </p>
+                              </div>
                             </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="font-medium text-slate-900">
-                                {queue.tokenNumber || 'Token ' + (idx + 1)}
-                              </p>
-                              <p className="text-xs text-slate-500">
-                                {queue.visitReason || 'Consultation'}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs">
-                            <Clock className="w-3 h-3 text-slate-400" />
-                            <span className="text-slate-600">
-                              {new Date(queue.checkinTime).toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </span>
-                            {queue.status === 'waiting' && (
-                              <span className="ml-2 inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800">
-                                Waiting
+                            <div className="flex items-center gap-2 text-xs">
+                              <Clock className="w-3 h-3 text-slate-400" />
+                              <span className="text-slate-600">
+                                {new Date(queue.checkinTime).toLocaleTimeString([], {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
                               </span>
-                            )}
+                              {queue.status === 'waiting' && (
+                                <span className="ml-2 inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800">
+                                  Waiting
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
+                      ))
+                    ) : (
+                      <div className="bg-slate-50 rounded-lg p-3 border border-slate-200 text-sm text-slate-500">
+                        Queue is enabled. No patients have checked in yet.
                       </div>
-                    ))}
+                    )}
                   </div>
                 )}
               </div>

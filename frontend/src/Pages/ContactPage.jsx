@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Eye, MapPin, Phone, Mail, Clock, ClipboardList, ChevronDown, User } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { submitFeedback } from '../api/feedbackApi';
+import bgImage from '../assets/image5.png';
 
 function isFeedbackValid(text) {
   const value = (text || '').trim();
@@ -64,7 +65,10 @@ const ContactPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#f0f7ff] font-sans text-slate-800 w-full">
+    <div
+      className="min-h-screen flex flex-col font-sans text-slate-800 w-full relative bg-cover bg-center bg-no-repeat bg-fixed"
+      style={{ backgroundImage: `url(${bgImage})` }}
+    >
       {/* Navbar */}
       <nav className="flex items-center justify-between px-12 py-4 bg-[#041a3f]/90 backdrop-blur-xl border-b border-cyan-100/10 sticky top-0 z-50 w-full shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
         <div className="flex items-center gap-2">
@@ -185,12 +189,12 @@ const ContactPage = () => {
       </nav>
 
       {/* Contact content */}
-      <section className="py-16 px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-10">
-            <p className="text-sm font-semibold tracking-wide text-blue-600 uppercase">We are here to help</p>
-            <h1 className="mt-2 text-3xl md:text-4xl font-bold text-[#003366]">Contact the National Eye Hospital</h1>
-            <p className="mt-4 text-slate-700 max-w-2xl mx-auto">
+      <section className="pt-8 pb-16 px-6 relative z-10">
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-8 mx-auto w-full max-w-2xl bg-white/40 backdrop-blur-lg border border-white/60 shadow-[0_4px_20px_rgba(0,0,0,0.08)] rounded-2xl py-4 px-6 md:px-8 md:py-5">
+            <p className="text-xs font-bold tracking-wider text-blue-600 uppercase">We are here to help</p>
+            <h1 className="mt-1.5 text-2xl md:text-3xl font-bold text-[#003366]">Contact the National Eye Hospital</h1>
+            <p className="mt-2 text-slate-800 text-sm md:text-[14px] leading-relaxed max-w-lg mx-auto">
               Reach us for questions about clinics, appointments, or the Queue Management System. Our staff
               will guide you to the right service.
             </p>
@@ -199,131 +203,150 @@ const ContactPage = () => {
           <div className="grid gap-10 md:grid-cols-2 items-start">
             <div className="space-y-5">
               <div className="space-y-4 bg-white/90 backdrop-blur-md rounded-2xl shadow-2xl border border-blue-100 p-6">
-              <div className="flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-blue-600 mt-1" />
-                <div>
-                  <h2 className="font-semibold text-[#003366]">Hospital Address</h2>
-                  <p className="text-sm text-slate-700">
-                    123 Eye Care Street,<br />
-                    Colombo, Sri Lanka
-                  </p>
+                <div className="flex items-start gap-3">
+                  <MapPin className="w-5 h-5 text-blue-600 mt-1" />
+                  <div>
+                    <h2 className="font-semibold text-[#003366]">Hospital Address</h2>
+                    <p className="text-sm text-slate-700">
+                      123 Eye Care Street,<br />
+                      Colombo, Sri Lanka
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <Phone className="w-5 h-5 text-blue-600 mt-1" />
-                <div>
-                  <h2 className="font-semibold text-[#003366]">Telephone</h2>
-                  <p className="text-sm text-slate-700">+94 11 123 4567</p>
-                  <p className="text-sm text-slate-700">+94 11 765 4321</p>
+                <div className="flex items-start gap-3">
+                  <Phone className="w-5 h-5 text-blue-600 mt-1" />
+                  <div>
+                    <h2 className="font-semibold text-[#003366]">Telephone</h2>
+                    <p className="text-sm text-slate-700">+94 11 123 4567</p>
+                    <p className="text-sm text-slate-700">+94 11 765 4321</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <Mail className="w-5 h-5 text-blue-600 mt-1" />
-                <div>
-                  <h2 className="font-semibold text-[#003366]">Email</h2>
-                  <p className="text-sm text-slate-700">info@eyehospital.lk</p>
+                <div className="flex items-start gap-3">
+                  <Mail className="w-5 h-5 text-blue-600 mt-1" />
+                  <div>
+                    <h2 className="font-semibold text-[#003366]">Email</h2>
+                    <p className="text-sm text-slate-700">info@eyehospital.lk</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-start gap-3 border-t border-slate-100 pt-4">
-                <Clock className="w-5 h-5 text-blue-600 mt-1" />
-                <div>
-                  <h2 className="font-semibold text-[#003366]">Working Hours</h2>
-                  <p className="text-sm text-slate-700">
-                    Outpatient clinics: Monday to Friday, 8.00 AM – 4.00 PM<br />
-                    Emergency services: 24 hours, 7 days a week
-                  </p>
+                <div className="flex items-start gap-3 border-t border-slate-100 pt-4">
+                  <Clock className="w-5 h-5 text-blue-600 mt-1" />
+                  <div>
+                    <h2 className="font-semibold text-[#003366]">Working Hours</h2>
+                    <p className="text-sm text-slate-700">
+                      Outpatient clinics: Monday to Friday, 8.00 AM – 4.00 PM<br />
+                      Emergency services: 24 hours, 7 days a week
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm text-slate-700">
-                <div className="bg-blue-50 rounded-xl px-4 py-3">
-                  <p className="font-semibold text-[#003366]">OPD</p>
-                  <p>Mon–Fri, 8.00 AM – 4.00 PM</p>
-                </div>
-                <div className="bg-sky-50 rounded-xl px-4 py-3">
-                  <p className="font-semibold text-[#003366]">Clinics</p>
-                  <p>By appointment only</p>
-                </div>
-                <div className="bg-indigo-50 rounded-xl px-4 py-3">
-                  <p className="font-semibold text-[#003366]">Emergency</p>
-                  <p>24 hours / 7 days</p>
+                <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm text-slate-700">
+                  <div className="bg-blue-50 rounded-xl px-4 py-3">
+                    <p className="font-semibold text-[#003366]">OPD</p>
+                    <p>Mon–Fri, 8.00 AM – 4.00 PM</p>
+                  </div>
+                  <div className="bg-sky-50 rounded-xl px-4 py-3">
+                    <p className="font-semibold text-[#003366]">Clinics</p>
+                    <p>By appointment only</p>
+                  </div>
+                  <div className="bg-indigo-50 rounded-xl px-4 py-3">
+                    <p className="font-semibold text-[#003366]">Emergency</p>
+                    <p>24 hours / 7 days</p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
             <div className="space-y-6 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-blue-100 p-6">
               <h2 className="text-xl font-semibold text-[#003366]">Feedback - add your rating</h2>
               <form className="space-y-4" onSubmit={handleSubmit}>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Your feedback</label>
-                <textarea
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm h-28 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/70 shadow-sm"
-                  placeholder="Share your experience or suggestions here"
-                  value={feedback}
-                  onChange={(e) => setFeedback(e.target.value)}
-                />
-                {feedback && !feedbackIsValid && (
-                  <p className="mt-1 text-xs text-red-500">
-                    Feedback must contain at least 5 letters and no numbers.
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Your feedback</label>
+                  <textarea
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm h-28 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/70 shadow-sm"
+                    placeholder="Share your experience or suggestions here"
+                    value={feedback}
+                    onChange={(e) => setFeedback(e.target.value)}
+                  />
+                  {feedback && !feedbackIsValid && (
+                    <p className="mt-1 text-xs text-red-500">
+                      Feedback must contain at least 5 letters and no numbers.
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Your rating</label>
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setRating(star)}
+                        onMouseEnter={() => setHoverRating(star)}
+                        onMouseLeave={() => setHoverRating(0)}
+                        className="text-3xl focus:outline-none"
+                      >
+                        <span
+                          className={`${(hoverRating || rating) >= star ? 'text-yellow-400' : 'text-slate-300'}`}
+                        >
+                          ★
+                        </span>
+                      </button>
+                    ))}
+                    <span className="ml-2 text-sm text-slate-600">
+                      {rating ? `${rating} out of 5` : 'Tap a star to rate'}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  className="mt-2 inline-flex items-center justify-center rounded-lg bg-[#2d9d78] px-8 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-[#248263] hover:shadow-lg transition-transform transform hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed"
+                  disabled={!rating || !feedback.trim() || !feedbackIsValid}
+                >
+                  Add Feedback
+                </button>
+                {showAuthPrompt && (
+                  <div className="mt-3 text-xs bg-yellow-50 border border-yellow-300 rounded-lg p-3 space-y-2 text-slate-700">
+                    <p className="font-semibold text-yellow-800">
+                      You can add feedback by logging in. Do you want to log in now?
+                    </p>
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => navigate('/login')}
+                        className="inline-flex items-center justify-center rounded-md bg-[#2d9d78] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[#248263] transition"
+                      >
+                        Yes
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowAuthPrompt(false);
+                          navigate('/');
+                        }}
+                        className="inline-flex items-center justify-center rounded-md border border-slate-300 px-4 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 transition"
+                      >
+                        No
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {submitError && (
+                  <p className="mt-2 text-xs text-red-500">
+                    {submitError}
                   </p>
                 )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Your rating</label>
-                <div className="flex items-center gap-1">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      type="button"
-                      onClick={() => setRating(star)}
-                      onMouseEnter={() => setHoverRating(star)}
-                      onMouseLeave={() => setHoverRating(0)}
-                      className="text-3xl focus:outline-none"
-                    >
-                      <span
-                        className={`${(hoverRating || rating) >= star ? 'text-yellow-400' : 'text-slate-300'}`}
-                      >
-                        ★
-                      </span>
-                    </button>
-                  ))}
-                  <span className="ml-2 text-sm text-slate-600">
-                    {rating ? `${rating} out of 5` : 'Tap a star to rate'}
-                  </span>
+                <div className="mt-3">
+                  <Link
+                    to="/feedback"
+                    className="inline-flex items-center justify-center rounded-lg border border-[#2d9d78] px-6 py-2 text-sm font-semibold text-[#2d9d78] bg-white hover:bg-[#e6f6f1] transition"
+                  >
+                    View all feedback
+                  </Link>
                 </div>
-              </div>
-              <button
-                type="submit"
-                className="mt-2 inline-flex items-center justify-center rounded-lg bg-[#2d9d78] px-8 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-[#248263] hover:shadow-lg transition-transform transform hover:-translate-y-0.5 disabled:opacity-60 disabled:cursor-not-allowed"
-                disabled={!rating || !feedback.trim() || !feedbackIsValid}
-              >
-                Add Feedback
-              </button>
-              {showAuthPrompt && (
-                <div className="mt-3 text-xs bg-yellow-50 border border-yellow-300 rounded-lg p-3 space-y-2 text-slate-700">
-                  <p className="font-semibold text-yellow-800">
-                    Only patients can add feedbacks!
-                  </p>
-                </div>
-              )}
-              {submitError && (
-                <p className="mt-2 text-xs text-red-500">
-                  {submitError}
+                <p className="text-xs text-slate-500">
+                  This is an information form only. Do not use it for medical emergencies. For urgent problems,
+                  please attend the emergency department directly.
                 </p>
-              )}
-              <div className="mt-3">
-                <Link
-                  to="/feedback"
-                  className="inline-flex items-center justify-center rounded-lg border border-[#2d9d78] px-6 py-2 text-sm font-semibold text-[#2d9d78] bg-white hover:bg-[#e6f6f1] transition"
-                >
-                  View all feedback
-                </Link>
-              </div>
-              <p className="text-xs text-slate-500">
-                This is an information form only. Do not use it for medical emergencies. For urgent problems,
-                please attend the emergency department directly.
-              </p>
-            </form>
+              </form>
             </div>
           </div>
         </div>
@@ -340,7 +363,7 @@ const ContactPage = () => {
               <h3 className="font-bold text-lg text-cyan-50">About Eye Hospital</h3>
             </div>
             <p className="text-sm text-cyan-100/70 leading-relaxed">
-              We provide specialized eye care services with a dedicated team of doctors and staff. 
+              We provide specialized eye care services with a dedicated team of doctors and staff.
               Our Queue Management System helps you save time and manage your visit easily.
             </p>
           </div>
@@ -355,9 +378,9 @@ const ContactPage = () => {
           </div>
           <div>
             <h3 className="font-bold text-lg mb-4 text-cyan-50">Contact Us</h3>
-            <p className="text-sm text-cyan-100/70 mb-2 flex items-center gap-2"><MapPin className="w-4 h-4 text-cyan-400"/> 123 Eye Care Street, Colombo, Sri Lanka</p>
-            <p className="text-sm text-cyan-100/70 mb-2 flex items-center gap-2"><Phone className="w-4 h-4 text-cyan-400"/> +94 11 123 4567</p>
-            <p className="text-sm text-cyan-100/70 flex items-center gap-2"><Mail className="w-4 h-4 text-cyan-400"/> info@eyehospital.lk</p>
+            <p className="text-sm text-cyan-100/70 mb-2 flex items-center gap-2"><MapPin className="w-4 h-4 text-cyan-400" /> 123 Eye Care Street, Colombo, Sri Lanka</p>
+            <p className="text-sm text-cyan-100/70 mb-2 flex items-center gap-2"><Phone className="w-4 h-4 text-cyan-400" /> +94 11 123 4567</p>
+            <p className="text-sm text-cyan-100/70 flex items-center gap-2"><Mail className="w-4 h-4 text-cyan-400" /> info@eyehospital.lk</p>
           </div>
         </div>
         <div className="text-center text-cyan-100/50 mt-12 text-sm border-t border-cyan-100/10 pt-6">
