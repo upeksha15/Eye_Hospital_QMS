@@ -39,6 +39,28 @@ const AboutPage = () => {
             </div>
             <span className="text-2xl font-bold text-cyan-50 tracking-wide">Sri Lanka National Eye Hospital Colombo</span>
           </button>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3">
+              <img
+                src="https://flagcdn.com/w40/lk.png"
+                alt="Sri Lanka Flag"
+                style={{
+                  animation: "wave 2s infinite ease-in-out",
+                  transformOrigin: "left center"
+                }}
+                className="w-14 h-7"
+              />
+            </div>
+            <style>
+              {`
+              @keyframes wave {
+                0% { transform: rotate(0deg); }
+                50% { transform: rotate(4deg); }
+                100% { transform: rotate(0deg); }
+              }
+              `}
+            </style>
+          </div>
         </div>
         <div className="flex items-center gap-8 font-semibold text-cyan-100/90">
           <Link to="/" className="hover:text-cyan-50 transition-colors">Home</Link>
@@ -73,10 +95,10 @@ const AboutPage = () => {
                 </div>
                 <div className="text-left">
                   <p className="text-sm font-semibold text-cyan-50 leading-tight">
-                    {patient?.fullName || 'Patient'}
+                    {activeUser?.fullName || activeUser?.name || 'User'}
                   </p>
                   <p className="text-xs text-cyan-100/70 leading-tight">
-                    {patient?.email || patient?.nic || ''}
+                    {activeUser?.email || activeUser?.nic || ''}
                   </p>
                 </div>
                 <ChevronDown className="w-4 h-4 text-cyan-100/70" />

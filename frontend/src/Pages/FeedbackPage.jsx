@@ -7,7 +7,9 @@ import bgImage from '../assets/image5.png';
 
 const FeedbackPage = () => {
   const navigate = useNavigate();
-  const { patient, isAuthenticated, userType, logout } = useAuth();
+  const { patient, staff, user, isAuthenticated, userType, logout } = useAuth();
+  const activeUser = userType === 'patient' ? patient : (staff || user);
+  const isLoggedIn = Boolean(isAuthenticated && activeUser);
   const isPatientLoggedIn = Boolean(isAuthenticated && userType === 'patient' && patient);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -51,31 +53,28 @@ const FeedbackPage = () => {
             </div>
             <span className="text-2xl font-bold text-cyan-50 tracking-wide">Sri Lanka National Eye Hospital Colombo</span>
           </button>
+          <div className="flex items-center gap-3">
             <div className="flex items-center gap-3">
-  <div className="flex items-center gap-3">
-  <img
-    src="https://flagcdn.com/w40/lk.png"
-    alt="Sri Lanka Flag"
-    style={{
-      animation: "wave 2s infinite ease-in-out",
-      transformOrigin: "left center"
-    }}
-    className="w-14 h-7"
-  />
-  
-</div>
-
-<style>
-{`
-@keyframes wave {
-  0% { transform: rotate(0deg); }
-  50% { transform: rotate(4deg); }
-  100% { transform: rotate(0deg); }
-}
-`}
-</style>
-
-  </div>
+              <img
+                src="https://flagcdn.com/w40/lk.png"
+                alt="Sri Lanka Flag"
+                style={{
+                  animation: "wave 2s infinite ease-in-out",
+                  transformOrigin: "left center"
+                }}
+                className="w-14 h-7"
+              />
+            </div>
+            <style>
+              {`
+              @keyframes wave {
+                0% { transform: rotate(0deg); }
+                50% { transform: rotate(4deg); }
+                100% { transform: rotate(0deg); }
+              }
+              `}
+            </style>
+          </div>
         </div>
         <div className="flex items-center gap-8 font-semibold text-cyan-100/90">
           <Link to="/" className="hover:text-cyan-50 transition-colors">Home</Link>
@@ -84,7 +83,7 @@ const FeedbackPage = () => {
           <Link to="/contact" className="hover:text-cyan-50 transition-colors">Contact</Link>
 
           {/* Right side: Login button (guest) or patient profile (logged-in) */}
-          {!isPatientLoggedIn ? (
+          {!isLoggedIn ? (
             <Link to="/login">
               <button className="relative group overflow-hidden bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-500 text-white px-6 py-2 rounded-full font-bold shadow-[0_0_20px_rgba(56,189,248,0.55)] transition-all hover:scale-105 border border-cyan-200/80">
                 <span className="absolute inset-0 bg-white/20 opacity-0 transition-opacity group-hover:opacity-100" />
@@ -112,10 +111,10 @@ const FeedbackPage = () => {
                 </div>
                 <div className="text-left">
                   <p className="text-sm font-semibold text-cyan-50 leading-tight">
-                    {patient?.fullName || 'Patient'}
+                    {activeUser?.fullName || activeUser?.name || 'User'}
                   </p>
                   <p className="text-xs text-cyan-100/70 leading-tight">
-                    {patient?.email || patient?.nic || ''}
+                    {activeUser?.email || activeUser?.nic || ''}
                   </p>
                 </div>
                 <ChevronDown className="w-4 h-4 text-cyan-100/70" />

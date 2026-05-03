@@ -148,10 +148,10 @@ useEffect(() => {
                 </div>
                 <div className="text-left">
                   <p className="text-sm font-semibold text-cyan-50 leading-tight">
-                    {patient?.fullName || 'Patient'}
+                    {activeUser?.fullName || activeUser?.name || 'User'}
                   </p>
                   <p className="text-xs text-cyan-100/70 leading-tight">
-                    {patient?.email || patient?.nic || ''}
+                    {activeUser?.email || activeUser?.nic || ''}
                   </p>
                 </div>
                 <ChevronDown className="w-4 h-4 text-cyan-100/70" />

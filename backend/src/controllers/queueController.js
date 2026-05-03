@@ -64,7 +64,7 @@ export async function getQueueToday(req, res) {
     const called = tokens.find((t) => t.status === 'called');
     const currentlyServing = called?.tokenNumber || '';
 
-    const doctorRoom = await DoctorRoom.findById(doctorId).select('status queueEnabledAt').lean();
+    const doctorRoom = await DoctorRoom.findById(doctorId).select('status queueEnabledAt queueLimit').lean();
     const window = computeCheckinWindow(doctorRoom);
 
     res.json({
@@ -80,6 +80,7 @@ export async function getQueueToday(req, res) {
       waiting,
       completed,
       estimatedWaitPerPatient: ESTIMATED_WAIT_PER_PATIENT,
+      queueLimit: doctorRoom?.queueLimit || null,
     });
   } catch (e) {
     console.error(e);
@@ -93,7 +94,7 @@ export async function getQueueBoardToday(req, res) {
     if (!ensureValidDoctorId(req, res, doctorId)) return;
     const { todayStart, tomorrow } = todayBounds();
 
-    const doctorRoom = await DoctorRoom.findById(doctorId).select('status queueEnabledAt doctorName room specialization').lean();
+    const doctorRoom = await DoctorRoom.findById(doctorId).select('status queueEnabledAt queueLimit doctorName room specialization').lean();
     const window = computeCheckinWindow(doctorRoom);
 
     const tokens = await QueueToken.find({
@@ -138,6 +139,7 @@ export async function getQueueBoardToday(req, res) {
       remainingMinutes: window.remainingMinutes,
       currentlyServing,
       estimatedWaitPerPatient: ESTIMATED_WAIT_PER_PATIENT,
+      queueLimit: doctorRoom?.queueLimit || null,
       tokens: queueList,
     });
   } catch (e) {
@@ -203,7 +205,7 @@ export async function getMyQueueStatusToday(req, res) {
       return res.status(404).json({ success: false, message: 'No appointment found for today' });
     }
 
-    const doctorRoom = await DoctorRoom.findById(doctorId).select('status queueEnabledAt').lean();
+    const doctorRoom = await DoctorRoom.findById(doctorId).select('status queueEnabledAt queueLimit').lean();
     const window = computeCheckinWindow(doctorRoom);
 
     const token = await QueueToken.findOne({
@@ -256,6 +258,7 @@ export async function getMyQueueStatusToday(req, res) {
       position,
       currentlyServing,
       estimatedWaitMinutes,
+      queueLimit: doctorRoom?.queueLimit || null,
     });
   } catch (e) {
     console.error(e);

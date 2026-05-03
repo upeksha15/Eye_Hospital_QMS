@@ -493,15 +493,19 @@ const FollowUps = () => {
                                     </div>
 
                                     <div className="flex items-center gap-3">
-                                      <div className="text-xs px-2 py-1 bg-slate-100 text-slate-700 rounded">{a.time || ''}</div>
-                                      <button
-                                        type="button"
-                                        onClick={() => openSchedule(a)}
-                                        className="px-3 py-1 rounded-lg bg-blue-600 text-white text-sm font-medium"
-                                      >
-                                        Schedule
-                                      </button>
-                                    </div>
+                                        <div className="text-xs px-2 py-1 bg-slate-100 text-slate-700 rounded">{a.time || ''}</div>
+                                        {scheduledFollowUps.some(f => f.appointmentId === a._id) ? (
+                                          <span className="px-3 py-1 rounded-lg bg-emerald-100 text-emerald-800 text-sm font-medium">Scheduled</span>
+                                        ) : (
+                                          <button
+                                            type="button"
+                                            onClick={() => openSchedule(a)}
+                                            className="px-3 py-1 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition"
+                                          >
+                                            Schedule
+                                          </button>
+                                        )}
+                                      </div>
                                   </li>
                                 ))}
                               </ul>

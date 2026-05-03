@@ -153,10 +153,8 @@ export default function BookAppointmentPage() {
   // Cap available slots by selected doctor's queue limit (if provided)
   const effectiveSlotForDay = useMemo(() => {
     if (!slotForDay) return null;
-    const qLimit = Number(selectedDoctor?.queueLimit ?? Infinity);
-    const available = typeof slotForDay.available === 'number' ? Math.max(0, Math.min(slotForDay.available, qLimit)) : slotForDay.available;
-    return { ...slotForDay, available };
-  }, [slotForDay, selectedDoctor]);
+    return slotForDay;
+  }, [slotForDay]);
 
   const handleDoctorChange = (id) => {
     setDoctorId(id);

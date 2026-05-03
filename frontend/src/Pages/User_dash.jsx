@@ -54,7 +54,8 @@ const UserDashboard = () => {
     queueNumber: null,
     position: null,
     estimatedWaitTime: 0,
-    status: 'inactive'
+    status: 'inactive',
+    queueLimit: null,
   });
 
   const [appointments, setAppointments] = useState({
@@ -116,6 +117,7 @@ const UserDashboard = () => {
               position: q?.position ?? null,
               estimatedWaitTime: q?.estimatedWaitMinutes ?? 0,
               status: q?.queueStatus || 'inactive',
+              queueLimit: q?.queueLimit ?? null,
             });
           } catch {
             setQueueStatus({
@@ -123,7 +125,8 @@ const UserDashboard = () => {
               queueNumber: null,
               position: null,
               estimatedWaitTime: 0,
-              status: 'inactive'
+              status: 'inactive',
+              queueLimit: null,
             });
           }
         } else {
@@ -132,7 +135,8 @@ const UserDashboard = () => {
             queueNumber: null,
             position: null,
             estimatedWaitTime: 0,
-            status: 'inactive'
+            status: 'inactive',
+            queueLimit: null,
           });
         }
       } catch (e) {
@@ -364,7 +368,7 @@ const UserDashboard = () => {
                     <span className="font-semibold text-sm text-[#15803D]">{String(queueStatus.status || 'active')}</span>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div className="bg-white rounded-lg p-4 border border-[#E5E7EB]">
                     <p className="text-sm mb-1 text-[#6B7280]">Queue Number</p>
                     <p className="text-3xl font-bold text-[#0F4C81]">{queueStatus.queueNumber || '--'}</p>
@@ -378,6 +382,11 @@ const UserDashboard = () => {
                     <p className="text-sm mb-1 text-[#6B7280]">Est. Wait Time</p>
                     <p className="text-3xl font-bold text-[#0F4C81]">{queueStatus.estimatedWaitTime}</p>
                     <p className="text-xs mt-1 text-[#6B7280]">minutes</p>
+                  </div>
+                  <div className="bg-white rounded-lg p-4 border border-[#E5E7EB]">
+                    <p className="text-sm mb-1 text-[#6B7280]">Daily Limit</p>
+                    <p className="text-3xl font-bold text-[#0F4C81]">{queueStatus.queueLimit ?? '--'}</p>
+                    <p className="text-xs mt-1 text-[#6B7280]">total slots today</p>
                   </div>
                 </div>
                 <div className="mt-4 p-3 bg-[#F0F9FF] rounded-lg border border-[#BAE6FD]">
