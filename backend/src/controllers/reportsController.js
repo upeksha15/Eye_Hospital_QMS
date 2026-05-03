@@ -72,6 +72,70 @@ async function bucketStats(start, end, doctorId) {
   };
 }
 
+async function getDailyStats(date, doctorId) {
+  const start = startOfDayColombo(date);
+  const end = new Date(start.getTime() + 86400000);
+  const q = { appointmentDate: { $gte: start, $lt: end } };
+  if (doctorId) q.doctorId = doctorId;
+  const appointmentCount = await Appointment.countDocuments(q);
+  return appointmentCount;
+}
+
+function linearPredictDaily(values) {
+  const n = values.length;
+  if (n === 0) return 0;
+  if (n === 1) return Math.max(0, values[0]);
+  let sumX = 0;
+  let sumY = 0;
+  let sumXY = 0;
+  let sumX2 = 0;
+  for (let i = 0; i < n; i++) {
+    sumX += i;
+    sumY += values[i];
+    sumXY += i * values[i];
+    sumX2 += i * i;
+  }
+  const denom = n * sumX2 - sumX * sumX;
+  if (denom === 0) return Math.max(0, Math.round(sumY / n));
+  const b = (n * sumXY - sumX * sumY) / denom;
+  const a = (sumY - b * sumX) / n;
+  return Math.max(0, Math.round(a + b * n));
+}
+
+async function buildDailyReport({ referenceDate, doctorId } = {}) {
+  const ref = referenceDate ? new Date(referenceDate) : new Date();
+  const refDay = startOfDayColombo(ref);
+  const thisMonday = startOfWeekMondayColombo(refDay);
+  const nextMonday = new Date(thisMonday.getTime() + 7 * 86400000);
+  const nextSunday = new Date(nextMonday.getTime() + 6 * 86400000);
+
+  const days = [];
+  const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+  for (let d = 0; d < 14; d++) {
+    const dayDate = new Date(thisMonday.getTime() + d * 86400000);
+    const dayOfWeek = d % 7;
+    const isNextWeek = d >= 7;
+    const appointmentCount = isNextWeek ? null : await getDailyStats(dayDate, doctorId);
+    days.push({
+      date: formatYMD(dayDate),
+      label: dayNames[dayOfWeek],
+      appointmentCount: appointmentCount ?? 0,
+      isActual: !isNextWeek,
+    });
+  }
+
+  const actualCounts = days.slice(0, 7).map((d) => d.appointmentCount);
+  const avgDaily = actualCounts.length > 0 ? Math.round(actualCounts.reduce((a, b) => a + b, 0) / actualCounts.length) : 0;
+  const totalWeek = actualCounts.reduce((a, b) => a + b, 0);
+
+  return {
+    days,
+    dailyAverage: avgDaily,
+    totalWeek,
+  };
+}
+
 function buildPredictionRange(values, predicted) {
   if (!values.length || predicted == null) {
     return { min: predicted ?? 0, max: predicted ?? 0 };
@@ -138,6 +202,8 @@ export async function buildAppointmentReport({ granularity = 'week', referenceDa
   const appointmentRange = buildPredictionRange(apptSeries, predictedAppointments);
   const uniquePatientRange = buildPredictionRange(uniqueSeries, predictedUniquePatients);
 
+  const dailyReport = await buildDailyReport({ referenceDate, doctorId: doctorFilter });
+
   return {
     granularity,
     referenceDate: refDay.toISOString(),
@@ -151,6 +217,7 @@ export async function buildAppointmentReport({ granularity = 'week', referenceDa
       note:
         'Forecasts extend the recent trend from the displayed periods. Use alongside clinical planning.',
     },
+    daily: dailyReport,
   };
 }
 
@@ -163,7 +230,7 @@ export async function getReportSummary(req, res) {
     const report = await buildAppointmentReport({ granularity, referenceDate, doctorId });
     res.json({ success: true, report });
   } catch (e) {
-    console.error(e);
+    console.error('Error in getReportSummary:', e);
     res.status(500).json({ success: false, message: e.message || 'Report failed' });
   }
 }

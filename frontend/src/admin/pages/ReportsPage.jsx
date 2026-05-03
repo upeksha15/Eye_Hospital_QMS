@@ -29,7 +29,7 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
-  const [selectedBucketLabel, setSelectedBucketLabel] = useState('');
+
   const [selectedDoctor, setSelectedDoctor] = useState('all');
   const [doctors, setDoctors] = useState([]);
   const [doctorLoading, setDoctorLoading] = useState(false);
@@ -95,13 +95,7 @@ export default function ReportsPage() {
     return () => clearInterval(interval);
   }, [load]);
 
-  useEffect(() => {
-    if (!report?.buckets?.length) return;
-    const latestLabel = report.buckets[report.buckets.length - 1].label;
-    if (!selectedBucketLabel || !report.buckets.some((b) => b.label === selectedBucketLabel)) {
-      setSelectedBucketLabel(latestLabel);
-    }
-  }, [report, selectedBucketLabel]);
+
 
   const downloadPdf = async () => {
     try {
@@ -138,61 +132,36 @@ export default function ReportsPage() {
   };
 
   const chartData = useMemo(() => {
-    const buckets = report?.buckets || [];
-    const base = buckets.map((b) => ({
-      name: b.label.length > 18 ? b.label.slice(0, 16) + '…' : b.label,
-      appointments: b.appointmentCount,
-      uniquePatients: b.uniquePatientCount,
-      predictionRangeLow: null,
-      predictionRangeHigh: null,
+    if (!report?.daily?.days) return [];
+    const avgDaily = report.daily.dailyAverage || 0;
+    return report.daily.days.map((d, idx) => ({
+      name: `${d.label}\n${d.date}`,
+      shortName: d.label.slice(0, 3),
+      appointments: d.appointmentCount,
+      prediction: avgDaily,
+      predictionMin: Math.max(0, avgDaily - 2),
+      predictionMax: avgDaily + 2,
+      isNextWeek: idx >= 7,
+      date: d.date,
     }));
-    if (report?.prediction) {
-      const rangeMin = report.prediction.appointmentRange?.min ?? null;
-      const rangeMax = report.prediction.appointmentRange?.max ?? null;
-      base.push({
-        name: granularity === 'week' ? 'Next week' : 'Next month',
-        appointments: report.prediction.nextPeriodAppointments,
-        uniquePatients: report.prediction.nextPeriodUniquePatients,
-        predictionRangeLow: rangeMin,
-        predictionRangeHigh: rangeMax,
-      });
-    }
-    return base;
-  }, [report, granularity]);
+  }, [report?.daily?.days, report?.daily?.dailyAverage]);
 
-  const latestBucket = report?.buckets?.[report?.buckets?.length - 1] || null;
-  const previousBucket = report?.buckets?.[report?.buckets?.length - 2] || null;
-  const deltaPct = latestBucket && previousBucket && previousBucket.appointmentCount > 0
-    ? ((latestBucket.appointmentCount - previousBucket.appointmentCount) / previousBucket.appointmentCount) * 100
-    : null;
-  const predictedAppointments = report?.prediction?.nextPeriodAppointments ?? null;
+  const totalCurrentWeek = report?.daily?.totalWeek ?? 0;
+  const avgCurrentWeek = report?.daily?.dailyAverage ?? 0;
+  const nextWeekPredicted = avgCurrentWeek * 7;
+  const deltaPct = totalCurrentWeek > 0 ? ((nextWeekPredicted - totalCurrentWeek) / totalCurrentWeek) * 100 : null;
   const predictedRange = report?.prediction?.appointmentRange ?? null;
-  const predictedDelta = latestBucket && predictedAppointments != null
-    ? predictedAppointments - latestBucket.appointmentCount
-    : null;
-  const predictedPct = latestBucket && predictedAppointments != null && latestBucket.appointmentCount > 0
-    ? (predictedDelta / latestBucket.appointmentCount) * 100
-    : null;
-  const riskLevel = predictedPct != null && predictedPct >= 20 ? 'High Risk' : 'Normal';
+  const predictedDelta = nextWeekPredicted - totalCurrentWeek;
+  const riskLevel = deltaPct != null && deltaPct >= 20 ? 'High Risk' : 'Normal';
 
   const monthValue = referenceDate.slice(0, 7);
-  const bucketOptions = report?.buckets || [];
-  const selectedBucket = bucketOptions.find((b) => b.label === selectedBucketLabel) || latestBucket;
-  const selectedBucketLabelText = selectedBucket?.label || '—';
 
-  const parseLabelEndDate = (label) => {
-    if (!label) return null;
-    const matches = label.match(/\d{4}-\d{2}-\d{2}/g);
-    if (!matches || matches.length < 1) return null;
-    return matches[matches.length - 1];
-  };
-
-  const handleBucketChange = (label) => {
-    setSelectedBucketLabel(label);
-    const endDate = parseLabelEndDate(label);
-    if (endDate) {
-      setReferenceDate(endDate);
-    }
+  const getCurrentWeekRange = () => {
+    if (!report?.daily?.days || report.daily.days.length < 7) return '—';
+    const firstDay = report.daily.days[0].date;
+    const lastDay = report.daily.days[6].date;
+    const formatDate = (d) => new Date(d).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+    return `${formatDate(firstDay)} → ${formatDate(lastDay)}`;
   };
 
   const handleMonthChange = (value) => {
@@ -206,6 +175,24 @@ export default function ReportsPage() {
     return `${sign}${value.toFixed(1)}%`;
   };
 
+  const getPredictedWeekRange = () => {
+    if (!report?.daily?.days || report.daily.days.length < 14) return '—';
+    const firstDay = report.daily.days[7].date;
+    const lastDay = report.daily.days[13].date;
+    const formatDate = (d) => new Date(d).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+    return `${formatDate(firstDay)} → ${formatDate(lastDay)}`;
+  };
+
+  const currentMonthDisplay = new Date(`${monthValue}-01`).toLocaleDateString('en-US', {
+    month: 'long',
+    year: 'numeric',
+  });
+
+  // Get selected doctor name for display
+  const selectedDoctorName = selectedDoctor === 'all' 
+    ? 'All Doctors'
+    : doctors.find(d => d._id === selectedDoctor)?.fullName || 'Unknown Doctor';
+
   return (
     <div className="font-admin space-y-8">
       <AdminHeader
@@ -216,33 +203,28 @@ export default function ReportsPage() {
       <div className="rounded-2xl bg-white border border-slate-200/80 shadow-sm p-6">
         <div className="flex flex-wrap items-end gap-4">
           <label className="block">
-            <span className="text-xs font-semibold text-slate-500">Select Month</span>
-            <div className="mt-1 flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm">
+            <span className="text-xs font-semibold text-slate-500">Current Month</span>
+            <div className="mt-1 flex items-center gap-2 rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-sm text-slate-700">
               <CalendarRange className="w-4 h-4 text-slate-400" />
-              <input
-                type="month"
-                className="bg-transparent outline-none"
-                value={monthValue}
-                onChange={(e) => handleMonthChange(e.target.value)}
-              />
+              <span className="font-medium">{currentMonthDisplay}</span>
             </div>
           </label>
           <label className="block">
-            <span className="text-xs font-semibold text-slate-500">Select Week</span>
-            <select
-              className="mt-1 block rounded-xl border border-slate-200 px-3 py-2 text-sm min-w-[220px]"
-              value={selectedBucketLabelText}
-              onChange={(e) => handleBucketChange(e.target.value)}
-            >
-              {bucketOptions.map((b) => (
-                <option key={b.label} value={b.label}>
-                  {b.label}
-                </option>
-              ))}
-            </select>
+            <span className="text-xs font-semibold text-slate-500">Current Week</span>
+            <div className="mt-1 flex items-center gap-2 rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-sm text-slate-700 min-w-[280px]">
+              <CalendarRange className="w-4 h-4 text-slate-400" />
+              <span className="font-medium">{getCurrentWeekRange()}</span>
+            </div>
           </label>
           <label className="block">
-            <span className="text-xs font-semibold text-slate-500">Select Doctor</span>
+            <span className="text-xs font-semibold text-slate-500">Predicted Week</span>
+            <div className="mt-1 flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-700 min-w-[280px]">
+              <TrendingUp className="w-4 h-4 text-emerald-400" />
+              <span className="font-medium">{getPredictedWeekRange() || '—'}</span>
+            </div>
+          </label>
+          <label className="block">
+            <span className="text-xs font-semibold text-slate-500">Filter by Doctor</span>
             <div className="mt-1 flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm">
               <Stethoscope className="w-4 h-4 text-slate-400" />
               <select
@@ -260,6 +242,12 @@ export default function ReportsPage() {
               </select>
             </div>
           </label>
+          {selectedDoctor !== 'all' && (
+            <div className="flex items-center gap-2 rounded-xl bg-blue-50 border border-blue-200 px-3 py-2 text-sm">
+              <Stethoscope className="w-4 h-4 text-blue-600" />
+              <span className="font-semibold text-blue-700">Showing: {selectedDoctorName}</span>
+            </div>
+          )}
           <button
             type="button"
             onClick={() => load()}
@@ -295,18 +283,18 @@ export default function ReportsPage() {
                 <BarChart3 className="w-5 h-5 text-white/80" />
               </div>
               <p className="text-4xl font-bold tabular-nums mt-2">
-                {selectedBucket?.appointmentCount ?? '—'}
+                {totalCurrentWeek ?? '—'}
               </p>
-              <p className="text-xs text-white/75 mt-2">{selectedBucket?.label || '—'}</p>
+              <p className="text-xs text-white/75 mt-2">{selectedDoctor === 'all' ? 'All doctors (Mon-Sun)' : `${selectedDoctorName} (Mon-Sun)`}</p>
             </div>
             <div className="rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white p-6 shadow-lg">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-white/85">Predicted Appointments</p>
+                <p className="text-sm font-medium text-white/85">Predicted Appointments Next Week</p>
                 <TrendingUp className="w-5 h-5 text-white/80" />
               </div>
-              <p className="text-4xl font-bold tabular-nums mt-2">{predictedAppointments ?? '—'}</p>
+              <p className="text-4xl font-bold tabular-nums mt-2">{Math.round(nextWeekPredicted) ?? '—'}</p>
               <div className="flex items-center gap-2 text-xs text-white/80 mt-2">
-                <span>{formatPct(predictedPct)} Increase</span>
+                <span>{formatPct(deltaPct)} Increase vs this week</span>
               </div>
             </div>
           </div>
@@ -318,49 +306,71 @@ export default function ReportsPage() {
                 <div className="h-full flex items-center justify-center text-slate-400">Loading…</div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 8 }}>
+                  <LineChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 40 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} angle={-25} textAnchor="end" height={70} />
+                    <XAxis 
+                      dataKey="shortName" 
+                      tick={{ fontSize: 10 }} 
+                      interval={0}
+                      angle={-25} 
+                      textAnchor="end" 
+                      height={70}
+                    />
                     <YAxis tick={{ fontSize: 11 }} />
-                    <Tooltip />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#fff', border: '1px solid #ddd', borderRadius: '8px' }}
+                      formatter={(value) => Math.round(value)}
+                      labelFormatter={(label, payload) => {
+                        if (payload && payload.length > 0) {
+                          return `${payload[0].payload.shortName} ${payload[0].payload.date}`;
+                        }
+                        return label;
+                      }}
+                    />
                     <Legend />
                     <Line
                       type="monotone"
                       dataKey="appointments"
                       name="Current Week"
                       stroke="#2563eb"
-                      strokeWidth={2}
-                      dot={{ r: 3 }}
-                      activeDot={{ r: 5 }}
+                      strokeWidth={3}
+                      dot={{ r: 4, fill: '#2563eb' }}
+                      activeDot={{ r: 6 }}
+                      connectNulls={false}
+                      isAnimationActive={true}
                     />
                     <Line
                       type="monotone"
-                      dataKey="uniquePatients"
+                      dataKey="prediction"
                       name="Next Week (Predicted)"
                       stroke="#16a34a"
                       strokeWidth={2}
-                      dot={{ r: 3 }}
-                      activeDot={{ r: 5 }}
+                      strokeDasharray="5 5"
+                      dot={{ r: 3, fill: '#16a34a' }}
+                      connectNulls={true}
+                      isAnimationActive={true}
                     />
                     <Line
                       type="monotone"
-                      dataKey="predictionRangeLow"
-                      name="Prediction Range (Min)"
+                      dataKey="predictionMin"
                       stroke="#22c55e"
-                      strokeWidth={2}
-                      strokeDasharray="4 4"
-                      dot={{ r: 2 }}
-                      connectNulls={false}
+                      strokeWidth={1}
+                      strokeDasharray="2 2"
+                      dot={false}
+                      connectNulls={true}
+                      isAnimationActive={false}
+                      name="Prediction Range (Min)"
                     />
                     <Line
                       type="monotone"
-                      dataKey="predictionRangeHigh"
-                      name="Prediction Range (Max)"
+                      dataKey="predictionMax"
                       stroke="#16a34a"
-                      strokeWidth={2}
-                      strokeDasharray="4 4"
-                      dot={{ r: 2 }}
-                      connectNulls={false}
+                      strokeWidth={1}
+                      strokeDasharray="2 2"
+                      dot={false}
+                      connectNulls={true}
+                      isAnimationActive={false}
+                      name="Prediction Range (Max)"
                     />
                   </LineChart>
                 </ResponsiveContainer>
@@ -397,11 +407,10 @@ export default function ReportsPage() {
                     const changePct = prev && prev.appointmentCount > 0
                       ? ((b.appointmentCount - prev.appointmentCount) / prev.appointmentCount) * 100
                       : null;
-                    const isSelected = selectedBucket?.label === b.label;
                     return (
                       <tr
                         key={i}
-                        className={`border-t border-slate-100 ${isSelected ? 'bg-amber-50/60' : ''}`}
+                        className="border-t border-slate-100"
                       >
                         <td className="px-5 py-3 text-slate-700">{b.label}</td>
                         <td className="px-3 py-3 font-semibold tabular-nums">{b.appointmentCount}</td>
@@ -460,10 +469,16 @@ export default function ReportsPage() {
               Prediction Summary
             </div>
             <p className="text-sm text-slate-600 mt-2">
-              Based on the current trend, the predicted patient count for next week is{' '}
-              <span className="font-semibold text-slate-900">{predictedAppointments ?? '—'}</span>.
+              {selectedDoctor === 'all' 
+                ? `Based on daily trends, all doctors predicted at ${Math.round(nextWeekPredicted)} appointments next week.`
+                : `${selectedDoctorName} predicted at ${Math.round(nextWeekPredicted)} appointments next week.`
+              }
             </p>
-            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 mt-3">
+            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold mt-3 ${
+              riskLevel === 'High Risk' 
+                ? 'bg-red-50 text-red-700' 
+                : 'bg-green-50 text-green-700'
+            }`}>
               {riskLevel}
             </span>
           </div>
@@ -474,26 +489,31 @@ export default function ReportsPage() {
               Demand Increase
             </div>
             <p className="text-sm text-slate-600 mt-2">
-              High confidence, projected demand increase of{' '}
+              Projected demand increase of{' '}
               <span className="font-semibold text-slate-900">
-                {predictedDelta == null ? '—' : `${predictedDelta > 0 ? '+' : ''}${predictedDelta}`}
+                {predictedDelta == null ? '—' : `${predictedDelta > 0 ? '+' : ''}${Math.round(predictedDelta)}`}
               </span>{' '}
               patients next week.
             </p>
-            <p className="text-xs text-slate-500 mt-2">Confidence based on recent trend buckets.</p>
+            <p className="text-xs text-slate-500 mt-2">
+              {selectedDoctor === 'all'
+                ? `All doctors average: ${avgCurrentWeek.toFixed(1)} appointments/day`
+                : `${selectedDoctorName} average: ${avgCurrentWeek.toFixed(1)} appointments/day`
+              }
+            </p>
           </div>
 
           <div className="rounded-2xl bg-white border border-slate-200/80 shadow-sm p-5">
             <div className="flex items-center gap-2 text-slate-700 font-semibold">
               <ShieldAlert className="w-4 h-4 text-rose-500" />
-              Risk Due
+              Risk Assessment
             </div>
             <p className="text-sm text-slate-600 mt-2">
-              {predictedPct != null && predictedPct >= 20
-                ? 'Identified a high risk alert due to the predicted surge in appointments.'
-                : 'Continue at a stable pace. No surge detected for the next week.'}
+              {deltaPct != null && deltaPct >= 20
+                ? `High risk alert: Expected ${Math.round(nextWeekPredicted)} appointments vs ${totalCurrentWeek} this week.`
+                : `Stable demand expected: ${Math.round(nextWeekPredicted)} appointments predicted for next week.`}
             </p>
-            <p className="text-xs text-slate-500 mt-2">{deltaPct == null ? '—' : `${formatPct(deltaPct)} vs previous period`}</p>
+            <p className="text-xs text-slate-500 mt-2">{deltaPct == null ? '—' : `Change: ${formatPct(deltaPct)}`}</p>
           </div>
         </aside>
       </div>
