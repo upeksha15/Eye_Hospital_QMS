@@ -45,7 +45,7 @@ const AboutPage = () => {
           <Link to="/services" className="hover:text-cyan-50 transition-colors">Services</Link>
           <span className="border-b-2 border-cyan-400 text-cyan-50">About Us</span>
           <Link to="/contact" className="hover:text-cyan-50 transition-colors">Contact</Link>
-          {!isPatientLoggedIn ? (
+          {!isLoggedIn ? (
             <Link to="/login">
               <button className="relative group overflow-hidden bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-500 text-white px-6 py-2 rounded-full font-bold shadow-[0_0_20px_rgba(56,189,248,0.55)] transition-all hover:scale-105 border border-cyan-200/80">
                 <span className="absolute inset-0 bg-white/20 opacity-0 transition-opacity group-hover:opacity-100" />
