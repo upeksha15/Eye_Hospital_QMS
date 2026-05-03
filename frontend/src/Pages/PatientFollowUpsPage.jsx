@@ -6,10 +6,6 @@ export default function PatientFollowUpsPage() {
   const { patient } = useAuth();
   const [followUps, setFollowUps] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [rescheduleId, setRescheduleId] = useState(null);
-  const [rescheduleDate, setRescheduleDate] = useState('');
-  const [rescheduleLoading, setRescheduleLoading] = useState(false);
-  const [rescheduleError, setRescheduleError] = useState('');
 
   useEffect(() => {
     let mounted = true;
@@ -48,11 +44,11 @@ export default function PatientFollowUpsPage() {
         <div className="mt-6 rounded-2xl bg-white border border-blue-100 p-6 shadow-sm">
           {loading ? (
             <div className="text-sm text-slate-600">Loading follow-ups…</div>
-          ) : followUps.length === 0 ? (
+          ) : followUps.filter(f => !f.patientAppointmentId).length === 0 ? (
             <p className="text-sm text-slate-600">You currently have no follow-up appointments listed.</p>
           ) : (
             <div className="space-y-4">
-              {followUps.map((f) => (
+              {followUps.filter(f => !f.patientAppointmentId).map((f) => (
                 <div key={f._id || f.id} className="p-4 border rounded-lg">
                   <div className="flex items-center justify-between">
                     <div>
@@ -67,9 +63,9 @@ export default function PatientFollowUpsPage() {
                   </div>
                   <div className="mt-3 flex items-center justify-end gap-3">
                     <button
-                      className="px-3 py-1 rounded-md bg-red-500 text-white text-sm"
+                      className="px-3 py-1 rounded-md border border-red-200 text-red-600 bg-white hover:bg-red-50 text-sm font-semibold transition-colors"
                       onClick={async () => {
-                        if (!window.confirm('Cancel this follow-up?')) return;
+                        if (!window.confirm('Deny and cancel this follow-up?')) return;
                         try {
                           await api.patch(`/api/follow-ups/${f._id || f.id}/cancel`);
                           setFollowUps((s) => s.filter(x => (x._id||x.id) !== (f._id||f.id)));
@@ -78,19 +74,27 @@ export default function PatientFollowUpsPage() {
                         }
                       }}
                     >
-                      Cancel
+                      Deny
                     </button>
 
                     <button
-                      className="px-3 py-1 rounded-md bg-blue-600 text-white text-sm"
-                      onClick={() => {
-                        const iso = f.recommendedDate ? new Date(f.recommendedDate).toISOString().slice(0,10) : '';
-                        setRescheduleId(f._id || f.id);
-                        setRescheduleDate(iso);
-                        setRescheduleError('');
+                      className="px-3 py-1 rounded-md bg-emerald-600 text-white text-sm font-semibold shadow-sm hover:bg-emerald-700 transition-colors"
+                      onClick={async () => {
+                        if (!window.confirm('Accept this follow-up appointment?')) return;
+                        try {
+                          setLoading(true);
+                          const iso = f.recommendedDate ? new Date(f.recommendedDate).toISOString() : new Date().toISOString();
+                          const res = await api.patch(`/api/follow-ups/${f._id || f.id}/reschedule`, { recommendedDate: iso });
+                          setFollowUps((s) => s.filter(x => (x._id||x.id) !== (f._id||f.id)));
+                          alert('Follow-up accepted successfully! You can view it in My Appointments.');
+                        } catch (e) {
+                          alert(e.response?.data?.message || e.message || 'Failed to accept follow-up');
+                        } finally {
+                          setLoading(false);
+                        }
                       }}
                     >
-                      Reschedule
+                      Accept
                     </button>
                   </div>
                 </div>
@@ -99,39 +103,7 @@ export default function PatientFollowUpsPage() {
           )}
         </div>
       </div>
-      {rescheduleId && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setRescheduleId(null)} />
-          <div className="relative w-full max-w-md mx-4">
-            <div className="bg-white rounded-lg shadow-lg border p-6">
-              <h3 className="text-lg font-semibold mb-2">Reschedule Follow-Up</h3>
-              <label className="block text-xs font-semibold text-slate-700">New Recommended Date</label>
-              <input type="date" value={rescheduleDate} onChange={(e) => setRescheduleDate(e.target.value)} className="w-full px-3 py-2 rounded-md border mt-2 mb-3" />
-              {rescheduleError && <div className="text-xs text-red-600 mb-2">{rescheduleError}</div>}
-              <div className="flex justify-end gap-2">
-                <button className="px-3 py-1 rounded-md border" onClick={() => setRescheduleId(null)}>Cancel</button>
-                <button className="px-3 py-1 rounded-md bg-emerald-600 text-white" onClick={async () => {
-                  if (!rescheduleDate) { setRescheduleError('Please choose a date'); return; }
-                  setRescheduleLoading(true); setRescheduleError('');
-                  try {
-                    const iso = new Date(rescheduleDate).toISOString();
-                    const res = await api.patch(`/api/follow-ups/${rescheduleId}/reschedule`, { recommendedDate: iso });
-                    const updated = res.data?.followUp || res.data;
-                    setFollowUps((s) => s.map(x => (x._id||x.id) === (updated._id||updated.id) ? { ...x, recommendedDate: updated.recommendedDate } : x));
-                    // Try to create a corresponding appointment so it appears in My Appointments
-                    // Server will create the appointment and return it (if successful).
-                    // Response contains followUp and optional appointment.
-                    // (No additional client POST required.)
-                    setRescheduleId(null);
-                  } catch (e) {
-                    setRescheduleError(e.response?.data?.message || e.message || 'Reschedule failed');
-                  } finally { setRescheduleLoading(false); }
-                }}>{rescheduleLoading ? 'Saving…' : 'Save'}</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }

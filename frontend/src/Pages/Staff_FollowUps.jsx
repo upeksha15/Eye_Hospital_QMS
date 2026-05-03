@@ -130,9 +130,10 @@ const FollowUps = () => {
         if (!mounted) return;
         const data = res.data?.appointments || res.data || [];
         const arr = Array.isArray(data) ? data : [];
-        // Only show patients who have checked in on the selected date
-        const checkedIn = arr.filter((a) => String(a.status || '').toLowerCase() === 'checked_in');
-        setAppointments(checkedIn);
+        // Show all patients who checked into the queues (either currently waiting or completed)
+        const validStatuses = ['checked_in', 'completed'];
+        const activePatients = arr.filter((a) => validStatuses.includes(String(a.status || '').toLowerCase()));
+        setAppointments(activePatients);
       } catch (e) {
         // on error, present an empty list (no local fallback)
         setAppointments([]);
@@ -166,7 +167,7 @@ const FollowUps = () => {
     const value = Number(intervalValue);
     if (!value || Number.isNaN(value) || !activeAppointment) return null;
 
-    const date = new Date();
+    const date = new Date(today);
     if (intervalType === 'days') {
       date.setDate(date.getDate() + value);
     } else if (intervalType === 'weeks') {
@@ -175,7 +176,7 @@ const FollowUps = () => {
       date.setMonth(date.getMonth() + value);
     }
     return date;
-  }, [intervalValue, intervalType, activeAppointment, overrideRecommendedDate]);
+  }, [intervalValue, intervalType, activeAppointment, overrideRecommendedDate, today]);
 
   useEffect(() => {
     if (!activeAppointment) setOverrideRecommendedDate(null);
@@ -240,7 +241,7 @@ const FollowUps = () => {
       setEditRecommendedError('Invalid interval');
       return;
     }
-    const date = new Date();
+    const date = new Date(today);
     if (editIntervalType === 'days') date.setDate(date.getDate() + value);
     else if (editIntervalType === 'weeks') date.setDate(date.getDate() + value * 7);
     else date.setMonth(date.getMonth() + value);
@@ -429,21 +430,17 @@ const FollowUps = () => {
 
                                 <div className="grid grid-cols-2 gap-3">
                                   <div>
-                                    <label className="block text-xs font-semibold text-slate-700">Interval</label>
-                                    <input type="number" min="1" value={intervalValue} onChange={(e)=>setIntervalValue(e.target.value)} className="w-full px-3 py-2 rounded-lg border text-sm shadow-sm" />
+                                    <label className="block text-xs font-semibold text-slate-700">Current Date</label>
+                                    <div className="mt-1 px-3 py-2 rounded-lg bg-emerald-50 text-sm text-emerald-800 border">{today ? formatDate(today) : '--'}</div>
                                   </div>
                                   <div>
-                                    <label className="block text-xs font-semibold text-slate-700">Type</label>
-                                    <select value={intervalType} onChange={(e)=>setIntervalType(e.target.value)} className="w-full px-3 py-2 rounded-lg border text-sm shadow-sm">
-                                      <option value="days">Days</option>
-                                      <option value="weeks">Weeks</option>
-                                      <option value="months">Months</option>
-                                    </select>
+                                    <label className="block text-xs font-semibold text-slate-700">Gap (Days)</label>
+                                    <input type="number" min="1" value={intervalValue} onChange={(e)=>{setIntervalValue(e.target.value); setIntervalType('days');}} className="w-full px-3 py-2 rounded-lg border text-sm shadow-sm" />
                                   </div>
                                 </div>
 
                                 <div>
-                                  <label className="block text-xs font-semibold text-slate-700">Recommended Date</label>
+                                  <label className="block text-xs font-semibold text-slate-700">Next Visit Day</label>
                                   <div className="mt-1 inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 text-sm text-emerald-800 border">{recommendedDate ? formatDate(recommendedDate) : '--'}</div>
                                   {recommendedError && <div className="text-xs text-red-600 mt-2">{recommendedError}</div>}
                                 </div>
@@ -534,8 +531,8 @@ const FollowUps = () => {
                     <tr className="bg-slate-50">
                       <th className="px-4 py-2 text-left font-semibold text-slate-600">Patient Name</th>
                       <th className="px-4 py-2 text-left font-semibold text-slate-600">Doctor</th>
-                      <th className="px-4 py-2 text-left font-semibold text-slate-600">Recommended Date</th>
-                      <th className="px-4 py-2 text-left font-semibold text-slate-600">Interval</th>
+                      <th className="px-4 py-2 text-left font-semibold text-slate-600">Next Visit Day</th>
+                      <th className="px-4 py-2 text-left font-semibold text-slate-600">Gap</th>
                       <th className="px-4 py-2 text-right font-semibold text-slate-600">Actions</th>
                     </tr>
                   </thead>
@@ -565,12 +562,8 @@ const FollowUps = () => {
                         <td className="px-4 py-2 text-slate-700">
                           {editingId === f.id ? (
                             <div className="flex items-center gap-2">
-                              <input type="number" min="1" value={editIntervalValue} onChange={(e)=>setEditIntervalValue(e.target.value)} className="w-20 px-2 py-1 rounded border text-sm" />
-                              <select value={editIntervalType} onChange={(e)=>setEditIntervalType(e.target.value)} className="px-2 py-1 rounded border text-sm">
-                                <option value="days">Days</option>
-                                <option value="weeks">Weeks</option>
-                                <option value="months">Months</option>
-                              </select>
+                              <input type="number" min="1" value={editIntervalValue} onChange={(e)=>{setEditIntervalValue(e.target.value); setEditIntervalType('days');}} className="w-20 px-2 py-1 rounded border text-sm" />
+                              <span className="text-sm">Days</span>
                             </div>
                           ) : (
                             `${f.intervalValue} ${f.intervalType}`
