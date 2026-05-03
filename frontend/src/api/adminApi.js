@@ -66,6 +66,11 @@ export async function getDoctorsAdmin() {
   return data;
 }
 
+export async function getDoctorRoomsAdmin() {
+  const { data } = await api.get('/api/admin/doctor-rooms');
+  return data;
+}
+
 export async function createDoctor(body) {
   const { data } = await api.post('/api/admin/doctors', body);
   return data;

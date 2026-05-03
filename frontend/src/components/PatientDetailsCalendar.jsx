@@ -34,7 +34,8 @@ export default function PatientDetailsCalendar({ referenceDate, onSelectDate, di
     const dim = colomboDaysInMonth(viewY, viewM);
     const first = colomboDateFromYmd(`${viewY}-${pad2(viewM)}-01`);
     const weekStart = colomboMondayOfWeek(first);
-    const lead = Math.round((first.getTime() - weekStart.getTime()) / 86400000);
+    const firstStart = colomboStartOfDay(first);
+    const lead = Math.floor((firstStart.getTime() - weekStart.getTime()) / 86400000);
     const cells = [];
     for (let i = 0; i < lead; i++) cells.push(null);
     for (let day = 1; day <= dim; day++) {

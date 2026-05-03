@@ -73,9 +73,18 @@ export default function ReportsPage() {
     const loadDoctors = async () => {
       setDoctorLoading(true);
       try {
-        const d = await adminApi.getDoctorsAdmin();
-        const rows = Array.isArray(d.doctors) ? d.doctors : [];
-        if (!cancelled) setDoctors(rows);
+        const d = await adminApi.getDoctorRoomsAdmin();
+        const rows = Array.isArray(d.rooms) ? d.rooms : [];
+        if (!cancelled) {
+          setDoctors(
+            rows.map((room) => ({
+              _id: room._id,
+              fullName: room.doctorName || room.fullName || 'Doctor',
+              speciality: room.specialization || room.speciality || '',
+              room: room.room || '',
+            }))
+          );
+        }
       } catch {
         if (!cancelled) setDoctors([]);
       } finally {
@@ -169,11 +178,17 @@ export default function ReportsPage() {
     setReferenceDate(`${value}-01`);
   };
 
-  const formatPct = (value) => {
+  const formatPct = useCallback((value) => {
     if (value == null || !Number.isFinite(value)) return '—';
     const sign = value > 0 ? '+' : '';
     return `${sign}${value.toFixed(1)}%`;
-  };
+  }, []);
+
+  const formatChangeFromCounts = useCallback((current, previous) => {
+    if (previous == null) return '—';
+    if (previous === 0) return current > 0 ? '+100.0%' : '0.0%';
+    return formatPct(((current - previous) / previous) * 100);
+  }, [formatPct]);
 
   const getPredictedWeekRange = () => {
     if (!report?.daily?.days || report.daily.days.length < 14) return '—';
@@ -192,6 +207,50 @@ export default function ReportsPage() {
   const selectedDoctorName = selectedDoctor === 'all' 
     ? 'All Doctors'
     : doctors.find(d => d._id === selectedDoctor)?.fullName || 'Unknown Doctor';
+
+  const weeklyDetailsRows = useMemo(() => {
+    const buckets = report?.buckets || [];
+    const rows = buckets.map((b, i) => {
+      const prev = i > 0 ? buckets[i - 1] : null;
+      return {
+        key: `actual-${b.start || i}`,
+        label: b.label,
+        appointmentCount: b.appointmentCount,
+        predictionRange:
+          i === buckets.length - 1 && predictedRange
+            ? `${predictedRange.min} - ${predictedRange.max}`
+            : '—',
+        uniquePatients: b.uniquePatientCount,
+        change: formatChangeFromCounts(b.appointmentCount, prev?.appointmentCount),
+        isPrediction: false,
+      };
+    });
+
+    if (report?.daily?.days?.length >= 14) {
+      const nextWeekStart = report.daily.days[7].date;
+      const nextWeekEnd = report.daily.days[13].date;
+      const uniqueRange = report?.prediction?.uniquePatientRange;
+      rows.push({
+        key: 'predicted-next-week',
+        label: `${nextWeekStart} → ${nextWeekEnd} (Predicted)`,
+        appointmentCount: Math.round(nextWeekPredicted),
+        predictionRange: predictedRange ? `${predictedRange.min} - ${predictedRange.max}` : '—',
+        uniquePatients: uniqueRange ? `${uniqueRange.min} - ${uniqueRange.max}` : '—',
+        change: formatChangeFromCounts(Math.round(nextWeekPredicted), totalCurrentWeek),
+        isPrediction: true,
+      });
+    }
+
+    return rows;
+  }, [
+    report?.buckets,
+    report?.daily?.days,
+    report?.prediction?.uniquePatientRange,
+    predictedRange,
+    nextWeekPredicted,
+    totalCurrentWeek,
+    formatChangeFromCounts,
+  ]);
 
   return (
     <div className="font-admin space-y-8">
@@ -402,26 +461,22 @@ export default function ReportsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {report?.buckets?.map((b, i) => {
-                    const prev = i > 0 ? report.buckets[i - 1] : null;
-                    const changePct = prev && prev.appointmentCount > 0
-                      ? ((b.appointmentCount - prev.appointmentCount) / prev.appointmentCount) * 100
-                      : null;
+                  {weeklyDetailsRows.map((row) => {
                     return (
                       <tr
-                        key={i}
-                        className="border-t border-slate-100"
+                        key={row.key}
+                        className={`border-t border-slate-100 ${row.isPrediction ? 'bg-emerald-50/70' : ''}`}
                       >
-                        <td className="px-5 py-3 text-slate-700">{b.label}</td>
-                        <td className="px-3 py-3 font-semibold tabular-nums">{b.appointmentCount}</td>
-                        <td className="px-3 py-3 font-semibold tabular-nums text-slate-600">
-                          {i === report.buckets.length - 1 && predictedRange
-                            ? `${predictedRange.min} - ${predictedRange.max}`
-                            : '—'}
+                        <td className={`px-5 py-3 ${row.isPrediction ? 'font-semibold text-emerald-800' : 'text-slate-700'}`}>
+                          {row.label}
                         </td>
-                        <td className="px-3 py-3 font-semibold tabular-nums">{b.uniquePatientCount}</td>
-                        <td className="px-3 py-3 font-semibold tabular-nums text-emerald-600">
-                          {changePct == null ? '—' : formatPct(changePct)}
+                        <td className="px-3 py-3 font-semibold tabular-nums">{row.appointmentCount}</td>
+                        <td className="px-3 py-3 font-semibold tabular-nums text-slate-600">
+                          {row.predictionRange}
+                        </td>
+                        <td className="px-3 py-3 font-semibold tabular-nums">{row.uniquePatients}</td>
+                        <td className={`px-3 py-3 font-semibold tabular-nums ${row.change.startsWith('-') ? 'text-rose-600' : 'text-emerald-600'}`}>
+                          {row.change}
                         </td>
                       </tr>
                     );

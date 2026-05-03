@@ -5,6 +5,7 @@ import Doctor from '../models/Doctor.js';
 import { startOfDayColombo, formatYMD } from '../utils/dateUtils.js';
 
 const TZ = 'Asia/Colombo';
+const NON_CANCELLED = { status: { $ne: 'cancelled' } };
 
 function addMonths(y, m, delta) {
   let nm = m + delta;
@@ -62,7 +63,7 @@ function linearPredict(values) {
 }
 
 async function bucketStats(start, end, doctorId) {
-  const q = { appointmentDate: { $gte: start, $lt: end } };
+  const q = { appointmentDate: { $gte: start, $lt: end }, ...NON_CANCELLED };
   if (doctorId) q.doctorId = doctorId;
   const appointmentCount = await Appointment.countDocuments(q);
   const patientIds = await Appointment.distinct('patientId', q);
@@ -75,7 +76,7 @@ async function bucketStats(start, end, doctorId) {
 async function getDailyStats(date, doctorId) {
   const start = startOfDayColombo(date);
   const end = new Date(start.getTime() + 86400000);
-  const q = { appointmentDate: { $gte: start, $lt: end } };
+  const q = { appointmentDate: { $gte: start, $lt: end }, ...NON_CANCELLED };
   if (doctorId) q.doctorId = doctorId;
   const appointmentCount = await Appointment.countDocuments(q);
   return appointmentCount;
@@ -234,8 +235,6 @@ export async function getReportSummary(req, res) {
     res.status(500).json({ success: false, message: e.message || 'Report failed' });
   }
 }
-
-const NON_CANCELLED = { status: { $ne: 'cancelled' } };
 
 async function buildWeekPatientList(start, end) {
   const appts = await Appointment.find({
